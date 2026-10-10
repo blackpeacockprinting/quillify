@@ -1,14 +1,14 @@
 /**
- * A file pdf.js will not open is refused at the open, in a sentence the person
- * can act on. pdf.js's own message ("No password given", "Invalid PDF
- * structure.") reads as a crash for a file the app is only declining.
+ * A file pdf.js will not open is refused at the open, under a code the caller
+ * can branch on. pdf.js's own message ("No password given", "Invalid PDF
+ * structure.") reads as a crash for a file a stage is only declining.
  */
 
 import wasmUrl from '@neslinesli93/qpdf-wasm/dist/qpdf.wasm?url';
 import { PDFDocument, PDFName } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
-import { PdfImportRefusal } from './inventory.js';
 import { openPdf } from './pdfjs.js';
+import { Refused } from './refusal.js';
 import { xfaToAcroForm } from './xfa.js';
 
 async function blank(): Promise<Uint8Array> {
@@ -43,39 +43,27 @@ async function certificateEncrypted(): Promise<Uint8Array> {
 	return doc.save({ useObjectStreams: false });
 }
 
-const NOT_A_PDF = 'This file is not a PDF the reader can open.';
-
 describe('a file pdf.js will not open', () => {
 	it.each([
-		['bytes that are not a PDF', async () => new TextEncoder().encode('just words'), NOT_A_PDF],
-		['an empty file', async () => new Uint8Array(0), NOT_A_PDF],
-		['a PDF cut off halfway', async () => (await blank()).slice(0, 288), NOT_A_PDF],
-		[
-			'a PDF behind a user password',
-			locked,
-			'This PDF is password protected. Remove the password first.'
-		],
-		[
-			'a certificate-encrypted PDF',
-			certificateEncrypted,
-			'This PDF uses an encryption this app cannot open'
-		]
+		['bytes that are not a PDF', async () => new TextEncoder().encode('just words'), 'not_pdf'],
+		['an empty file', async () => new Uint8Array(0), 'not_pdf'],
+		['a PDF cut off halfway', async () => (await blank()).slice(0, 288), 'not_pdf'],
+		['a PDF behind a user password', locked, 'password'],
+		['a certificate-encrypted PDF', certificateEncrypted, 'encryption']
 	])(
-		'%s is refused in words',
-		async (_, make, words) => {
+		'$0 is refused as $2',
+		async (_, make, code) => {
 			const bytes = await make();
 			const refused = await openPdf(bytes).catch((err: unknown) => err);
-			expect(refused).toBeInstanceOf(PdfImportRefusal);
-			expect((refused as Error).message).toContain(words);
+			expect(refused).toBeInstanceOf(Refused);
+			expect((refused as Refused).refusal).toEqual({ code });
 		},
 		60_000
 	);
 
 	it('refuses at the first open the importer makes', async () => {
 		const refused = await xfaToAcroForm(await locked()).catch((err: unknown) => err);
-		expect(refused).toBeInstanceOf(PdfImportRefusal);
-		expect((refused as Error).message).toBe(
-			'This PDF is password protected. Remove the password first.'
-		);
+		expect(refused).toBeInstanceOf(Refused);
+		expect((refused as Refused).refusal).toEqual({ code: 'password' });
 	}, 60_000);
 });
