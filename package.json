@@ -13,7 +13,8 @@
 		"format": "prettier --write .",
 		"check": "tsc",
 		"test": "vitest run",
-		"assets": "node scripts/assets.js"
+		"assets": "node scripts/assets.js",
+		"corpus": "npm run assets && vitest run --config corpus/vitest.config.ts"
 	},
 	"devDependencies": {
 		"@quillmark/wasm": "0.124.0",
