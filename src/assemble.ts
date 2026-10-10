@@ -1,10 +1,12 @@
-import type {
-	FieldInventory,
-	InventoryWidget,
-	QualifiedField,
-	QualifiedForm,
-	QuillTree
-} from './types.js';
+import type { InventoryWidget, QualifiedField, QualifiedForm, QuillTree } from './types.js';
+
+/** What the assembly reads of a field, of the form and of a widget. The carried tests hand it a title, which it does not read. */
+type Named = Omit<QualifiedField, 'label'>;
+type Qualified = {
+	quill: Pick<QualifiedForm['quill'], 'name' | 'description'> & { title?: string };
+	fields: Named[];
+};
+type Placed = Pick<InventoryWidget, 'id' | 'kind' | 'places' | 'tooltip'>;
 
 /** Every format the importer builds is a first version. */
 export const QUILL_VERSION = '0.1.0';
@@ -25,7 +27,7 @@ function groupId(name: string): string {
  * A `default:` says nobody need answer the field. A required field declares
  * none, so the blueprint leaves its cell empty for the author.
  */
-function fieldYaml(field: QualifiedField): string[] {
+function fieldYaml(field: Named): string[] {
 	const lines = [`    ${q(field.name)}:`];
 	const ui: string[] = [];
 	if (field.group) ui.push(`        group: ${q(groupId(field.group))}`);
@@ -59,7 +61,7 @@ function fieldYaml(field: QualifiedField): string[] {
 	return lines;
 }
 
-export function quillYaml(form: QualifiedForm, fields: QualifiedField[]): string {
+export function quillYaml(form: Qualified, fields: Named[]): string {
 	const lines = [
 		'quill:',
 		`  name: ${q(form.quill.name)}`,
@@ -81,7 +83,7 @@ export function quillYaml(form: QualifiedForm, fields: QualifiedField[]): string
 }
 
 /** The sample values as the quill's example document, or null when no kept field carries one. */
-function exampleMarkdown(form: QualifiedForm, fields: QualifiedField[]): string | null {
+function exampleMarkdown(form: Qualified, fields: Named[]): string | null {
 	const lines = fields.flatMap((f) => {
 		if (f.example === undefined || f.type === 'boolean') return [];
 		return f.type === 'array'
@@ -97,12 +99,12 @@ function exampleMarkdown(form: QualifiedForm, fields: QualifiedField[]): string 
  * Signatures are always unbound widgets; a dropped field leaves no widget.
  */
 export function assembleQuill(
-	form: QualifiedForm,
-	inventory: FieldInventory,
+	form: Qualified,
+	inventory: { widgets: Placed[] },
 	formPdf: Uint8Array
 ): QuillTree {
 	const byId = new Map(inventory.widgets.map((w) => [w.id, w]));
-	const widgetOf = (field: QualifiedField): InventoryWidget => {
+	const widgetOf = (field: Named): Placed => {
 		const widget = byId.get(field.widget);
 		if (!widget) throw new Error(`Field ${field.name} names no widget ${field.widget}.`);
 		return widget;

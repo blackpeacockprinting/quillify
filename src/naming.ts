@@ -48,7 +48,9 @@ export function check(fields: readonly Field[], naming: Naming): Problem[] {
 		if (sharing.length > 1) problems.push({ code: 'repeated_field', id });
 	for (const id of ids) if (!entries.has(id)) problems.push({ code: 'unnamed_field', id });
 
-	const kept = naming.fields.filter((entry) => entry.keep && ids.has(entry.id));
+	// A read-only field is left out whatever its entry says, so it counts as dropped.
+	const fillable = new Set(fields.filter((field) => !field.readOnly).map((field) => field.id));
+	const kept = naming.fields.filter((entry) => entry.keep && fillable.has(entry.id));
 	if (kept.length === 0) problems.push({ code: 'nothing_kept' });
 	for (const { id, name } of kept)
 		if (!SNAKE_CASE.test(name)) problems.push({ code: 'field_name', id });
