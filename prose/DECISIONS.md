@@ -113,3 +113,13 @@ Adds to "Two releases", which puts #20 and #21 in v0.1.0.
 **Decision.** Of a page's annotations a background keeps its links. Every other object that reads as an annotation is deleted, whether a page lists it or not: one that says `/Type /Annot`, one with a `/Rect`, or a widget. So those 7 backgrounds do not look like the published file opened in a viewer. They show the form without the review marks left on it.
 
 **Unlock.** A published form whose printed content is itself an annotation.
+
+## 10 Oct 2026: The carried strip test stops keeping the sample's link
+
+Adds to "Which carried tests change, and how".
+
+**Context.** `strip.test.ts` asserts that the sample's one link survives the strip. That link holds its address as a PDF name where a string belongs (#56). From #19 on, the strip keeps a link only when its address is an http or https string or its destination is in the file.
+
+**Decision.** That case asserts that no annotation is left, and its title says so. `strip-actions.test.ts` holds a well-formed link. No other assertion in the carried test changes.
+
+**Unlock.** The sample is regenerated with a string for its address (#56).
