@@ -200,3 +200,13 @@ Adds to "The API is built as proposed".
 - The engine takes a description of one line, and `check` does not copy that rule. A description that holds a line feed passes `check` and comes back from `quillify` as an `engine` problem with the engine's code. A copy of the rule here would be a second place to change when the engine's changes.
 
 **Unlock.** The maintainer's answer on #3. For the description rule, a consumer whose interface lets a person type a line break into a description, and so wants the problem to name the field.
+
+## 10 Oct 2026: A carried test takes an opened document and its closer
+
+Adds to "Which carried tests change, and how".
+
+**Context.** `openPdf` returns a loading task whose promise it has already awaited, and each caller awaits it again and destroys the task. From #23 on every open has a worker of its own to end, which destroying the task does not do. One carried test opens a PDF that way: `xfa.browser.test.ts`, in the case "stamps no chrome over the page it just drew". `pdfjs.browser.test.ts` calls `openPdf` only where it rejects, and does not change.
+
+**Decision.** That case takes `{ pdf, close }` from `openPdf` where it took a task, and calls `close()` where it destroyed the task. Only the call shape changes, and no assertion does. Two tests that are not carried change with it: `background.browser.test.ts` the same way, and `page-identity.browser.test.ts`, which calls pdf.js itself and so makes its own worker from the package's worker file.
+
+**Unlock.** None.
