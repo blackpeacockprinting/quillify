@@ -4,8 +4,8 @@
  * style of its own; without these rules every field lays out at its content
  * size and the geometry harvested from it is fiction.
  *
- * Shipped as a module's text and injected into a <style> beside the offscreen
- * host. The `:root` rules below reach the app's own document all the same.
+ * Shipped as a module's text and adopted on the stage's own document, so none
+ * of it reaches the host page.
  * On a pdfjs-dist upgrade the copy goes stale silently; the fixed-rect
  * assertion in xfa.browser.test.ts is what notices.
  */

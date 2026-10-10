@@ -11,7 +11,7 @@ const WORKER = new URL('../assets/pdf.worker.js', import.meta.url);
  */
 export async function openPdf(
 	bytes: Uint8Array,
-	options: { enableXfa?: boolean } = {}
+	options: { enableXfa?: boolean; ownerDocument?: Document } = {}
 ): Promise<{ pdf: PDFDocumentProxy; close(): Promise<void> }> {
 	const pdfjs = await import('pdfjs-dist');
 	const port = new Worker(WORKER, { type: 'module' });
