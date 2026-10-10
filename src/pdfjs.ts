@@ -1,12 +1,6 @@
 import { PdfImportRefusal } from './inventory.js';
 import type { PDFDocumentLoadingTask } from 'pdfjs-dist';
 
-/**
- * Where the copy of `pdfjs-dist/wasm/` lands. `vite.config.ts` puts it there;
- * pdf.js appends a filename, so the trailing slash is required.
- */
-const WASM_URL = '/pdfjs/wasm/';
-
 /** pdf.js, loaded on first use with its worker as a module worker of this bundle. */
 export async function loadPdfjs(): Promise<typeof import('pdfjs-dist')> {
 	const pdfjs = await import('pdfjs-dist');
@@ -18,11 +12,6 @@ export async function loadPdfjs(): Promise<typeof import('pdfjs-dist')> {
 }
 
 /**
- * Open a PDF for reading. Every caller goes through here so the codec wasm is
- * always reachable: without `wasmUrl` a JBIG2-encoded scan decodes to nothing
- * and the page rasterizes white, which the naming pass then reads as a blank
- * sheet and answers about anyway. SF 144 is one such file.
- *
  * The task returned holds an opened document. A file pdf.js rejects is refused
  * here, so every reader words a locked or damaged file the same way.
  */
@@ -31,7 +20,7 @@ export async function openPdf(
 	options: { enableXfa?: boolean } = {}
 ): Promise<PDFDocumentLoadingTask> {
 	const pdfjs = await loadPdfjs();
-	const task = pdfjs.getDocument({ data: bytes.slice(), wasmUrl: WASM_URL, ...options });
+	const task = pdfjs.getDocument({ data: bytes.slice(), ...options });
 	try {
 		await task.promise;
 	} catch (err) {

@@ -18,7 +18,7 @@ import { stripAcroForm } from './strip.js';
 describe('radio group binding', () => {
 	it('stamps every widget of the group, which is why we do not bind one enum', async () => {
 		const bytes = await normalizePdf(new Uint8Array(await (await fetch(formUrl)).arrayBuffer()));
-		const { inventory } = await inventoryPdf(bytes);
+		const inventory = await inventoryPdf(bytes);
 		const background = await stripAcroForm(bytes);
 
 		const radios = inventory.widgets.filter((w) => w.radioButton);

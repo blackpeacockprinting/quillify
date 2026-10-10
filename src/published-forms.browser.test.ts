@@ -19,10 +19,8 @@ import { stripAcroForm } from './strip.js';
 import { xfaToAcroForm } from './xfa.js';
 
 /**
- * `pages`, `widgets` and `signatures` are counts from
- * `scripts/characterize-forms.mjs` over the published files. `tooltips` is
- * `inventoryPdf`'s own count, what the naming pass gets for free; the rest it
- * reads off the page raster.
+ * `pages`, `widgets` and `signatures` are what each published file holds.
+ * `tooltips` is how many of its widgets `inventoryPdf` finds hover text for.
  */
 const CORPUS = [
 	{ name: 'DD 1610 TDY', url: tdyUrl, pages: 3, widgets: 46, signatures: 2, tooltips: 46 },
@@ -64,21 +62,6 @@ const CORPUS = [
 ];
 
 /**
- * How much of a page raster is not blank. The naming pass reads labels off these
- * images, so a page that rasterizes white gets named from nothing at all.
- */
-async function ink(png: Blob): Promise<number> {
-	const bitmap = await createImageBitmap(png);
-	const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-	const ctx = canvas.getContext('2d')!;
-	ctx.drawImage(bitmap, 0, 0);
-	const { data } = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
-	let dark = 0;
-	for (let i = 0; i < data.length; i += 4) if (data[i] < 200) dark++;
-	return dark / (data.length / 4);
-}
-
-/**
  * Every stream pdf-lib can inflate, as text. An XFA packet is Flate, so it is
  * among them; an image codec pdf-lib has no decoder for is not.
  */
@@ -107,7 +90,7 @@ describe('the published forms', () => {
 			const original = new Uint8Array(await (await fetch(form.url)).arrayBuffer());
 			const bytes = await xfaToAcroForm(await normalizePdf(original));
 
-			const { inventory, pages } = await inventoryPdf(bytes);
+			const inventory = await inventoryPdf(bytes);
 			expect(inventory.pages).toHaveLength(form.pages);
 			expect(inventory.widgets).toHaveLength(form.widgets);
 			for (const widget of inventory.widgets)
@@ -116,11 +99,6 @@ describe('the published forms', () => {
 					expect(place.rect.h, widget.id).toBeGreaterThan(0);
 					expect(place.page).toBeLessThan(form.pages);
 				}
-			expect(pages).toHaveLength(form.pages);
-			// Half a percent, because DD 1610's continuation page is only 1.4%.
-			// A page whose image failed to decode measures 0.000.
-			for (const [index, page] of pages.entries())
-				expect(await ink(page.png), `${form.name} page ${index + 1}`).toBeGreaterThan(0.005);
 			// qpdf's --remove-restrictions takes these with it.
 			expect(inventory.widgets.filter((w) => w.kind === 'Sig')).toHaveLength(form.signatures);
 			// Acrobat writes `/TU` on the field and leaves the widgets in `/Kids`
@@ -157,7 +135,7 @@ describe('a form that paints one value in two places', () => {
 		const bytes = await xfaToAcroForm(
 			await normalizePdf(new Uint8Array(await (await fetch(beneficiaryUrl)).arrayBuffer()))
 		);
-		const { inventory } = await inventoryPdf(bytes);
+		const inventory = await inventoryPdf(bytes);
 		// One name is one value in the file. Treating the copies as separate
 		// fields asks the person to type every answer on this form twice.
 		expect(inventory.widgets.every((w) => w.places.length === 2)).toBe(true);

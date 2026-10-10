@@ -93,7 +93,7 @@ for (const [path, url] of Object.entries(fixtures)) {
 		const bytes = await xfaToAcroForm(
 			await normalizePdf(new Uint8Array(await (await fetch(url)).arrayBuffer()))
 		);
-		const { inventory } = await inventoryPdf(bytes);
+		const inventory = await inventoryPdf(bytes);
 		const tree = assembleQuill(named(inventory), inventory, await stripAcroForm(bytes));
 		const { fields, widgets }: Record<string, { name: string; page: number; rect: Rect }[]> =
 			JSON.parse(new TextDecoder().decode(tree.get('form.json')));

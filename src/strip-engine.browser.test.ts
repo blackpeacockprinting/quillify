@@ -20,7 +20,7 @@ it('builds a quill the engine fills once, from a widget that names its subtype b
 	widget.dict.set(PDFName.of('Subtype'), doc.context.register(PDFName.of('Widget')));
 
 	const source = await normalizePdf(await doc.save({ useObjectStreams: false }));
-	const { inventory } = await inventoryPdf(source);
+	const inventory = await inventoryPdf(source);
 	expect(inventory.widgets.map(({ id }) => id)).toEqual(['unit']);
 	const { quill } = await fromTree(
 		assembleQuill(

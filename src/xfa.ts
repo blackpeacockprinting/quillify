@@ -258,9 +258,8 @@ function stamp(doc: PDFDocument, widgets: XfaWidget[]): void {
 }
 
 /**
- * `/TU`, which the inventory reads as the widget's hover text and the naming
- * pass reads as a label. It covers 740 of the corpus's 831 XFA fields; the rest
- * are named off the page raster, as an unlabelled AcroForm widget already is.
+ * `/TU`, which the inventory reads as the widget's hover text. It covers 740 of
+ * the corpus's 831 XFA fields.
  */
 function tooltip(field: PDFField, text?: string): void {
 	if (!text) return;
