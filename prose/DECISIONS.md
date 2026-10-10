@@ -82,3 +82,13 @@ Every `Source:` line and the review command need the fork readable at that commi
 **Decision.** `npm run patch` makes the fork's two edits in the installed worker, and a test fails by name when they are missing. That covers this repository's own suite and nothing more. What a consumer gets is a guarded worker the package ships itself (#10).
 
 **Unlock.** pdf.js carries the guard (#47), or the move to pdf.js 6.4 shows it is no longer needed (#48). Either one removes the script, the test and the CI step.
+
+## 10 Oct 2026: The API is built as proposed
+
+Replaces "The API waits for confirmation".
+
+**Context.** #3 proposes four functions and their types, and it is the maintainer's to confirm. Every pull request after the port builds on those names, so waiting on #3 holds all of them.
+
+**Decision.** I am building the proposal, with two additions the engine's behavior asked for: a problem for an empty quill description, which the engine refuses, and the engine's own code on an `engine` problem. #3 stays open. Nothing depends on the names before the first tag, so until then a rename is one pull request.
+
+**Unlock.** The maintainer's answer on #3.
