@@ -177,3 +177,11 @@ Adds to "v0.1.0 fixes four more defects of the carried code".
 **Decision.** The inventory leaves out a widget whose `/FT` names none of the four field types, and an option of a choice that is not a string. The rest of the file is read as before. None of the 1,351 Air Force forms pulled for #54 has such a widget or option, so no measured form changes.
 
 **Unlock.** A consumer that has to be told a file held one, which is a refusal code or a count on the form.
+
+## 10 Oct 2026: The inventory refuses a file with no field
+
+**Context.** In the fork the inventory refused a file with no field only when the file declared an XFA form, and the app's wizard refused the others in a sentence of its own. `sanitize` (#12) is where that second refusal would be made here, the one refusal that does not come from a stage.
+
+**Decision.** `inventoryPdf` refuses every file with no field as `no_fields`, and `xfa` says whether the file declares an XFA form. `sanitize` will return what a stage refuses and refuse nothing itself. No carried test changes: none reads the inventory of a file with no field.
+
+**Unlock.** A caller that wants the empty inventory of such a file.
