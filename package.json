@@ -8,6 +8,7 @@
 		"node": ">=24"
 	},
 	"scripts": {
+		"gate": "npm run lint && npm run check && npm test",
 		"lint": "prettier --check .",
 		"format": "prettier --write .",
 		"check": "tsc",

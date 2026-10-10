@@ -4,9 +4,16 @@
 
 - Branch from `main`: `port/`, `feat/`, `fix/`, `docs/`, `chore/`, `test/` or `release/vX.Y.Z`. `main` moves only by a merge commit from a pull request. The branch is not protected, so nothing but this rule stops a direct push.
 - One concern per pull request, small enough to read in one sitting. A bug fix and a feature are two pull requests.
+- A branch merges only when it contains `main`. CI checks the pull request's tree, and nothing runs after the merge.
 - A commit subject is a plain sentence saying what now holds, 72 characters at most, with no prefix. The body gives the reason and what was deleted, wrapped at 72. A change to code ends with `Check:`, the command and what it returned. `Refs #N` names the issue the commit serves.
 - A fix or a feature is two commits: the test that fails, then the change that passes it without touching the test.
 - The repository merges with the pull request's title as the subject and its body as the message, so both are written to be read in `git log`.
+
+## The gate
+
+`npm run gate` is the one verb: Prettier, `tsc`, then Vitest's two projects. A test file's name picks its runner: `*.browser.test.ts` runs in headless Chromium and every other test file in node. `npm run format` rewrites what `npm run lint` flags.
+
+Tools are pinned exactly and installed with `npm ci`. `npx playwright install --only-shell chromium` fetches the browser the Chromium project drives.
 
 ## Carried code
 
