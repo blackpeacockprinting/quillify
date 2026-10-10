@@ -9,6 +9,7 @@ import { PDFDocument, PDFName } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 import { PdfImportRefusal } from './inventory.js';
 import { openPdf } from './pdfjs.js';
+import { xfaToAcroForm } from './xfa.js';
 
 async function blank(): Promise<Uint8Array> {
 	const doc = await PDFDocument.create();
@@ -69,4 +70,12 @@ describe('a file pdf.js will not open', () => {
 		},
 		60_000
 	);
+
+	it('refuses at the first open the importer makes', async () => {
+		const refused = await xfaToAcroForm(await locked()).catch((err: unknown) => err);
+		expect(refused).toBeInstanceOf(PdfImportRefusal);
+		expect((refused as Error).message).toBe(
+			'This PDF is password protected. Remove the password first.'
+		);
+	}, 60_000);
 });
