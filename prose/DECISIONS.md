@@ -149,3 +149,11 @@ Adds to "Which carried tests change, and how", whose table deletes the raster as
 **Decision.** The field-cap case builds one blank page, its title stops at "names the whole count", and its assertion on the noisy file's size goes with the noise. Its assertion on the refusal does not change. The `published-forms` comment says what its counts are. Each call to `inventoryPdf` in a test takes the inventory where it destructured `{ inventory }`, in the commit that changes what the function returns, and no assertion changes for it.
 
 **Unlock.** None.
+
+## 10 Oct 2026: Page rasters are removed
+
+**Context.** The fork's `inventoryPdf` also renders every page to a PNG, and the app posts those images to the model that names the fields. That client stays with the app and this library calls no model, so nothing here reads a raster. The rasters cost a canvas per page, a 9 MiB budget with a refusal of its own, and pdf.js's image codecs, which a consumer would have to serve from a fixed path: without them a JBIG2 scan such as SF 144 rasters white.
+
+**Decision.** `inventoryPdf` returns the inventory alone. The rasterizer, its budget and that refusal are deleted, with the codec path and the plugin that served the codecs to the tests. A scan the fork refuses for the size of its rasters inventories here. Every caller takes the inventory where it destructured one, the carried tests among them, and no assertion changes for it.
+
+**Unlock.** A consumer adopts a namer that reads the page (#35).

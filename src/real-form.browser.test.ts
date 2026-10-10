@@ -42,7 +42,7 @@ beforeAll(async () => {
 
 describe('a form in the shape of DD Form 2977', () => {
 	it('inventories every widget with a page, a rect and a kind', async () => {
-		const { inventory } = await inventoryPdf(bytes);
+		const inventory = await inventoryPdf(bytes);
 
 		expect(inventory.widgets.length).toBeGreaterThanOrEqual(40);
 		expect(new Set(inventory.widgets.map((w) => w.kind))).toEqual(new Set(['Tx', 'Btn', 'Ch']));
@@ -62,7 +62,7 @@ describe('a form in the shape of DD Form 2977', () => {
 	}, 90_000);
 
 	it('strips the form layer and renders the rebuilt one', async () => {
-		const { inventory } = await inventoryPdf(bytes);
+		const inventory = await inventoryPdf(bytes);
 		const background = await stripAcroForm(bytes);
 		const text = new TextDecoder('latin1').decode(background);
 		expect(text).not.toContain('/AcroForm');

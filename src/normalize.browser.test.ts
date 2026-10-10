@@ -28,7 +28,7 @@ describe('normalizePdf', () => {
 
 	it('leaves the widgets where the reader found them', async () => {
 		const normalized = await normalizePdf(await form());
-		const { inventory } = await inventoryPdf(normalized);
+		const inventory = await inventoryPdf(normalized);
 
 		expect(inventory.widgets.length).toBeGreaterThan(30);
 		expect(inventory.pages).toHaveLength(3);

@@ -90,7 +90,7 @@ describe('the published forms', () => {
 			const original = new Uint8Array(await (await fetch(form.url)).arrayBuffer());
 			const bytes = await xfaToAcroForm(await normalizePdf(original));
 
-			const { inventory } = await inventoryPdf(bytes);
+			const inventory = await inventoryPdf(bytes);
 			expect(inventory.pages).toHaveLength(form.pages);
 			expect(inventory.widgets).toHaveLength(form.widgets);
 			for (const widget of inventory.widgets)
@@ -135,7 +135,7 @@ describe('a form that paints one value in two places', () => {
 		const bytes = await xfaToAcroForm(
 			await normalizePdf(new Uint8Array(await (await fetch(beneficiaryUrl)).arrayBuffer()))
 		);
-		const { inventory } = await inventoryPdf(bytes);
+		const inventory = await inventoryPdf(bytes);
 		// One name is one value in the file. Treating the copies as separate
 		// fields asks the person to type every answer on this form twice.
 		expect(inventory.widgets.every((w) => w.places.length === 2)).toBe(true);

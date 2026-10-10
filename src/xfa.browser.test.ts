@@ -35,7 +35,7 @@ async function convert(url: string): Promise<Uint8Array> {
 describe('a dynamic form, laid out and written back as an AcroForm', () => {
 	for (const form of FORMS) {
 		it(`${form.name}: ${form.widgets} fields on ${form.pages} pages`, async () => {
-			const { inventory } = await inventoryPdf(await convert(form.url));
+			const inventory = await inventoryPdf(await convert(form.url));
 			expect(inventory.pages).toHaveLength(form.pages);
 			expect(inventory.widgets).toHaveLength(form.widgets);
 
@@ -55,7 +55,7 @@ describe('a dynamic form, laid out and written back as an AcroForm', () => {
 	}
 
 	it('DAF 1288 converts with its radio options in nine groups, one on-state each', async () => {
-		const { inventory } = await inventoryPdf(await convert(readyReserveUrl));
+		const inventory = await inventoryPdf(await convert(readyReserveUrl));
 		const radios = inventory.widgets.filter((w) => w.radioButton);
 		expect(radios).toHaveLength(26);
 		// Nine exclusion groups. Emitting one boolean per option instead would let
@@ -80,7 +80,7 @@ describe('a dynamic form, laid out and written back as an AcroForm', () => {
 	}, 300_000);
 
 	it('DD 2875 lands its fields where the form draws them', async () => {
-		const { inventory } = await inventoryPdf(await convert(saarUrl));
+		const inventory = await inventoryPdf(await convert(saarUrl));
 		// Geometry read off the browser's own layout, in points. This one assertion
 		// catches a stale copy of the viewer stylesheet, a pdf.js layout change and
 		// a Chromium change alike, which a byte comparison on the CSS would not.

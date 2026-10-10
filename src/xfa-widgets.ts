@@ -102,11 +102,7 @@ function exclusion(el: HTMLElement, layer: HTMLElement): HTMLElement | null {
 	return found && layer.contains(found) ? found : null;
 }
 
-/**
- * The hover text a filler reads, which covers 740 of the 831 fields. The rest
- * are named by the model off the page raster, as an unlabelled AcroForm widget
- * already is.
- */
+/** The hover text a filler reads, which covers 740 of the 831 fields. */
 function tooltipOf(el: HTMLElement): string | undefined {
 	const field = el.closest<HTMLElement>('.xfaField');
 	const direct =

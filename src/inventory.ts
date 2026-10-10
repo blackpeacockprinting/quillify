@@ -1,20 +1,11 @@
 import { PDFDocument, PDFHexString, PDFName, PDFString } from 'pdf-lib';
 import { toTopLeftRect } from './coords.js';
 import { openPdf } from './pdfjs.js';
-import { MAX_PAGES, MAX_RASTER_BYTES, MAX_WIDGETS } from './types.js';
-import type { PDFPageProxy } from 'pdfjs-dist';
+import { MAX_PAGES, MAX_WIDGETS } from './types.js';
 import type { FieldInventory, InventoryWidget, WidgetKind } from './types.js';
-
-const RASTER_DPI = 96;
 
 /** A PDF the pipeline does not take, worded for the person who dropped it. */
 export class PdfImportRefusal extends Error {}
-
-export interface PageImage {
-	png: Blob;
-	width: number;
-	height: number;
-}
 
 interface Annotation {
 	subtype: string;
@@ -35,9 +26,7 @@ interface Annotation {
 	buttonValue?: string | null;
 }
 
-export async function inventoryPdf(
-	bytes: Uint8Array
-): Promise<{ inventory: FieldInventory; pages: PageImage[] }> {
+export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory> {
 	const task = await openPdf(bytes);
 	try {
 		const pdf = await task.promise;
@@ -67,11 +56,9 @@ export async function inventoryPdf(
 		const inherited = await tooltipsByField(bytes);
 
 		const widgets: InventoryWidget[] = [];
-		const pages: PageImage[] = [];
 		const dims: FieldInventory['pages'] = [];
 		const seen = new Map<string, number>();
 		const byName = new Map<string, InventoryWidget>();
-		let rasterBytes = 0;
 		for (let index = 0; index < pdf.numPages; index++) {
 			const page = await pdf.getPage(index + 1);
 			if (page.rotate % 360 !== 0)
@@ -120,28 +107,17 @@ export async function inventoryPdf(
 			}
 		}
 
-		// The cap reads a complete count, and a form it refuses rasters nothing.
-		// Inside the page loop it would name a running partial after rendering
-		// the pages before it.
+		// The cap reads a complete count. Inside the page loop it would name a
+		// running partial.
 		if (widgets.length > MAX_WIDGETS)
 			throw new PdfImportRefusal(
 				`This form has ${widgets.length} fields; the importer reads up to ${MAX_WIDGETS} in one pass. Import the pages you need as a shorter form.`
 			);
-
-		for (let index = 0; index < pdf.numPages; index++) {
-			const image = await rasterize(await pdf.getPage(index + 1));
-			rasterBytes += image.png.size;
-			if (rasterBytes > MAX_RASTER_BYTES)
-				throw new PdfImportRefusal(
-					`These pages raster to more than ${MAX_RASTER_BYTES / 1024 / 1024} MB, which is more than one request carries. A scan at a lower resolution will fit.`
-				);
-			pages.push(image);
-		}
 		if (xfa && widgets.length === 0)
 			throw new PdfImportRefusal(
 				'This PDF declares an Adobe LiveCycle template but carries no fields on the page and none that could be laid out from the template either. There is nothing here to turn into a format.'
 			);
-		return { inventory: { pages: dims, widgets }, pages };
+		return { pages: dims, widgets };
 	} finally {
 		await task.destroy();
 	}
@@ -169,19 +145,4 @@ async function tooltipsByField(bytes: Uint8Array): Promise<Map<string, string>> 
 			found.set(field.getName(), tip.decodeText());
 	}
 	return found;
-}
-
-async function rasterize(page: PDFPageProxy): Promise<PageImage> {
-	const viewport = page.getViewport({ scale: RASTER_DPI / 72 });
-	const canvas = document.createElement('canvas');
-	canvas.width = Math.ceil(viewport.width);
-	canvas.height = Math.ceil(viewport.height);
-	await page.render({ canvas, viewport }).promise;
-	const png = await new Promise<Blob>((resolve, reject) =>
-		canvas.toBlob(
-			(blob) => (blob ? resolve(blob) : reject(new Error('Page raster failed.'))),
-			'image/png'
-		)
-	);
-	return { png, width: canvas.width, height: canvas.height };
 }

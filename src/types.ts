@@ -78,20 +78,6 @@ export type QuillTree = Map<string, Uint8Array>;
 
 /** The largest file the importer opens. It bounds the compressed input. */
 export const MAX_BYTES = 8 * 1024 * 1024;
-/** The naming pass sends one raster per page, and a provider counts images. */
 export const MAX_PAGES = 20;
-/**
- * The rasters ride to the model as base64 in one JSON body. MAX_PAGES bounds the
- * provider's image count; this bounds the wire, and page count is a poor proxy
- * for it: eighteen vector pages are 5.8 MB and twenty scanned ones are 23 MB.
- */
-export const MAX_RASTER_BYTES = 9 * 1024 * 1024;
-/**
- * What the qualify route accepts: the rasters after base64's 4/3 inflation,
- * plus room for the inventory JSON. Derived from MAX_RASTER_BYTES rather than
- * written out, because a client that sends more than the server takes gets its
- * connection torn down mid-upload and reads as `Failed to fetch`.
- */
-export const MAX_BODY_BYTES = Math.ceil((MAX_RASTER_BYTES * 4) / 3) + 4 * 1024 * 1024;
 /** More widgets than one qualify call has been measured to name correctly. */
 export const MAX_WIDGETS = 200;
