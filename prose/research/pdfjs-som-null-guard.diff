@@ -1,0 +1,62 @@
+Guard a null class slot in the XFA SOM resolver
+
+`searchNode` dereferences `.isXFAObjectArray` on the result of
+`$getChildrenByClass`, which returns `this[name]` verbatim. An absent optional
+child is initialized to `null` (`Caption` sets `this.para = null` alongside
+`extras`, `font`, `margin` and `value`), so a `.#class` step naming a child the
+target does not have throws instead of resolving to nothing.
+
+Reached through `usehref=".#som(...)"` prototype references, which Designer
+2024.07 emits and Designer 6.5 does not. DAF Form 1288 carries 43 of them, two
+of which point at `#para` on a caption that has only a `<font>`. The throw kills
+`Binder.bind()`, so `XFAFactory.form` is never assigned, `_createPagesHelper`
+reads `Symbol()` off `undefined`, `dims` is never set, and the document surfaces
+as `UnknownErrorException: Cannot read properties of undefined (reading
+'length')`.
+
+With the guard, an unresolvable prototype warns and is skipped, which is what
+Acrobat does with nothing to inherit. DAF 1288 goes from failing to load to two
+pages and 122 fields, every one of them with non-zero width and height and
+inside the page box. The other 23 forms in the corpus produce identical page and
+field counts before and after.
+
+`children == null` rather than `!children`, so an empty-string slot keeps its
+current `[""]` behaviour.
+
+Introduced by PR #13473 (usehref support, merged 2021-06-04) on a line from
+commit 45329af9. PR #13761 later hardened every caller of `searchNode` against a
+null return "to prevent future bugs" but not the inside of `searchNode`. Still
+unguarded on master as of 2026-09-03; no matching issue, PR or Bugzilla report.
+
+--- a/src/core/xfa/som.js
++++ b/src/core/xfa/som.js
+@@ -207,9 +207,12 @@
+             break;
+           case operators.dotHash:
+             children = node[$getChildrenByClass](name);
+-            children = children.isXFAObjectArray
+-              ? children.children
+-              : [children];
++            children =
++              children == null
++                ? []
++                : children.isXFAObjectArray
++                  ? children.children
++                  : [children];
+             break;
+           default:
+             break;
+@@ -286,7 +289,12 @@
+         break;
+       case operators.dotHash:
+         children = root[$getChildrenByClass](name);
+-        children = children.isXFAObjectArray ? children.children : [children];
++        children =
++          children == null
++            ? []
++            : children.isXFAObjectArray
++              ? children.children
++              : [children];
+         break;
+       default:
+         break;
