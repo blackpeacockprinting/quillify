@@ -31,11 +31,12 @@ export interface XfaWidget {
  */
 export function harvestWidgets(page: XfaPage, pageNumber: number): XfaWidget[] {
 	const { layer, origin } = page;
+	const view = layer.ownerDocument.defaultView!;
 	const widgets: XfaWidget[] = [];
 	const seen = new Map<string, number>();
 
 	for (const el of layer.querySelectorAll<HTMLElement>('input, select, textarea')) {
-		const style = getComputedStyle(el);
+		const style = view.getComputedStyle(el);
 		if (style.visibility === 'hidden' || style.display === 'none') continue;
 		const rect = el.getBoundingClientRect();
 		if (rect.width <= 0 || rect.height <= 0) continue;
