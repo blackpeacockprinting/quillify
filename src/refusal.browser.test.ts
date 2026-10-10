@@ -2,6 +2,7 @@
 
 import { PDFDocument, PDFName, PDFString, degrees, type PDFPage } from 'pdf-lib';
 import { afterEach, describe, expect, it } from 'vitest';
+import sampleUrl from '../test/fixtures/acroform-sample.pdf?url';
 import { displayList } from './display-list.js';
 import { inventoryPdf } from './inventory.js';
 import { normalizePdf } from './normalize.js';
@@ -27,6 +28,17 @@ describe('what the inventory refuses', () => {
 		);
 		await expect(inventoryPdf(await doc.save())).rejects.toMatchObject({
 			refusal: { code: 'no_fields', xfa: true }
+		});
+	});
+
+	it('refuses a PDF that has no field and declares no XFA form, and says so', async () => {
+		const sample = await (await fetch(sampleUrl)).arrayBuffer();
+		const doc = await PDFDocument.load(sample);
+		const form = doc.getForm();
+		for (const field of form.getFields()) form.removeField(field);
+		expect(doc.catalog.has(PDFName.of('AcroForm'))).toBe(true);
+		await expect(inventoryPdf(await doc.save())).rejects.toMatchObject({
+			refusal: { code: 'no_fields', xfa: false }
 		});
 	});
 

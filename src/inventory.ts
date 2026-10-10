@@ -111,7 +111,7 @@ export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory> {
 		// running partial.
 		if (widgets.length > MAX_WIDGETS)
 			throw new Refused({ code: 'too_many_fields', fields: widgets.length, limit: MAX_WIDGETS });
-		if (xfa && widgets.length === 0) throw new Refused({ code: 'no_fields', xfa: true });
+		if (widgets.length === 0) throw new Refused({ code: 'no_fields', xfa });
 		return { pages: dims, widgets };
 	} finally {
 		await task.destroy();
