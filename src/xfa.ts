@@ -11,8 +11,8 @@ import {
 	rgb
 } from 'pdf-lib';
 import { displayList, type DisplayList, type Run } from './display-list.js';
-import { PdfImportRefusal } from './inventory.js';
 import { openPdf } from './pdfjs.js';
+import { Refused } from './refusal.js';
 import { XfaStage } from './xfa-layer.js';
 import { harvestWidgets, type XfaWidget } from './xfa-widgets.js';
 
@@ -45,7 +45,7 @@ export async function xfaToAcroForm(bytes: Uint8Array): Promise<Uint8Array> {
 			const laid = await stage.lay(await pdf.getPage(number));
 			const list = displayList(laid, number);
 			widgets.push(...harvestWidgets(laid, number));
-			await paint(out.addPage([list.width, list.height]), list, async (name) => {
+			await paint(out.addPage([list.width, list.height]), number, list, async (name) => {
 				let font = fonts.get(name);
 				if (!font) fonts.set(name, (font = await out.embedFont(name)));
 				return font;
@@ -63,6 +63,7 @@ export async function xfaToAcroForm(bytes: Uint8Array): Promise<Uint8Array> {
 /** PDF's origin is bottom-left; every primitive arrives top-left. */
 function paint(
 	page: PDFPage,
+	pageNumber: number,
 	list: DisplayList,
 	font: (name: StandardFonts) => Promise<PDFFont>
 ): Promise<void> {
@@ -111,11 +112,12 @@ function paint(
 			thickness: line.width,
 			color: rgb(...line.colour)
 		});
-	return drawRuns(page, list.runs, H, font);
+	return drawRuns(page, pageNumber, list.runs, H, font);
 }
 
 async function drawRuns(
 	page: PDFPage,
+	pageNumber: number,
 	runs: Run[],
 	H: number,
 	get: (name: StandardFonts) => Promise<PDFFont>
@@ -156,9 +158,12 @@ async function drawRuns(
 			// pdf-lib's WinAnsi encoder throws on a character the standard-14 fonts
 			// have no code for. Dropping the run would lose a line of the form
 			// without anything reporting it.
-			throw new PdfImportRefusal(
-				`This form uses a character the importer cannot draw, in "${run.text.slice(0, 40)}". Print it to a flat PDF and import that.`
-			);
+			throw new Refused({
+				code: 'unpaintable',
+				page: pageNumber - 1,
+				construct: 'glyph',
+				detail: run.text.slice(0, 40)
+			});
 		}
 		if (scaled)
 			page.pushOperators(PDFOperator.of(PDFOperatorNames.SetTextHorizontalScaling, ['100']));
