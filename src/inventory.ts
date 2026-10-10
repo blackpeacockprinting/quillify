@@ -1,11 +1,9 @@
 import { PDFDocument, PDFHexString, PDFName, PDFString } from 'pdf-lib';
 import { toTopLeftRect } from './coords.js';
 import { openPdf } from './pdfjs.js';
+import { Refused } from './refusal.js';
 import { MAX_PAGES, MAX_WIDGETS } from './types.js';
 import type { FieldInventory, InventoryWidget, WidgetKind } from './types.js';
-
-/** A PDF the pipeline does not take, worded for the person who dropped it. */
-export class PdfImportRefusal extends Error {}
 
 interface Annotation {
 	subtype: string;
@@ -46,13 +44,11 @@ export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory> {
 		// encrypted to a tenant nobody here has a licence for, and counting the
 		// cover sheet's widgets answers the wrong question.
 		if (info.IsCollectionPresent) {
-			const attached = [...((await pdf.getAttachments())?.keys() ?? [])];
-			throw new PdfImportRefusal(
-				`This PDF is a cover sheet: the form itself rides inside it as an attachment${attached[0] ? ` (${attached[0]})` : ''}, and this app cannot open it there. Open it in a reader that can unwrap it, save a plain copy, and import that.`
-			);
+			const [attachment] = (await pdf.getAttachments())?.keys() ?? [];
+			throw new Refused({ code: 'portfolio', attachment });
 		}
 		if (pdf.numPages > MAX_PAGES)
-			throw new PdfImportRefusal(`This PDF has ${pdf.numPages} pages; the limit is ${MAX_PAGES}.`);
+			throw new Refused({ code: 'too_many_pages', pages: pdf.numPages, limit: MAX_PAGES });
 		const inherited = await tooltipsByField(bytes);
 
 		const widgets: InventoryWidget[] = [];
@@ -61,10 +57,7 @@ export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory> {
 		const byName = new Map<string, InventoryWidget>();
 		for (let index = 0; index < pdf.numPages; index++) {
 			const page = await pdf.getPage(index + 1);
-			if (page.rotate % 360 !== 0)
-				throw new PdfImportRefusal(
-					`Page ${index + 1} carries a rotation. The renderer stamps unrotated pages only, so save a flattened copy and import that.`
-				);
+			if (page.rotate % 360 !== 0) throw new Refused({ code: 'rotated', page: index });
 			const view = page.view as [number, number, number, number];
 			dims.push({ width: view[2] - view[0], height: view[3] - view[1] });
 
@@ -110,13 +103,8 @@ export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory> {
 		// The cap reads a complete count. Inside the page loop it would name a
 		// running partial.
 		if (widgets.length > MAX_WIDGETS)
-			throw new PdfImportRefusal(
-				`This form has ${widgets.length} fields; the importer reads up to ${MAX_WIDGETS} in one pass. Import the pages you need as a shorter form.`
-			);
-		if (xfa && widgets.length === 0)
-			throw new PdfImportRefusal(
-				'This PDF declares an Adobe LiveCycle template but carries no fields on the page and none that could be laid out from the template either. There is nothing here to turn into a format.'
-			);
+			throw new Refused({ code: 'too_many_fields', fields: widgets.length, limit: MAX_WIDGETS });
+		if (xfa && widgets.length === 0) throw new Refused({ code: 'no_fields', xfa: true });
 		return { pages: dims, widgets };
 	} finally {
 		await task.destroy();

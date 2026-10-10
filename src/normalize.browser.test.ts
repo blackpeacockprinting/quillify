@@ -8,7 +8,8 @@ import { describe, expect, it } from 'vitest';
 import formUrl from '../test/fixtures/DD1610_Request_and_Authorization_for_TDY_Travel.pdf?url';
 import { PDFDocument } from 'pdf-lib';
 import { normalizePdf } from './normalize.js';
-import { inventoryPdf, PdfImportRefusal } from './inventory.js';
+import { inventoryPdf } from './inventory.js';
+import { Refused } from './refusal.js';
 import { MAX_BYTES } from './types.js';
 
 async function form(): Promise<Uint8Array> {
@@ -42,7 +43,9 @@ describe('normalizePdf', () => {
 	}, 120_000);
 
 	it('refuses a file over the ceiling before qpdf allocates for it', async () => {
-		await expect(normalizePdf(new Uint8Array(MAX_BYTES + 1))).rejects.toThrow(/over 8 MB/);
+		await expect(normalizePdf(new Uint8Array(MAX_BYTES + 1))).rejects.toMatchObject({
+			refusal: { code: 'too_large', bytes: MAX_BYTES + 1, limit: MAX_BYTES }
+		});
 	});
 
 	it('refuses a file qpdf cannot rewrite, and takes the next one', async () => {
@@ -51,8 +54,8 @@ describe('normalizePdf', () => {
 		const refused = await normalizePdf(new TextEncoder().encode('just words')).catch(
 			(err: unknown) => err
 		);
-		expect(refused).toBeInstanceOf(PdfImportRefusal);
-		expect((refused as Error).message).toBe('This file is not a PDF the reader can open.');
+		expect(refused).toBeInstanceOf(Refused);
+		expect((refused as Refused).refusal).toEqual({ code: 'not_pdf' });
 
 		const doc = await PDFDocument.create();
 		doc.addPage([612, 792]);
@@ -74,9 +77,7 @@ describe('normalizePdf', () => {
 		damaged.set(tail, at);
 
 		const refused = await normalizePdf(damaged).catch((err: unknown) => err);
-		expect(refused).toBeInstanceOf(PdfImportRefusal);
-		expect((refused as Error).message).toBe(
-			'This PDF could not be read. Open it in a PDF reader, save a fresh copy, and import that.'
-		);
+		expect(refused).toBeInstanceOf(Refused);
+		expect((refused as Refused).refusal).toEqual({ code: 'damaged' });
 	}, 60_000);
 });

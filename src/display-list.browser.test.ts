@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { displayList } from './display-list.js';
-import { PdfImportRefusal } from './inventory.js';
+import { Refused } from './refusal.js';
 import type { XfaPage } from './xfa-layer.js';
 
 let host: HTMLDivElement | undefined;
@@ -33,9 +33,11 @@ describe('an inline SVG shape', () => {
 
 	it('refuses an ellipse by name, since a box has four corners', () => {
 		const laid = page('<ellipse cx="50" cy="25" rx="50" ry="25" fill="none" stroke="#000" />');
-		expect(() => displayList(laid, 3)).toThrow(PdfImportRefusal);
+		expect(() => displayList(laid, 3)).toThrow(Refused);
 		expect(() => displayList(laid, 3)).toThrow(
-			'Page 3 of this form carries an SVG <ellipse>, which the importer cannot redraw.'
+			expect.objectContaining({
+				refusal: { code: 'unpaintable', page: 2, construct: 'svg', detail: 'ellipse' }
+			})
 		);
 	});
 });

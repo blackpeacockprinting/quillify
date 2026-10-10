@@ -1,4 +1,4 @@
-import { PdfImportRefusal } from './inventory.js';
+import { Refused, type Refusal } from './refusal.js';
 import type { XfaPage } from './xfa-layer.js';
 
 /** RGB in the 0..1 the PDF operators take. */
@@ -77,8 +77,9 @@ function stroked(style: CSSStyleDeclaration): Edge | null {
  * the layout, so every number here is exact rather than estimated.
  *
  * What it can express is text, CSS backgrounds and borders, and inline SVG
- * `line` and `rect`. Anything else refuses by name: a silently incomplete
- * background of a government form is worse than not taking the form.
+ * `line` and `rect`. Anything else is refused with its construct named: a
+ * silently incomplete background of a government form is worse than not taking
+ * the form.
  */
 export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 	const { layer, origin } = page;
@@ -87,16 +88,17 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 	const runs: Run[] = [];
 	const X = (v: number) => +(v - origin.left).toFixed(2);
 	const Y = (v: number) => +(v - origin.top).toFixed(2);
-	const refuse = (what: string): never => {
-		throw new PdfImportRefusal(
-			`Page ${pageNumber} of this form carries ${what}, which the importer cannot redraw. Print it to a flat PDF and import that.`
-		);
+	const refuse = (
+		construct: Extract<Refusal, { code: 'unpaintable' }>['construct'],
+		detail?: string
+	): never => {
+		throw new Refused({ code: 'unpaintable', page: pageNumber - 1, construct, detail });
 	};
 
 	for (const el of layer.querySelectorAll<HTMLElement>('*')) {
 		const tag = el.tagName.toLowerCase();
 		if (tag === 'svg' || tag === 'option' || tag === 'g' || tag === 'defs') continue;
-		if (tag === 'img' || el.classList.contains('xfaImage')) refuse('an image');
+		if (tag === 'img' || el.classList.contains('xfaImage')) refuse('image');
 
 		const style = getComputedStyle(el);
 		if (style.visibility === 'hidden' || style.display === 'none') continue;
@@ -136,7 +138,7 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 			}
 			continue;
 		}
-		if (svgOnly(tag)) refuse(`an SVG <${tag}>`);
+		if (svgOnly(tag)) refuse('svg', tag);
 
 		const rect = el.getBoundingClientRect();
 		if (rect.width < 0.3 || rect.height < 0.3) continue;
@@ -162,8 +164,8 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 			continue;
 		}
 
-		if (style.backgroundImage !== 'none') refuse('a background image');
-		if (unrepresentable(style.transform)) refuse('a rotated or vertically scaled element');
+		if (style.backgroundImage !== 'none') refuse('background_image');
+		if (unrepresentable(style.transform)) refuse('transform');
 
 		const sides = ['Top', 'Right', 'Bottom', 'Left'] as const;
 		const edges = sides.map((side) => {
@@ -171,7 +173,7 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 			const kind = style.getPropertyValue(`border-${side.toLowerCase()}-style`);
 			const colour = style.getPropertyValue(`border-${side.toLowerCase()}-color`);
 			if (width <= 0 || kind === 'none' || kind === 'hidden' || !opaque(colour)) return null;
-			if (!PAINTED_BORDER.has(kind)) refuse(`a ${kind} border`);
+			if (!PAINTED_BORDER.has(kind)) refuse('border', kind);
 			return { width, colour: rgb(colour) };
 		}) as Box['edges'];
 		const fill = opaque(style.backgroundColor) ? rgb(style.backgroundColor) : null;

@@ -15,8 +15,8 @@
  */
 
 import wasmUrl from '@neslinesli93/qpdf-wasm/dist/qpdf.wasm?url';
-import { PdfImportRefusal } from './inventory.js';
 import { openPdf } from './pdfjs.js';
+import { Refused } from './refusal.js';
 import { MAX_BYTES } from './types.js';
 
 const IN = '/in.pdf';
@@ -55,7 +55,7 @@ export async function normalizePdf(bytes: Uint8Array): Promise<Uint8Array> {
 	// emscripten heap only grows and the module is held for the life of the page,
 	// so a file refused later is memory pinned for the session.
 	if (bytes.byteLength > MAX_BYTES)
-		throw new PdfImportRefusal('This PDF is over 8 MB. Pick a smaller one.');
+		throw new Refused({ code: 'too_large', bytes: bytes.byteLength, limit: MAX_BYTES });
 
 	const mod = await load();
 	const { FS } = mod;
@@ -75,10 +75,8 @@ export async function normalizePdf(bytes: Uint8Array): Promise<Uint8Array> {
 			}
 		}
 	}
-	// qpdf gives its reason on stderr alone. The reader refuses a locked or
-	// damaged file in words; one it opens is a file only qpdf rejects.
+	// qpdf gives its reason on stderr alone. A file the reader cannot open is
+	// refused there, under its own code; one it opens is a file only qpdf rejects.
 	await (await openPdf(bytes)).destroy();
-	throw new PdfImportRefusal(
-		'This PDF could not be read. Open it in a PDF reader, save a fresh copy, and import that.'
-	);
+	throw new Refused({ code: 'damaged' });
 }
