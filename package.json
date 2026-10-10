@@ -10,6 +10,7 @@
 	"scripts": {
 		"lint": "prettier --check .",
 		"format": "prettier --write .",
+		"check": "tsc",
 		"test": "vitest run"
 	},
 	"devDependencies": {
