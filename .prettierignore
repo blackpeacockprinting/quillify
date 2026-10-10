@@ -2,3 +2,6 @@ package-lock.json
 
 # Tables are written by hand; Prettier pads their columns.
 prose/
+
+# A golden holds one widget per line.
+test/goldens/
