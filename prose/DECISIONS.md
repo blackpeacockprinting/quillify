@@ -185,3 +185,18 @@ Adds to "v0.1.0 fixes four more defects of the carried code".
 **Decision.** `inventoryPdf` refuses every file with no field as `no_fields`, and `xfa` says whether the file declares an XFA form. `sanitize` will return what a stage refuses and refuse nothing itself. No carried test changes: none reads the inventory of a file with no field.
 
 **Unlock.** A caller that wants the empty inventory of such a file.
+
+## 10 Oct 2026: Where the built API departs from the proposal
+
+Adds to "The API is built as proposed".
+
+**Context.** `quillify` is built (#13), and with it the API differs from #3's signatures in four places. Each is small, and each is the maintainer's to reverse.
+
+**Decision.**
+
+- `tree` is a `Map`, where #3 says `ReadonlyMap`. `Quill.fromTree` takes a `Map`, and a read-only one does not pass to it without a copy or a cast.
+- An `engine` problem's `diagnostic` is optional, because the engine types a diagnostic's code as optional.
+- A read-only field is left out of the quill whatever its entry says, as the fork's `qualify` step left it out, and `check` counts it as dropped. The other choices are to honor `keep: true` on such a field, or to report it as a problem.
+- The engine takes a description of one line, and `check` does not copy that rule. A description that holds a line feed passes `check` and comes back from `quillify` as an `engine` problem with the engine's code. A copy of the rule here would be a second place to change when the engine's changes.
+
+**Unlock.** The maintainer's answer on #3. For the description rule, a consumer whose interface lets a person type a line break into a description, and so wants the problem to name the field.
