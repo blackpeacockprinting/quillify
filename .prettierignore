@@ -1,0 +1,4 @@
+package-lock.json
+
+# Tables are written by hand; Prettier pads their columns.
+prose/
