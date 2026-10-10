@@ -124,6 +124,16 @@ async function drawRuns(
 ): Promise<void> {
 	for (const run of runs) {
 		const font = await get(standard14(run));
+		// The standard-14 fonts encode WinAnsi alone. Dropping the run would lose a
+		// line of the form without anything reporting it.
+		const encodable = font.getCharacterSet();
+		if ([...run.text].some((char) => !encodable.includes(char.codePointAt(0)!)))
+			throw new Refused({
+				code: 'unpaintable',
+				page: pageNumber - 1,
+				construct: 'glyph',
+				detail: run.text.slice(0, 40)
+			});
 		// The standard-14 substitute's advances differ from the embedded face's.
 		// Letter spacing goes in first, since it is a real property of the run;
 		// horizontal scaling then pins the whole run to the width the browser
@@ -146,25 +156,13 @@ async function drawRuns(
 			page.pushOperators(
 				PDFOperator.of(PDFOperatorNames.SetTextHorizontalScaling, [String(+scale.toFixed(3))])
 			);
-		try {
-			page.drawText(run.text, {
-				x: run.x,
-				y: H - run.baseline,
-				size: run.size,
-				font,
-				color: rgb(...run.colour)
-			});
-		} catch {
-			// pdf-lib's WinAnsi encoder throws on a character the standard-14 fonts
-			// have no code for. Dropping the run would lose a line of the form
-			// without anything reporting it.
-			throw new Refused({
-				code: 'unpaintable',
-				page: pageNumber - 1,
-				construct: 'glyph',
-				detail: run.text.slice(0, 40)
-			});
-		}
+		page.drawText(run.text, {
+			x: run.x,
+			y: H - run.baseline,
+			size: run.size,
+			font,
+			color: rgb(...run.colour)
+		});
 		if (scaled)
 			page.pushOperators(PDFOperator.of(PDFOperatorNames.SetTextHorizontalScaling, ['100']));
 		if (run.letterSpacing)
