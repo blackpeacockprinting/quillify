@@ -31,7 +31,8 @@ export function suggest(fields: readonly Field[]): FieldNaming[] {
 		let name = base;
 		for (let n = 2; taken.has(name); n++) name = `${base}_${n}`;
 		taken.add(name);
-		return { id: field.id, keep: !field.readOnly, name, description: field.tooltip ?? '' };
+		const description = (field.tooltip ?? '').trim().replace(/\s+/g, ' ');
+		return { id: field.id, keep: !field.readOnly, name, description };
 	});
 }
 
