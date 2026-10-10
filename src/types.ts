@@ -7,7 +7,8 @@ export interface Rect {
 }
 
 /** AcroForm field type codes as pdf.js reports them. */
-export type WidgetKind = 'Tx' | 'Btn' | 'Ch' | 'Sig';
+export const WIDGET_KINDS = ['Tx', 'Btn', 'Ch', 'Sig'] as const;
+export type WidgetKind = (typeof WIDGET_KINDS)[number];
 
 /** One place a field is painted. */
 export interface WidgetPlace {
