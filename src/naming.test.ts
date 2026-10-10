@@ -152,6 +152,16 @@ describe('suggest', () => {
 		]);
 	});
 
+	it.each([
+		['a line feed', 'Organizational element\n(Indicate division)'],
+		['a carriage return', 'Organizational element\r(Indicate division)'],
+		['both, a tab, and a space at each end', ' Organizational element \r\n\t(Indicate division) ']
+	])('describes a field whose tooltip holds %s in one line', (_, tooltip) => {
+		expect(suggest([text('a', tooltip)])[0].description).toBe(
+			'Organizational element (Indicate division)'
+		);
+	});
+
 	it('names a field from its tooltip, or from the end of its id when the tooltip has no word', () => {
 		expect(suggest(fields).map((entry) => entry.name)).toEqual([
 			'date_req',
