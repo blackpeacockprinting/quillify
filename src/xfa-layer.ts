@@ -1,5 +1,4 @@
 import css from './xfa-layer.css?inline';
-import { loadPdfjs } from './pdfjs.js';
 import type { PDFPageProxy } from 'pdfjs-dist';
 
 /** One page after the browser has solved its layout. */
@@ -48,7 +47,7 @@ export class XfaStage {
 	 * wrong origin.
 	 */
 	async lay(page: PDFPageProxy): Promise<XfaPage> {
-		const pdfjs = await loadPdfjs();
+		const pdfjs = await import('pdfjs-dist');
 		const xfa = await page.getXfa();
 		if (!xfa) throw new Error(`XFA page ${page.pageNumber} laid out to nothing.`);
 		const viewport = pdfjs.XfaLayer.getPageViewport(xfa, { scale: 1, rotation: 0 });

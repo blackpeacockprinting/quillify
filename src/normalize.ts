@@ -77,6 +77,6 @@ export async function normalizePdf(bytes: Uint8Array): Promise<Uint8Array> {
 	}
 	// qpdf gives its reason on stderr alone. A file the reader cannot open is
 	// refused there, under its own code; one it opens is a file only qpdf rejects.
-	await (await openPdf(bytes)).destroy();
+	await (await openPdf(bytes)).close();
 	throw new Refused({ code: 'damaged' });
 }

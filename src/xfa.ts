@@ -31,10 +31,9 @@ import { harvestWidgets, type XfaWidget } from './xfa-widgets.js';
  * downstream is unchanged.
  */
 export async function xfaToAcroForm(bytes: Uint8Array): Promise<Uint8Array> {
-	const task = await openPdf(bytes, { enableXfa: true });
+	const { pdf, close } = await openPdf(bytes, { enableXfa: true });
 	let stage: XfaStage | undefined;
 	try {
-		const pdf = await task.promise;
 		if (!pdf.isPureXfa) return bytes;
 		stage = new XfaStage();
 		const out = await PDFDocument.create();
@@ -56,7 +55,7 @@ export async function xfaToAcroForm(bytes: Uint8Array): Promise<Uint8Array> {
 		return await out.save();
 	} finally {
 		stage?.close();
-		await task.destroy();
+		await close();
 	}
 }
 

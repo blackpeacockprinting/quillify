@@ -98,8 +98,7 @@ describe('a dynamic form, laid out and written back as an AcroForm', () => {
 		// missing one to opaque white. Left out, every widget paints a white box
 		// with a black border over the transcription, which on this form erases the
 		// classification banners at the top and bottom of every page.
-		const task = await openPdf(await convert(saarUrl));
-		const pdf = await task.promise;
+		const { pdf, close } = await openPdf(await convert(saarUrl));
 		try {
 			const widgets = [];
 			for (let n = 1; n <= pdf.numPages; n++) {
@@ -114,7 +113,7 @@ describe('a dynamic form, laid out and written back as an AcroForm', () => {
 			expect(widgets.filter((a) => a.backgroundColor)).toHaveLength(0);
 			expect(widgets.filter((a) => a.borderColor)).toHaveLength(0);
 		} finally {
-			await task.destroy();
+			await close();
 		}
 	}, 300_000);
 });

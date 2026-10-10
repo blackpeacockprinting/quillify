@@ -29,9 +29,8 @@ const isWidgetKind = (type: unknown): type is WidgetKind =>
 	WIDGET_KINDS.includes(type as WidgetKind);
 
 export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory> {
-	const task = await openPdf(bytes);
+	const { pdf, close } = await openPdf(bytes);
 	try {
-		const pdf = await task.promise;
 		// XFA alone is not a refusal. A LiveCycle form is usually hybrid: the XFA
 		// template rides along beside a complete AcroForm field tree, and pdf.js
 		// never XFA-renders one of those, so the widgets below are the real ones.
@@ -114,7 +113,7 @@ export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory> {
 		if (widgets.length === 0) throw new Refused({ code: 'no_fields', xfa });
 		return { pages: dims, widgets };
 	} finally {
-		await task.destroy();
+		await close();
 	}
 }
 
