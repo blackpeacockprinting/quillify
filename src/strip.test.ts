@@ -148,7 +148,7 @@ async function hybrid(shape: 'array' | 'stream'): Promise<Uint8Array> {
 }
 
 describe('stripAcroForm', () => {
-	it('removes the AcroForm and every Widget, keeping the Link', async () => {
+	it('removes the AcroForm, every Widget and the Link whose address is a name', async () => {
 		const before = await PDFDocument.load(FIXTURE);
 		expect(before.catalog.has(PDFName.of('AcroForm'))).toBe(true);
 		expect(annotSubtypes(before)).toEqual([
@@ -163,7 +163,7 @@ describe('stripAcroForm', () => {
 		const stripped = await stripAcroForm(FIXTURE);
 		const after = await PDFDocument.load(stripped);
 		expect(after.catalog.has(PDFName.of('AcroForm'))).toBe(false);
-		expect(annotSubtypes(after)).toEqual(['Link']);
+		expect(annotSubtypes(after)).toEqual([]);
 		expect(after.getPageCount()).toBe(1);
 
 		// Unlinking leaves the objects in the file, and a background that still
