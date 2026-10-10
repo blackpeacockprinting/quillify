@@ -30,7 +30,6 @@ it('builds a quill the engine fills once, from a widget that names its subtype b
 					{
 						widget: 'unit',
 						name: 'unit',
-						label: 'Unit',
 						description: '',
 						type: 'string',
 						multiline: false,

@@ -66,6 +66,11 @@ describe('check', () => {
 		expect(check([a], naming(dropped('a', 'first')))).toEqual([{ code: 'nothing_kept' }]);
 	});
 
+	it('counts a read-only field as dropped, whatever its entry says', () => {
+		const total: Field = { ...text('total'), readOnly: true };
+		expect(check([total], naming(kept('total', 'Not A Name')))).toEqual([{ code: 'nothing_kept' }]);
+	});
+
 	it('reports a kept entry whose name is not snake_case', () => {
 		expect(check([a], naming(kept('a', 'First')))).toEqual([{ code: 'field_name', id: 'a' }]);
 	});
