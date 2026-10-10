@@ -3,7 +3,7 @@
 		"target": "ES2024",
 		"lib": ["ES2024", "DOM"],
 		"module": "NodeNext",
-		"types": ["node"],
+		"types": ["node", "vite/client"],
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
 		"verbatimModuleSyntax": true,

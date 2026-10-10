@@ -20,6 +20,12 @@
 		"playwright": "1.63.0",
 		"prettier": "3.9.9",
 		"typescript": "6.0.3",
+		"vite": "8.3.2",
 		"vitest": "5.0.2"
+	},
+	"dependencies": {
+		"@neslinesli93/qpdf-wasm": "0.3.0",
+		"pdf-lib": "1.17.1",
+		"pdfjs-dist": "6.3.289"
 	}
 }
