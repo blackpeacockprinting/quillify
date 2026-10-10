@@ -6,6 +6,7 @@ import type {
 	Naming,
 	Place,
 	Problem,
+	Quillified,
 	Rect,
 	Refusal,
 	Sanitized,
@@ -14,7 +15,12 @@ import type {
 
 // The import compiles every module behind the entry point, which takes seconds on a loaded machine.
 it('imports where there is no DOM, and exports the public functions and nothing else', async () => {
-	expect(Object.keys(await import('./index.js')).sort()).toEqual(['check', 'sanitize', 'suggest']);
+	expect(Object.keys(await import('./index.js')).sort()).toEqual([
+		'check',
+		'quillify',
+		'sanitize',
+		'suggest'
+	]);
 }, 60_000);
 
 it('exports each type a caller has to name', () => {
@@ -26,6 +32,7 @@ it('exports each type a caller has to name', () => {
 		Naming,
 		Place,
 		Problem,
+		Quillified,
 		Rect,
 		Refusal,
 		Sanitized,

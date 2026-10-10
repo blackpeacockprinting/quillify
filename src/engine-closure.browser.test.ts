@@ -1,20 +1,16 @@
 /**
- * What the importer writes in `form.json` is what the engine stamps: every
- * entry is in the rendered PDF under the same name, on the same page and at
- * the same rect, on a page the size the inventory measured, and the PDF has no
- * field `form.json` does not name. qpdf reads the stamped fields back.
+ * What `quillify` writes in `form.json` is what the engine stamps: every entry
+ * is in the rendered PDF under the same name, on the same page and at the same
+ * rect, on a page the size `sanitize` measured, and the PDF has no field
+ * `form.json` does not name. qpdf reads the stamped fields back.
  */
 
 import wasmUrl from '@neslinesli93/qpdf-wasm/dist/qpdf.wasm?url';
 import { expect, it } from 'vitest';
 import { fromTree, render } from '../test/engine.js';
-import { assembleQuill } from './assemble.js';
 import { toTopLeftRect } from './coords.js';
-import { inventoryPdf } from './inventory.js';
-import { normalizePdf } from './normalize.js';
-import { stripAcroForm } from './strip.js';
-import { xfaToAcroForm } from './xfa.js';
-import type { FieldInventory, QualifiedForm, Rect } from './types.js';
+import { quillify, sanitize, suggest } from './index.js';
+import type { Rect } from './index.js';
 
 type Box = [x0: number, y0: number, x1: number, y1: number];
 
@@ -63,24 +59,6 @@ async function stamped(pdf: Uint8Array) {
 	}));
 }
 
-/** Every widget kept, under a name of no meaning, typed by its kind as the fork's `qualify()` types it. */
-const named = (inventory: FieldInventory): QualifiedForm => ({
-	quill: { name: 'closure', title: 'Closure', description: 'Every widget of a fixture.' },
-	fields: inventory.widgets.map((widget, index) => ({
-		widget: widget.id,
-		name: `field_${index}`,
-		label: widget.name,
-		description: '',
-		type: ({ Tx: 'string', Btn: 'boolean', Ch: 'enum', Sig: 'string' } as const)[widget.kind],
-		multiline: widget.multiLine,
-		...(widget.kind === 'Tx' ? { example: 'x' } : {}),
-		...(widget.kind === 'Ch' ? { options: widget.options, example: widget.options[0] } : {}),
-		...(widget.radioButton ? { group: widget.name } : {}),
-		keep: true,
-		required: widget.required
-	}))
-});
-
 const fixtures = import.meta.glob<string>('../test/fixtures/*.pdf', {
 	query: '?url',
 	import: 'default',
@@ -90,14 +68,29 @@ const fixtures = import.meta.glob<string>('../test/fixtures/*.pdf', {
 for (const [path, url] of Object.entries(fixtures)) {
 	const form = path.slice(path.lastIndexOf('/') + 1).split(/[_.]/)[0];
 	it(`${form} renders with every form.json entry where it was placed, and no other field`, async () => {
-		const bytes = await xfaToAcroForm(
-			await normalizePdf(new Uint8Array(await (await fetch(url)).arrayBuffer()))
-		);
-		const inventory = await inventoryPdf(bytes);
-		const tree = assembleQuill(named(inventory), inventory, await stripAcroForm(bytes));
+		const sanitized = await sanitize(new Uint8Array(await (await fetch(url)).arrayBuffer()));
+		if (!sanitized.ok) throw new Error(`refused as ${sanitized.refusal.code}`);
+		const { pages, fields: read } = sanitized.form;
+		// suggest keeps every field a person can fill. Each text field gets a value to stamp.
+		const naming = suggest(read).map((entry, index) => ({
+			...entry,
+			...(read[index].kind === 'text' ? { example: 'x' } : {})
+		}));
+		const quillified = await quillify(sanitized.form, {
+			name: 'closure',
+			description: 'Every field of a fixture that a person can fill.',
+			fields: naming
+		});
+		if (!quillified.ok) throw new Error(JSON.stringify(quillified.problems));
+		const { tree } = quillified;
 		const { fields, widgets }: Record<string, { name: string; page: number; rect: Rect }[]> =
 			JSON.parse(new TextDecoder().decode(tree.get('form.json')));
 		const placed = [...fields, ...widgets];
+		expect(placed).toHaveLength(
+			read
+				.filter((field) => !field.readOnly)
+				.reduce((count, field) => count + field.places.length, 0)
+		);
 
 		const { quill } = await fromTree(tree);
 		const example = quill.exampleDocument()!;
@@ -111,10 +104,10 @@ for (const [path, url] of Object.entries(fixtures)) {
 		for (const { name, page, rect } of placed) {
 			const got = found.find((field) => field.name === name)!;
 			expect(got.page, name).toBe(page);
-			// The engine's page is the one the inventory measured, or a rect means nothing.
+			// The engine's page is the one sanitize measured, or a rect means nothing.
 			const [x0, y0, x1, y1] = got.mediaBox;
-			expect(x1 - x0, `${name} page width`).toBeCloseTo(inventory.pages[page].width, 3);
-			expect(y1 - y0, `${name} page height`).toBeCloseTo(inventory.pages[page].height, 3);
+			expect(x1 - x0, `${name} page width`).toBeCloseTo(pages[page].width, 3);
+			expect(y1 - y0, `${name} page height`).toBeCloseTo(pages[page].height, 3);
 			const read = toTopLeftRect(got.rect, got.mediaBox, 0);
 			for (const side of ['x', 'y', 'w', 'h'] as const)
 				expect(Math.abs(read[side] - rect[side]), `${name} ${side}`).toBeLessThanOrEqual(0.01);

@@ -34,6 +34,7 @@ export interface Form {
 
 export interface FieldNaming {
 	id: string;
+	/** A read-only field is left out whatever this says. */
 	keep: boolean;
 	name: string;
 	description: string;
@@ -58,4 +59,4 @@ export type Problem =
 	| { code: 'duplicate_name'; name: string }
 	| { code: 'text_on_non_text'; id: string }
 	/** `diagnostic` is the engine's code, such as `quill::yaml_parse_error`, and `message` its text. */
-	| { code: 'engine'; diagnostic: string; message: string };
+	| { code: 'engine'; diagnostic?: string; message: string };

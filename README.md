@@ -8,7 +8,7 @@ It is logic and tests, with no interface, and it runs in a browser.
 
 ## Status
 
-`sanitize` reads a PDF into its fields and a background with no form layer, or returns the reason it does not take the file. `suggest` names the fields from the form's own tooltips, and `check` says what is wrong with a naming. The call that builds the quill is next ([#13](https://github.com/tonguetoquill/quillify/issues/13)). The code comes from `tonguetoquill/web-app-afa-demo@842ef4207cb5`, in the order [#1](https://github.com/tonguetoquill/quillify/issues/1) lays out. [`prose/DECISIONS.md`](prose/DECISIONS.md) has what was decided and what would unlock a different answer.
+`sanitize` reads a PDF into its fields and a background with no form layer, or returns the reason it does not take the file. `suggest` names the fields from the form's own tooltips, `check` says what is wrong with a naming, and `quillify` builds the quill's files from the form and a naming. The code comes from `tonguetoquill/web-app-afa-demo@842ef4207cb5`, in the order [#1](https://github.com/tonguetoquill/quillify/issues/1) lays out. [`prose/DECISIONS.md`](prose/DECISIONS.md) has what was decided and what would unlock a different answer.
 
 ## What it leaves to the consumer
 
