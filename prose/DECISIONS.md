@@ -74,3 +74,11 @@ Every `Source:` line and the review command need the fork readable at that commi
 **Decision.** One job runs the whole gate on each push to a pull request and cancels the run it supersedes. Nothing runs on a push to `main`. Hosted CI for this repository stops at 300 billed minutes across v0.1.0. Past that, a pull request carries the local gate's output and says so.
 
 **Unlock.** A larger pool, or a self-hosted runner.
+
+## 10 Oct 2026: The pdf.js guard is applied by a verb
+
+**Context.** Stock `pdfjs-dist` 6.3.289 fails to load DAF 1288: two lines of its XFA resolver read a property off a slot that is null. The fork edits the installed worker with patch-package on postinstall. This repository's `.npmrc` turns install scripts off, and a library cannot count on a postinstall of its own to patch the copy of pdf.js its consumer installs.
+
+**Decision.** `npm run patch` makes the fork's two edits in the installed worker, and a test fails by name when they are missing. That covers this repository's own suite and nothing more. What a consumer gets is a guarded worker the package ships itself (#10).
+
+**Unlock.** pdf.js carries the guard (#47), or the move to pdf.js 6.4 shows it is no longer needed (#48). Either one removes the script, the test and the CI step.
