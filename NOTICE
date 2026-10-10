@@ -1,0 +1,29 @@
+quillify redistributes three files that are other projects' work. Everything
+else it depends on is installed by its consumer and is not in the package.
+
+assets/pdf.worker.js
+  The worker of pdf.js: build/pdf.worker.mjs of pdfjs-dist 6.3.289,
+  Copyright 2024 Mozilla Foundation, under the Apache License 2.0
+  (licenses/pdf.js-LICENSE).
+  Changed: a null guard added at two sites, and the last line, which named a
+  source map, removed. The file's first line says the same.
+
+assets/xfa-layer.js
+  Lines 1267 to 1585 of web/pdf_viewer.css of pdfjs-dist 6.3.289, unchanged,
+  under a header comment and as the text of a JavaScript module.
+  Copyright 2014 Mozilla Foundation, under the Apache License 2.0
+  (licenses/pdf.js-LICENSE).
+
+assets/qpdf.wasm
+  dist/qpdf.wasm of @neslinesli93/qpdf-wasm 0.3.0, unchanged. Its SHA-256 is
+  abd933f4ccace4f732999381b21aec8b7e3726f18a5b167fafd57f88dd440876.
+  That package declares the ISC license and ships no license text. The binary
+  is a build of qpdf 12.2.0, Copyright (c) 2005-2021 Jay Berkenbilt and
+  Copyright (c) 2022-2025 Jay Berkenbilt and Manfred Holger, under the Apache
+  License 2.0, whose text is the one in licenses/pdf.js-LICENSE. zlib and
+  libjpeg-turbo 2.1.1 are linked into it, and so is a C++ runtime.
+
+  Not in that package, and so not in licenses/: the license texts of zlib, of
+  libjpeg-turbo and of that runtime, and the notices qpdf carries in its
+  NOTICE.md for code it embeds. In qpdf 12.4.0 those are for sphlib 3.0 and
+  for a Rijndael implementation; the NOTICE.md of 12.2.0 was not read.

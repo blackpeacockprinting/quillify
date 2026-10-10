@@ -1,7 +1,7 @@
 // prose/research/pdfjs-som-null-guard.diff has the diagnosis behind the guard.
 
 import { hash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 
 const UNGUARDED = 'children = children.isXFAObjectArray ? children.children : [children];';
 const GUARDED =
@@ -25,7 +25,8 @@ if (sha256 !== QPDF_WASM) throw new Error(`qpdf.wasm hashes to ${sha256}, expect
 
 const stylesheet = readFileSync('src/xfa-layer.css', 'utf8');
 
-mkdirSync('assets', { recursive: true });
+rmSync('assets', { recursive: true, force: true });
+mkdirSync('assets');
 for (const [name, content] of [
 	[
 		'pdf.worker.js',
