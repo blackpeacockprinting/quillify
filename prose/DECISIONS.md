@@ -210,3 +210,15 @@ Adds to "Which carried tests change, and how".
 **Decision.** That case takes `{ pdf, close }` from `openPdf` where it took a task, and calls `close()` where it destroyed the task. Only the call shape changes, and no assertion does. Two tests that are not carried change with it: `background.browser.test.ts` the same way, and `page-identity.browser.test.ts`, which calls pdf.js itself and so makes its own worker from the package's worker file.
 
 **Unlock.** None.
+
+## 10 Oct 2026: The pdf.js guard lives in the worker the package ships
+
+Replaces "The pdf.js guard is applied by a verb".
+
+**Context.** `npm run patch` edited the installed worker. That covered this repository's suite and no consumer: a package cannot patch the pdf.js its consumer installs, and the worker was a module of whatever bundle the app built. The carried code reached its two other assets the same way, through Vite's `?url` and `?inline` (#10).
+
+**Decision.** `npm run assets` writes `assets/` from `node_modules`, and the library loads its worker, `qpdf.wasm` and the stage's stylesheet from there. `assets/pdf.worker.js` is the 6.3.289 worker with the two edits, without its last line, which names a source map the package does not ship, and under a first line that says it was changed, as its license asks. The script throws unless it finds exactly two unguarded sites, and unless `qpdf.wasm` has the recorded hash. Nothing edits `node_modules`. The gate runs the script first, and a test fails by name when `assets/` is missing or stale. `scripts/patch-pdfjs.js`, its test and its CI step are deleted.
+
+The source holds the worker's URL in a constant. Vite 8.3 copies the file then, and bundles and minifies it again when the URL is written inside `new Worker(...)` (#10 has both measured, in that one bundler). Each open makes a worker of its own and ends it, and the library neither reads nor writes pdf.js's global worker settings (#23).
+
+**Unlock.** pdf.js carries the guard (#47), or the move to pdf.js 6.4 shows it is no longer needed (#48). Either one leaves the dropped last line as the worker's only change.
