@@ -42,6 +42,7 @@ Every `Source:` line and the review command need the fork readable at that commi
 | `background` and `real-form`, which read the fork's copy of DD 2977 | The file is not carried: it is a converted copy whose producer is Aspose, and the published DD 2977 is dynamic XFA. A script builds the shapes those tests need. |
 | Refusal assertions | Move from sentences to codes, in a commit before the change that introduces the codes (#8). |
 | Raster assertions | Deleted with the rasterizer, a function in `inventory.ts`, in the pull request that removes it (#9). |
+| Assertions on the text of `Quill.yaml` and `example.md`, in `assemble` (both) | Each name gains quotes, in the commit that writes names as JSON strings where the fork writes them bare (#24). |
 
 **Unlock.** A new entry, written before the edit.
 
@@ -92,3 +93,13 @@ Replaces "The API waits for confirmation".
 **Decision.** I am building the proposal, with two additions the engine's behavior asked for: a problem for an empty quill description, which the engine refuses, and the engine's own code on an `engine` problem. #3 stays open. Nothing depends on the names before the first tag, so until then a rename is one pull request.
 
 **Unlock.** The maintainer's answer on #3.
+
+## 10 Oct 2026: v0.1.0 fixes four more defects of the carried code
+
+Adds to "Two releases", which names the strip fixes alone.
+
+**Context.** Four things in the carried code cannot ship in a package. A dynamic form is laid out inside the host page's document, under the host's styles (#22). A host that set its own pdf.js worker gets one without the null guard (#23). A quill or a field named `true`, `false` or `null` breaks the YAML it is written into (#24). And the refusal for a character the standard fonts cannot encode never fires, so such a form ends in an error (#65).
+
+**Decision.** v0.1.0 fixes all four, each in its own pull request with a failing test first. Everything else in the release is the fork's behavior.
+
+**Unlock.** None.
