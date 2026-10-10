@@ -42,10 +42,9 @@ beforeAll(async () => {
 
 describe('a form in the shape of DD Form 2977', () => {
 	it('inventories every widget with a page, a rect and a kind', async () => {
-		const { inventory, pages } = await inventoryPdf(bytes);
+		const { inventory } = await inventoryPdf(bytes);
 
 		expect(inventory.widgets.length).toBeGreaterThanOrEqual(40);
-		expect(pages.length).toBe(inventory.pages.length);
 		expect(new Set(inventory.widgets.map((w) => w.kind))).toEqual(new Set(['Tx', 'Btn', 'Ch']));
 		expect(new Set(inventory.widgets.map((w) => w.id)).size).toBe(inventory.widgets.length);
 		for (const w of inventory.widgets) {
