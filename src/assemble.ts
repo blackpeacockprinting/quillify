@@ -1,0 +1,154 @@
+import type {
+	FieldInventory,
+	InventoryWidget,
+	QualifiedField,
+	QualifiedForm,
+	QuillTree
+} from './types.js';
+
+/** Every format the importer builds is a first version. */
+export const QUILL_VERSION = '0.1.0';
+
+/** YAML takes a JSON string literal verbatim. */
+const q = (s: string) => JSON.stringify(s);
+
+/** A group id is snake_case; a radio group's PDF name is whatever its author typed. */
+function groupId(name: string): string {
+	const id = name
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '_')
+		.replace(/^_+|_+$/g, '');
+	return /^[a-z]/.test(id) ? id : `group_${id}`;
+}
+
+/**
+ * A `default:` says nobody need answer the field. A required field declares
+ * none, so the blueprint leaves its cell empty for the author.
+ */
+function fieldYaml(field: QualifiedField): string[] {
+	const lines = [`    ${field.name}:`];
+	const ui: string[] = [];
+	if (field.group) ui.push(`        group: ${q(groupId(field.group))}`);
+	switch (field.type) {
+		case 'string':
+			lines.push('      type: string');
+			if (!field.required) lines.push('      default: ""');
+			if (field.multiline) ui.push('        multiline: true');
+			break;
+		case 'boolean':
+			lines.push('      type: boolean', '      default: false');
+			break;
+		case 'enum': {
+			// The engine supplies the blank row and refuses it as a declared value. A
+			// dropdown with no other row offers nothing to choose, which is a text box.
+			const values = (field.options ?? []).filter((option) => option !== '');
+			if (values.length === 0) lines.push('      type: string');
+			else
+				lines.push('      type: enum', '      values:', ...values.map((v) => `        - ${q(v)}`));
+			if (!field.required) lines.push('      default: ""');
+			break;
+		}
+		case 'array':
+			lines.push('      type: array', '      items:', '        type: string');
+			if (!field.required) lines.push('      default: []');
+			ui.push('        multiline: true');
+			break;
+	}
+	if (ui.length > 0) lines.push('      ui:', ...ui);
+	lines.push(`      description: ${q(field.description)}`);
+	return lines;
+}
+
+export function quillYaml(form: QualifiedForm, fields: QualifiedField[]): string {
+	const lines = [
+		'quill:',
+		`  name: ${form.quill.name}`,
+		`  version: ${QUILL_VERSION}`,
+		'  backend: acroform',
+		`  description: ${q(form.quill.description)}`,
+		'',
+		'main:',
+		'  body:',
+		'    enabled: false'
+	];
+	const groups = [...new Set(fields.flatMap((f) => (f.group ? [groupId(f.group)] : [])))];
+	if (groups.length > 0) lines.push('  ui:', `    groups: [${groups.map(q).join(', ')}]`);
+	if (fields.length > 0) {
+		lines.push('  fields:');
+		for (const field of fields) lines.push(...fieldYaml(field));
+	}
+	return lines.join('\n') + '\n';
+}
+
+/** The sample values as the quill's example document, or null when no kept field carries one. */
+function exampleMarkdown(form: QualifiedForm, fields: QualifiedField[]): string | null {
+	const lines = fields.flatMap((f) => {
+		if (f.example === undefined || f.type === 'boolean') return [];
+		return f.type === 'array'
+			? [`${f.name}:`, `  - ${q(f.example)}`]
+			: [`${f.name}: ${q(f.example)}`];
+	});
+	if (lines.length === 0) return null;
+	return ['~~~', `$quill: ${form.quill.name}`, ...lines, '~~~', ''].join('\n');
+}
+
+/**
+ * An `acroform` quill tree from the qualified fields and the stripped background.
+ * Signatures are always unbound widgets; a dropped field leaves no widget.
+ */
+export function assembleQuill(
+	form: QualifiedForm,
+	inventory: FieldInventory,
+	formPdf: Uint8Array
+): QuillTree {
+	const byId = new Map(inventory.widgets.map((w) => [w.id, w]));
+	const widgetOf = (field: QualifiedField): InventoryWidget => {
+		const widget = byId.get(field.widget);
+		if (!widget) throw new Error(`Field ${field.name} names no widget ${field.widget}.`);
+		return widget;
+	};
+	const kept = form.fields.filter((f) => f.keep);
+	const bound = kept.filter((f) => widgetOf(f).kind !== 'Sig');
+	const signatures = kept.filter((f) => widgetOf(f).kind === 'Sig');
+
+	const formJson = {
+		schema: 'quillmark/form@0.2.0',
+		// One binding per place, all of them naming the same schema field, so a
+		// form that paints a value twice gets it in both boxes from one answer.
+		fields: bound.flatMap((f) => {
+			const w = widgetOf(f);
+			return w.places.map((place, n) => ({
+				name: placeName(w.id, n),
+				schema_field: f.name,
+				page: place.page,
+				rect: place.rect,
+				...(w.tooltip ? { tooltip: w.tooltip } : {})
+			}));
+		}),
+		widgets: signatures.flatMap((f) => {
+			const w = widgetOf(f);
+			return w.places.map((place, n) => ({
+				name: placeName(w.id, n),
+				type: 'signature',
+				page: place.page,
+				rect: place.rect,
+				...(w.tooltip ? { tooltip: w.tooltip } : {})
+			}));
+		})
+	};
+
+	const encoder = new TextEncoder();
+	const tree = new Map<string, Uint8Array>([
+		['Quill.yaml', encoder.encode(quillYaml(form, bound))],
+		['form.pdf', formPdf],
+		['form.json', encoder.encode(JSON.stringify(formJson, null, 2) + '\n')]
+	]);
+	const example = exampleMarkdown(form, bound);
+	if (example) tree.set('example.md', encoder.encode(example));
+	return tree;
+}
+
+/** Each place gets its own widget name; they share a schema field, not an identity. */
+function placeName(id: string, index: number): string {
+	return index === 0 ? id : `${id}#${index + 1}`;
+}
