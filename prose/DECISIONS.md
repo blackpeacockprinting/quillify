@@ -157,3 +157,13 @@ Adds to "Which carried tests change, and how", whose table deletes the raster as
 **Decision.** `inventoryPdf` returns the inventory alone. The rasterizer, its budget and that refusal are deleted, with the codec path and the plugin that served the codecs to the tests. A scan the fork refuses for the size of its rasters inventories here. Every caller takes the inventory where it destructured one, the carried tests among them, and no assertion changes for it.
 
 **Unlock.** A consumer adopts a namer that reads the page (#35).
+
+## 10 Oct 2026: A refusal is a code with its data
+
+**Context.** In the fork each stage refuses a PDF by throwing a sentence written for the app's user ("this app cannot open it there", "Pick a smaller one."). A package cannot ship another product's copy, and a caller cannot branch on prose (#8).
+
+**Decision.** A stage throws `Refused`, which carries a `Refusal`: a code, with the numbers and names the sentence held (`src/refusal.ts`). Its `page` counts from 0, as a `Place`'s does, where the sentences counted from 1. The codes are the ones proposed in #3 and one more, `rotated`. The plan was to delete the rotation guard as unreachable, because `normalizePdf` runs qpdf with `--flatten-rotation` before any stage reads a page. Measured, qpdf folds a page's own quarter turn into the page and leaves three rotations where they were: one inherited from the page tree, one of 450 degrees and one of -90. pdf.js reads each as a rotation, so the guard stays and refuses with the page number. The glyph refusal keeps its site and takes a code, though it cannot fire as written (#65).
+
+In the carried tests each assertion on a sentence becomes one on a code, as the table says, and a case that asserted the error's class asserts `Refused`. Beyond the table: the header comments of `refusals` and `pdfjs` stop describing an app and a person reading words, a comment in `refusals` loses "tells the person", and the `pdfjs` cases are titled by their code where they said "in words". No carried case is added or dropped. The codes no carried case reaches are asserted in a test file of this repository's own, `refusal.browser.test.ts`.
+
+**Unlock.** #3 for the names. For a rotation folded here and not refused, a published form that carries one of the three.
