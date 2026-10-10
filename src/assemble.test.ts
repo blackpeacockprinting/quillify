@@ -149,7 +149,7 @@ describe('assembleQuill', () => {
 		expect(tree.get('form.pdf')).toBe(pdf);
 		expect(text('Quill.yaml')).toMatchInlineSnapshot(`
 			"quill:
-			  name: sample_form
+			  name: "sample_form"
 			  version: 0.1.0
 			  backend: acroform
 			  description: "A sample application."
@@ -158,11 +158,11 @@ describe('assembleQuill', () => {
 			  body:
 			    enabled: false
 			  fields:
-			    full_name:
+			    "full_name":
 			      type: string
 			      default: ""
 			      description: "Full legal name of the applicant."
-			    comments:
+			    "comments":
 			      type: array
 			      items:
 			        type: string
@@ -170,7 +170,7 @@ describe('assembleQuill', () => {
 			      ui:
 			        multiline: true
 			      description: "Free-form comments, one line per element."
-			    agree:
+			    "agree":
 			      type: boolean
 			      default: false
 			      description: "Whether the applicant agrees to the terms."
@@ -187,9 +187,9 @@ describe('assembleQuill', () => {
 		});
 		expect(text('example.md')).toMatchInlineSnapshot(`
 			"~~~
-			$quill: sample_form
-			full_name: "Ada Lovelace"
-			comments:
+			$quill: "sample_form"
+			"full_name": "Ada Lovelace"
+			"comments":
 			  - "Arrived early."
 			~~~
 			"

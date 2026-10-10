@@ -171,9 +171,9 @@ describe('assembled acroform quill', () => {
 
 		const yaml = new TextDecoder().decode(tree.get('Quill.yaml'));
 		expect(yaml).toContain(
-			'    grade:\n      type: enum\n      values:\n        - "O-1"\n        - "O-2"\n'
+			'    "grade":\n      type: enum\n      values:\n        - "O-1"\n        - "O-2"\n'
 		);
-		expect(yaml).toContain('    unit:\n      type: string\n');
+		expect(yaml).toContain('    "unit":\n      type: string\n');
 		expect(quill.backendId).toBe('acroform');
 	}, 60_000);
 });

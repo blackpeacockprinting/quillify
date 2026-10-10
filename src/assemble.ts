@@ -26,7 +26,7 @@ function groupId(name: string): string {
  * none, so the blueprint leaves its cell empty for the author.
  */
 function fieldYaml(field: QualifiedField): string[] {
-	const lines = [`    ${field.name}:`];
+	const lines = [`    ${q(field.name)}:`];
 	const ui: string[] = [];
 	if (field.group) ui.push(`        group: ${q(groupId(field.group))}`);
 	switch (field.type) {
@@ -62,7 +62,7 @@ function fieldYaml(field: QualifiedField): string[] {
 export function quillYaml(form: QualifiedForm, fields: QualifiedField[]): string {
 	const lines = [
 		'quill:',
-		`  name: ${form.quill.name}`,
+		`  name: ${q(form.quill.name)}`,
 		`  version: ${QUILL_VERSION}`,
 		'  backend: acroform',
 		`  description: ${q(form.quill.description)}`,
@@ -85,11 +85,11 @@ function exampleMarkdown(form: QualifiedForm, fields: QualifiedField[]): string 
 	const lines = fields.flatMap((f) => {
 		if (f.example === undefined || f.type === 'boolean') return [];
 		return f.type === 'array'
-			? [`${f.name}:`, `  - ${q(f.example)}`]
-			: [`${f.name}: ${q(f.example)}`];
+			? [`${q(f.name)}:`, `  - ${q(f.example)}`]
+			: [`${q(f.name)}: ${q(f.example)}`];
 	});
 	if (lines.length === 0) return null;
-	return ['~~~', `$quill: ${form.quill.name}`, ...lines, '~~~', ''].join('\n');
+	return ['~~~', `$quill: ${q(form.quill.name)}`, ...lines, '~~~', ''].join('\n');
 }
 
 /**
