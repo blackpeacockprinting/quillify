@@ -83,6 +83,7 @@ function stroked(style: CSSStyleDeclaration): Edge | null {
  */
 export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 	const { layer, origin } = page;
+	const view = layer.ownerDocument.defaultView!;
 	const boxes: Box[] = [];
 	const lines: Line[] = [];
 	const runs: Run[] = [];
@@ -100,7 +101,7 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 		if (tag === 'svg' || tag === 'option' || tag === 'g' || tag === 'defs') continue;
 		if (tag === 'img' || el.classList.contains('xfaImage')) refuse('image');
 
-		const style = getComputedStyle(el);
+		const style = view.getComputedStyle(el);
 		if (style.visibility === 'hidden' || style.display === 'none') continue;
 
 		if (tag === 'line' || tag === 'rect') {
@@ -224,16 +225,18 @@ function collectText(
 	Y: (v: number) => number,
 	runs: Run[]
 ): void {
-	const measure = document.createElement('canvas').getContext('2d')!;
-	const walker = document.createTreeWalker(layer, NodeFilter.SHOW_TEXT);
-	const range = document.createRange();
+	const owner = layer.ownerDocument;
+	const view = owner.defaultView!;
+	const measure = owner.createElement('canvas').getContext('2d')!;
+	const walker = owner.createTreeWalker(layer, NodeFilter.SHOW_TEXT);
+	const range = owner.createRange();
 	for (let node = walker.nextNode(); node; node = walker.nextNode()) {
 		const text = node.nodeValue;
 		const parent = node.parentElement;
 		if (!text || !text.trim() || !parent) continue;
 		// A <select> is de-chromed above; only the option the form shows is drawn.
 		if (parent.tagName === 'OPTION' && !(parent as HTMLOptionElement).selected) continue;
-		const style = getComputedStyle(parent);
+		const style = view.getComputedStyle(parent);
 		if (style.visibility === 'hidden' || style.display === 'none') continue;
 
 		const size = parseFloat(style.fontSize);
