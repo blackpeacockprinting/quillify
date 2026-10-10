@@ -1,4 +1,4 @@
-import css from './xfa-layer.css?inline';
+import css from '../assets/xfa-layer.js';
 import type { PDFPageProxy } from 'pdfjs-dist';
 
 /** One page after the browser has solved its layout. */
