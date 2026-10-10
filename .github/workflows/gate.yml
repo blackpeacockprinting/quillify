@@ -23,5 +23,6 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - run: npm run patch
       - run: npx playwright install --with-deps --only-shell chromium
       - run: npm run gate

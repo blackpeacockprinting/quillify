@@ -1,3 +1,4 @@
+import { createReadStream } from 'node:fs';
 import { playwright } from '@vitest/browser-playwright';
 import { configDefaults, defineConfig } from 'vitest/config';
 
@@ -14,6 +15,20 @@ export default defineConfig({
 				}
 			},
 			{
+				plugins: [
+					// src/pdfjs.ts points pdf.js at /pdfjs/wasm/ for its image codecs.
+					{
+						name: 'pdfjs-codecs',
+						configureServer({ middlewares }) {
+							middlewares.use('/pdfjs/wasm', (req, res, next) => {
+								if (req.url!.includes('..')) return res.writeHead(403).end();
+								createReadStream(`node_modules/pdfjs-dist/wasm${req.url}`)
+									.on('error', next)
+									.pipe(res);
+							});
+						}
+					}
+				],
 				test: {
 					name: 'chromium',
 					include: [BROWSER],

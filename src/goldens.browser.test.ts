@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 import { inventoryPdf } from './inventory.js';
 import { normalizePdf } from './normalize.js';
+import { xfaToAcroForm } from './xfa.js';
 import type { FieldInventory } from './types.js';
 
 const fixtures = import.meta.glob<string>('../test/fixtures/*.pdf', {
@@ -21,7 +22,7 @@ for (const [path, golden] of Object.entries(goldens)) {
 	)!;
 	it(`${form} inventories as it does in the fork`, async () => {
 		const bytes = new Uint8Array(await (await fetch(fixture)).arrayBuffer());
-		const { inventory } = await inventoryPdf(await normalizePdf(bytes));
+		const { inventory } = await inventoryPdf(await xfaToAcroForm(await normalizePdf(bytes)));
 		expect(inventory).toEqual(golden);
 	}, 120_000);
 }

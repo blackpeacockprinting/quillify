@@ -5,3 +5,6 @@ prose/
 
 # A golden holds one widget per line.
 test/goldens/
+
+# Below its header, a verbatim slice of pdfjs-dist/web/pdf_viewer.css. Reformatting it breaks the diff against upstream.
+src/xfa-layer.css
