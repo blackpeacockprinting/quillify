@@ -14,6 +14,11 @@ const sourceLines = readdirSync('src')
 			.map((text, index) => ({ at: `src/${name}:${index + 1}`, text: text.trim() }))
 	);
 
+it('reaches no asset through a bundler suffix or an absolute path, in any source file', () => {
+	const found = sourceLines.filter(({ text }) => /\?(url|inline|raw)\b|['"`]\/assets\b/.test(text));
+	expect(found.map(({ at }) => at)).toEqual([]);
+});
+
 it('starts a worker in one place, from the constant that holds its URL', () => {
 	const code = sourceLines.filter(({ text }) => !text.startsWith('//') && !text.startsWith('*'));
 	expect(
