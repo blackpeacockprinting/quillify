@@ -139,3 +139,13 @@ What it costs on those forms: of the 121 links 86 stay (75 to a web address, 11 
 What a kept value holds is not read. A `/Resources` dictionary, a `/Border` array or the elements of a destination array can still reference anything, and that is what is left of #25.
 
 **Unlock.** A consumer who needs the links with no scheme or the `mailto:` ones (#68 has the counts and what each takes). A published form with a key outside a set that changes how its page paints or reads.
+
+## 10 Oct 2026: What the raster assertions take with them
+
+Adds to "Which carried tests change, and how", whose table deletes the raster assertions (#9).
+
+**Context.** Three edits ride with those deletions and are not one. The field-cap case in `refusals` builds twelve pages of noise, so that a page rastered before the cap was read would trip the raster budget first. A header comment in `published-forms` explains a count by the raster and names a script this repository does not carry. And every test that calls `inventoryPdf` destructures a result that is about to be the inventory itself.
+
+**Decision.** The field-cap case builds one blank page, its title stops at "names the whole count", and its assertion on the noisy file's size goes with the noise. Its assertion on the refusal does not change. The `published-forms` comment says what its counts are. Each call to `inventoryPdf` in a test takes the inventory where it destructured `{ inventory }`, in the commit that changes what the function returns, and no assertion changes for it.
+
+**Unlock.** None.
