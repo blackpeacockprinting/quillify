@@ -103,3 +103,13 @@ Adds to "Two releases", which names the strip fixes alone.
 **Decision.** v0.1.0 fixes all four, each in its own pull request with a failing test first. Everything else in the release is the fork's behavior.
 
 **Unlock.** None.
+
+## 10 Oct 2026: A background keeps no annotation but a link
+
+Adds to "Two releases", which puts #20 and #21 in v0.1.0.
+
+**Context.** The fork's strip removed widgets and kept every other annotation as it was (#20), and it knew a widget only by a `/Subtype` written as a name (#21). Published forms carry more than widgets and links. Counted on qpdf-decrypted copies of 1,395 distinct forms (the 59 and the AF e-Publishing pull, each file once): 116 entries in a page's `/Annots` that are neither, on 11 forms. Fifteen are marks a viewer paints over the page: 6 strikeouts, 4 text boxes, 4 lines and a stamp, on 7 forms. 38 are notes flagged hidden, and 49 are popups. 14 are no annotation at all: a script action, a name tree, the form dictionary itself, listed where an annotation belongs. 53 name an author, the 15 marks and the 38 notes.
+
+**Decision.** Of a page's annotations a background keeps its links. Every other object that reads as an annotation is deleted, whether a page lists it or not: one that says `/Type /Annot`, one with a `/Rect`, or a widget. So those 7 backgrounds do not look like the published file opened in a viewer. They show the form without the review marks left on it.
+
+**Unlock.** A published form whose printed content is itself an annotation.
