@@ -39,7 +39,7 @@ Every `Source:` line and the review command need the fork readable at that commi
 | `strip`, `assemble`, `coords`, `display-list` (both), `normalize`, `refusals`, `xfa`, and `corpus` renamed `published-forms` | Paths only. A file that runs in Chromium is named `*.browser.test.ts`. |
 | `pdfjs` | Its one XFA case moves to the pull request that carries the XFA modules. |
 | `assemble`, `background`, `radio-binding`, `rotation`, `real-form` (the browser ones) | Rewritten over a small engine harness (`init`, `Quill.fromTree`, `new Engine()`). The case that needs the app's quiver stays with the app. |
-| `background` and `real-form`, which read the fork's copy of DD 2977 | The file is not carried: it has no publisher URL on record. A script builds the shapes those tests need. |
+| `background` and `real-form`, which read the fork's copy of DD 2977 | The file is not carried: it is a converted copy whose producer is Aspose, and the published DD 2977 is dynamic XFA. A script builds the shapes those tests need. |
 | Refusal assertions | Move from sentences to codes, in a commit before the change that introduces the codes (#8). |
 | Raster assertions | Deleted with the rasterizer, a function in `inventory.ts`, in the pull request that removes it (#9). |
 

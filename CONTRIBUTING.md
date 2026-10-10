@@ -29,7 +29,7 @@ It is reviewed with `git show 842ef4207cb5:<path> | diff - <file>` in a clone of
 
 A carried test changes only by an entry in [`prose/DECISIONS.md`](prose/DECISIONS.md), written before the edit. A hostile input is built in its test, from bytes, so the repository holds no dangerous file.
 
-Fixtures are blank forms as published, and test values are notional. No filled form, and no name or identifier of a real person, goes into a fixture, a test, an issue or a pull request.
+Fixtures are blank forms, byte for byte as published, and test values are notional. Nothing a person entered into a form goes into a fixture, a test, an issue or a pull request, and neither does a name or identifier that we add. What a publisher left in its own file's metadata stays: removing it would end the identity with the published file.
 
 ## Comments and prose
 

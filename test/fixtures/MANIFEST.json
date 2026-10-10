@@ -1,0 +1,76 @@
+{
+	"DD1610_Request_and_Authorization_for_TDY_Travel.pdf": {
+		"form": "DD 1610",
+		"publisher": "esd.whs.mil",
+		"kind": "hybrid",
+		"encryption": "AESv2, R4, empty user password",
+		"sha256": "702fe2abb0225d176537840d43ec5ae6417593d52af5177f63e37b8a7137070b"
+	},
+	"DD577_Appointment_Termination_Record.pdf": {
+		"form": "DD 577",
+		"publisher": "esd.whs.mil",
+		"kind": "hybrid",
+		"encryption": "AESv2, R4, empty user password",
+		"sha256": "b160c0cbb0162f70d44b278b281481f3b01a2ca7ba8dfc45f97c76919266ccbb"
+	},
+	"DD689_Individual_Sick_Slip.pdf": {
+		"form": "DD 689",
+		"publisher": "esd.whs.mil",
+		"kind": "hybrid",
+		"encryption": "AESv2, R4, empty user password",
+		"sha256": "32aacd097e9250e469adcbdb5b312e3de520d228f8ed3706a1ff2f9c1d3a85c3"
+	},
+	"SF144_Statement_of_Prior_Federal_Service.pdf": {
+		"form": "SF 144",
+		"publisher": "opm.gov",
+		"url": "https://www.opm.gov/forms/pdf_fill/sf144.pdf",
+		"verified": "2026-10-10T06:27:53Z",
+		"kind": "plain",
+		"encryption": "none",
+		"sha256": "f12c93bf129b85a09352b1b4a1dba2704aff85ddb59130779d3544febe25f2e6"
+	},
+	"SF1152_Designation_of_Beneficiary_Unpaid_Compensation.pdf": {
+		"form": "SF 1152",
+		"publisher": "opm.gov",
+		"url": "https://www.opm.gov/forms/pdf_fill/sf1152.pdf",
+		"verified": "2026-10-10T06:28:01Z",
+		"kind": "plain",
+		"encryption": "AESv2, R4, empty user password",
+		"sha256": "932daa6337cd6dec94443858fdd308947c9c81b5de2676abc6cd657181e49184"
+	},
+	"SF182_Authorization_Agreement_and_Certification_of_Training.pdf": {
+		"form": "SF 182",
+		"publisher": "opm.gov",
+		"kind": "plain",
+		"encryption": "none",
+		"sha256": "6f3bc58aaa8adfabc3f55d39df3a59ad36908be1ef5865a3cb90f4370d5b1eee"
+	},
+	"DD2875_System_Authorization_Access_Request.pdf": {
+		"form": "DD 2875",
+		"publisher": "esd.whs.mil",
+		"kind": "dynamic",
+		"encryption": "none",
+		"sha256": "e7247a22dac5633d00e761724f169d32186853300b9eec6d870df35103401885"
+	},
+	"DAF988_Leave_Request_Authorization.pdf": {
+		"form": "DAF 988",
+		"publisher": "static.e-publishing.af.mil",
+		"kind": "dynamic",
+		"encryption": "AESv2, R4, empty user password",
+		"sha256": "c9ea8e6b5e91d49ffce71012bda14bcb13be0dc19242945a321ff5f50dff3904"
+	},
+	"DAF1288_Application_for_Ready_Reserve_Assignment.pdf": {
+		"form": "DAF 1288",
+		"publisher": "static.e-publishing.af.mil",
+		"kind": "dynamic",
+		"encryption": "AESv2, R4, empty user password",
+		"sha256": "f72990b29decd6992ef89f76709acdfefe2ea5b3a5749f6899b46ba2e93a6cd9"
+	},
+	"acroform-sample.pdf": {
+		"form": "synthetic",
+		"generator": "scripts/make-acroform-fixture.js",
+		"kind": "plain",
+		"encryption": "none",
+		"sha256": "7ef77452b3baa92730f9e10165c7fe2862b16e72155da5ca6fa9979b977a225d"
+	}
+}
