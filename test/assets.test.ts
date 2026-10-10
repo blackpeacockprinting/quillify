@@ -1,0 +1,74 @@
+import { hash } from 'node:crypto';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { expect, it } from 'vitest';
+
+const STALE = 'assets/ is missing or stale. Run `npm run assets`.';
+const asset = (name: string) =>
+	existsSync(`assets/${name}`) ? readFileSync(`assets/${name}`) : Buffer.alloc(0);
+
+const sourceLines = readdirSync('src')
+	.filter((name) => name.endsWith('.ts') && !name.endsWith('.test.ts'))
+	.flatMap((name) =>
+		readFileSync(`src/${name}`, 'utf8')
+			.split('\n')
+			.map((text, index) => ({ at: `src/${name}:${index + 1}`, text: text.trim() }))
+	);
+
+it('starts a worker in one place, from the constant that holds its URL', () => {
+	const code = sourceLines.filter(({ text }) => !text.startsWith('//') && !text.startsWith('*'));
+	expect(
+		code
+			.filter(({ text }) => /new Worker\(|new URL\(.*pdf\.worker/.test(text))
+			.map(({ text }) => text)
+	).toEqual([
+		"const WORKER = new URL('../assets/pdf.worker.js', import.meta.url);",
+		"const port = new Worker(WORKER, { type: 'module' });"
+	]);
+});
+
+it('ships the pdf.js worker under a first line that says it was changed', () => {
+	const [first] = asset('pdf.worker.js').toString().split('\n', 1);
+	expect(first, STALE).toMatch(/^\/\* The worker of pdfjs-dist 6\.3\.289 .*changed.*\*\/$/);
+});
+
+it('ships the pdf.js worker with the null guard at both sites and no site without it', () => {
+	const worker = asset('pdf.worker.js').toString();
+	expect(
+		[
+			worker.split('children == null ? [] : children.isXFAObjectArray').length - 1,
+			worker.split('children = children.isXFAObjectArray').length - 1
+		],
+		STALE
+	).toEqual([2, 0]);
+});
+
+it('ships the qpdf.wasm whose hash is recorded', () => {
+	expect(hash('sha256', asset('qpdf.wasm')), STALE).toBe(
+		'abd933f4ccace4f732999381b21aec8b7e3726f18a5b167fafd57f88dd440876'
+	);
+});
+
+it('ships the stage stylesheet as the default export of a module', async () => {
+	const stylesheet = await import('../assets/xfa-layer.js').catch(() => ({ default: '' }));
+	expect(stylesheet.default, STALE).toBe(readFileSync('src/xfa-layer.css', 'utf8'));
+});
+
+it('ships the pdf.js worker as the installed one but for the notice, the guard and the map', () => {
+	const UNGUARDED = 'children = children.isXFAObjectArray ? children.children : [children];';
+	const GUARDED =
+		'children = children == null ? [] : children.isXFAObjectArray ? children.children : [children];';
+	const installed = readFileSync('node_modules/pdfjs-dist/build/pdf.worker.mjs', 'utf8').split(
+		'\n'
+	);
+	const shipped = asset('pdf.worker.js').toString().split('\n').slice(1);
+	expect(shipped, STALE).toHaveLength(installed.length);
+
+	const differing = installed.flatMap((line, index) =>
+		line === shipped[index] ? [] : [[line.trim(), shipped[index].trim()]]
+	);
+	expect(differing, STALE).toEqual([
+		[UNGUARDED, GUARDED],
+		[UNGUARDED, GUARDED],
+		['//# sourceMappingURL=pdf.worker.mjs.map', '']
+	]);
+});
