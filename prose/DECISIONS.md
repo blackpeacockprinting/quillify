@@ -123,3 +123,19 @@ Adds to "Which carried tests change, and how".
 **Decision.** That case asserts that no annotation is left, and its title says so. `strip-actions.test.ts` holds a well-formed link. No other assertion in the carried test changes.
 
 **Unlock.** The sample is regenerated with a string for its address (#56).
+
+## 10 Oct 2026: A page and a link keep a named set of keys
+
+Adds to "Two releases" and to "v0.1.0 fixes four more defects of the carried code". v0.1.0 also takes #26 and four levels of #25: the page tree, the page, the link and its action. The trailer, and what a kept value holds, stay with v0.2.0.
+
+**Context.** The strip named what it took off a page (`/Annots`, `/CropBox`) and kept the rest, so a page action, a thumbnail or an application's private data rode into every background, and a link kept any action with anything chained after it (#18, #19, #26). Naming each key that can act means reading the specification for the next one nobody thought of (#25). What published forms use is small, and it was counted on qpdf-decrypted copies of 1,395 distinct forms (the 59 and the AF e-Publishing pull, each file once): 1,792 pages using 19 keys, 1,406 page tree nodes using 6, and 121 links using 15.
+
+**Decision.** `stripAcroForm` keeps of a page tree node, of a page, of a link and of a link's action the keys listed at the top of `strip.ts`, and deletes every other. A link stays when it leads one way (by an `/A` or by a `/Dest`, never both, with nothing chained by `/Next`) and that way is a `/URI` that begins `http://` or `https://` in either case, a `/GoTo` to an explicit destination, or an explicit `/Dest`. The action a link keeps is a copy. A page object the page tree does not hold is deleted, as an object that reads as an annotation is.
+
+The address is read from the string as pdf-lib decodes it. Two spellings the specification allows decode differently there, a hex string with white space in it and a literal split over lines, and `normalizePdf` writes neither.
+
+What it costs on those forms: of the 121 links 86 stay (75 to a web address, 11 inside the file) and 35 go (20 with no scheme, such as `www.va.gov`; 14 `mailto:`; one `file:`). The page keys that go are `/ArtBox`, `/BleedBox` and `/TrimBox` (18 pages each), `/Thumb` (13), `/PieceInfo` (3), `/LastModified` (3), `/B` (2) and `/Marked` (1). The `/CropBox` is folded into the MediaBox as before. One page tree node loses `/ITXT`, and one a `/MediaBox` that its page has by then taken as its own. The link keys that go are `/NM` and `/P`. With annotations hidden, every page paints as it did: 1,792 pages in the 1,395 files (Poppler 26.08.0, 60 dpi, crop box).
+
+What a kept value holds is not read. A `/Resources` dictionary, a `/Border` array or the elements of a destination array can still reference anything, and that is what is left of #25.
+
+**Unlock.** A consumer who needs the links with no scheme or the `mailto:` ones (#68 has the counts and what each takes). A published form with a key outside a set that changes how its page paints or reads.
