@@ -7,7 +7,6 @@
 
 import { expect, it } from 'vitest';
 import { normalizePdf } from './normalize.js';
-import { loadPdfjs } from './pdfjs.js';
 import { stripAcroForm } from './strip.js';
 import { xfaToAcroForm } from './xfa.js';
 
@@ -16,11 +15,18 @@ const fixtures = import.meta.glob<string>('../test/fixtures/*.pdf', {
 	import: 'default',
 	eager: true
 });
+const WORKER = new URL('../assets/pdf.worker.js', import.meta.url);
 
 async function painted(bytes: Uint8Array) {
-	const { AnnotationMode, getDocument } = await loadPdfjs();
-	// pdf.js takes the buffer it is handed, so it gets a copy.
-	const task = getDocument({ data: bytes.slice(), wasmUrl: '/node_modules/pdfjs-dist/wasm/' });
+	const { AnnotationMode, PDFWorker, getDocument } = await import('pdfjs-dist');
+	const port = new Worker(WORKER, { type: 'module' });
+	const worker = PDFWorker.create({ port });
+	const task = getDocument({
+		// pdf.js takes the buffer it is handed, so it gets a copy.
+		data: bytes.slice(),
+		wasmUrl: '/node_modules/pdfjs-dist/wasm/',
+		worker
+	});
 	try {
 		const pdf = await task.promise;
 		const pages: { width: number; height: number; pixels: Uint32Array }[] = [];
@@ -38,6 +44,8 @@ async function painted(bytes: Uint8Array) {
 		return pages;
 	} finally {
 		await task.destroy();
+		worker.destroy();
+		port.terminate();
 	}
 }
 

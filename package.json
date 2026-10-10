@@ -8,12 +8,12 @@
 		"node": ">=24"
 	},
 	"scripts": {
-		"gate": "npm run lint && npm run check && npm test",
+		"gate": "npm run assets && npm run lint && npm run check && npm test",
 		"lint": "prettier --check .",
 		"format": "prettier --write .",
 		"check": "tsc",
 		"test": "vitest run",
-		"patch": "node scripts/patch-pdfjs.js"
+		"assets": "node scripts/assets.js"
 	},
 	"devDependencies": {
 		"@quillmark/wasm": "0.124.0",

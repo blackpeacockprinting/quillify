@@ -38,9 +38,9 @@ function inkOf(data: Uint8ClampedArray): number {
 }
 
 async function inkFromPdf(bytes: Uint8Array): Promise<number> {
-	const task = await openPdf(bytes);
+	const { pdf, close } = await openPdf(bytes);
 	try {
-		const page = await (await task.promise).getPage(1);
+		const page = await pdf.getPage(1);
 		const viewport = page.getViewport({ scale: 1 });
 		const canvas = document.createElement('canvas');
 		canvas.width = Math.ceil(viewport.width);
@@ -49,7 +49,7 @@ async function inkFromPdf(bytes: Uint8Array): Promise<number> {
 		const ctx = canvas.getContext('2d')!;
 		return inkOf(ctx.getImageData(0, 0, canvas.width, canvas.height).data);
 	} finally {
-		await task.destroy();
+		await close();
 	}
 }
 

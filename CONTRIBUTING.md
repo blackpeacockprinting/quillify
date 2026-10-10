@@ -11,9 +11,9 @@
 
 ## The gate
 
-`npm run gate` is the one verb: Prettier, `tsc`, then Vitest's two projects. A test file's name picks its runner: `*.browser.test.ts` runs in headless Chromium and every other test file in node. `npm run format` rewrites what `npm run lint` flags.
+`npm run gate` is the one verb: `npm run assets`, Prettier, `tsc`, then Vitest's two projects. A test file's name picks its runner: `*.browser.test.ts` runs in headless Chromium and every other test file in node. `npm run format` rewrites what `npm run lint` flags.
 
-Tools are pinned exactly and installed with `npm ci`. `npm run patch` guards two lines in the installed pdf.js worker so that DAF 1288 loads, and has to run after every install because `.npmrc` turns install scripts off. `npx playwright install --only-shell chromium` fetches the browser the Chromium project drives.
+Tools are pinned exactly and installed with `npm ci`. `npm run assets` writes `assets/` from `node_modules` (the pdf.js worker with two lines guarded so that DAF 1288 loads, `qpdf.wasm` and the stage's stylesheet as a module), and the gate runs it first. `npx playwright install --only-shell chromium` fetches the browser the Chromium project drives.
 
 ## Carried code
 

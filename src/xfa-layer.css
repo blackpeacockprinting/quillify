@@ -4,10 +4,10 @@
  * style of its own; without these rules every field lays out at its content
  * size and the geometry harvested from it is fiction.
  *
- * Imported `?inline` and injected into a <style> beside the offscreen host, so
- * none of it reaches the app's own document. On a pdfjs-dist upgrade the copy
- * goes stale silently; the fixed-rect assertion in xfa.svelte.test.ts is what
- * notices.
+ * Shipped as a module's text and injected into a <style> beside the offscreen
+ * host. The `:root` rules below reach the app's own document all the same.
+ * On a pdfjs-dist upgrade the copy goes stale silently; the fixed-rect
+ * assertion in xfa.browser.test.ts is what notices.
  */
 
 :root{
