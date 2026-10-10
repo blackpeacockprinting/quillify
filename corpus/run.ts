@@ -6,6 +6,7 @@
 
 import { expect, inject, it } from 'vitest';
 import { quillify, sanitize, suggest } from '../src/index.js';
+import { expectClosure } from '../test/closure.js';
 import { fromTree, render } from '../test/engine.js';
 import manifest from './manifest.json' with { type: 'json' };
 
@@ -21,8 +22,9 @@ it('the directory holds every form of the manifest and no other PDF', () => {
 });
 
 /**
- * A refusal's code, or `converted` once the engine has rendered the quill, with
- * what was read. `why` is the refusal or the problems, for the failure to print.
+ * A refusal's code, or `converted` once the engine has stamped a field at every
+ * place `form.json` gives, with what was read. `why` is the refusal or the
+ * problems, for the failure to print.
  */
 async function outcome(pdf: Uint8Array) {
 	const read = await sanitize(pdf);
@@ -35,15 +37,20 @@ async function outcome(pdf: Uint8Array) {
 	});
 	if (!built.ok) return { outcome: 'problems', why: built.problems };
 	const { ref, quill } = await fromTree(built.tree);
-	await render(quill, `~~~\n$quill: ${ref}\n$kind: main\n~~~\n`);
+	const rendered = await render(quill, `~~~\n$quill: ${ref}\n$kind: main\n~~~\n`);
 	quill.free();
-	return { outcome: 'converted', pages: form.pages.length, fields: form.fields.length };
+	return {
+		outcome: 'converted',
+		pages: form.pages.length,
+		fields: form.fields.length,
+		places: await expectClosure(form.pages, built.tree, rendered)
+	};
 }
 
-for (const { form, sha256, outcome: expected, pages, fields } of manifest)
+for (const { form, sha256, outcome: expected, pages, fields, places } of manifest)
 	it(`${form}: ${expected}`, async () => {
 		const response = await fetch(found[sha256]);
 		expect(response.ok, `${found[sha256]} answered ${response.status}`).toBe(true);
 		const { why, ...measured } = await outcome(new Uint8Array(await response.arrayBuffer()));
-		expect(measured, JSON.stringify(why)).toEqual({ outcome: expected, pages, fields });
+		expect(measured, JSON.stringify(why)).toEqual({ outcome: expected, pages, fields, places });
 	});
