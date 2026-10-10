@@ -167,3 +167,13 @@ Adds to "Which carried tests change, and how", whose table deletes the raster as
 In the carried tests each assertion on a sentence becomes one on a code, as the table says, and a case that asserted the error's class asserts `Refused`. Beyond the table: the header comments of `refusals` and `pdfjs` stop describing an app and a person reading words, a comment in `refusals` loses "tells the person", and the `pdfjs` cases are titled by their code where they said "in words". No carried case is added or dropped. The codes no carried case reaches are asserted in a test file of this repository's own, `refusal.browser.test.ts`.
 
 **Unlock.** #3 for the names. For a rotation folded here and not refused, a published form that carries one of the three.
+
+## 10 Oct 2026: The inventory leaves out what its types do not cover
+
+Adds to "v0.1.0 fixes four more defects of the carried code".
+
+**Context.** In the fork a server route parsed the inventory against a schema before anything used it. A file with a widget of an unknown field type, or with a choice option that was no string, was answered with an error for the whole request. This package has no such route, so those values reached a caller under types that forbid them (#79).
+
+**Decision.** The inventory leaves out a widget whose `/FT` names none of the four field types, and an option of a choice that is not a string. The rest of the file is read as before. None of the 1,351 Air Force forms pulled for #54 has such a widget or option, so no measured form changes.
+
+**Unlock.** A consumer that has to be told a file held one, which is a refusal code or a count on the form.

@@ -2,27 +2,31 @@ import { PDFDocument, PDFHexString, PDFName, PDFString } from 'pdf-lib';
 import { toTopLeftRect } from './coords.js';
 import { openPdf } from './pdfjs.js';
 import { Refused } from './refusal.js';
-import { MAX_PAGES, MAX_WIDGETS } from './types.js';
+import { MAX_PAGES, MAX_WIDGETS, WIDGET_KINDS } from './types.js';
 import type { FieldInventory, InventoryWidget, WidgetKind } from './types.js';
 
 interface Annotation {
 	subtype: string;
 	hidden?: boolean;
 	fieldName?: string;
-	fieldType?: WidgetKind;
+	fieldType?: string | null;
 	rect: [number, number, number, number];
 	multiLine?: boolean;
 	radioButton?: boolean;
 	checkBox?: boolean;
 	pushButton?: boolean;
 	combo?: boolean;
-	options?: { exportValue: string; displayValue: string }[];
+	options?: { exportValue: string | string[] | null }[];
 	readOnly?: boolean;
 	required?: boolean;
 	alternativeText?: string;
 	maxLen?: number;
 	buttonValue?: string | null;
 }
+
+/** pdf.js passes on whatever name a file gives `/FT`. */
+const isWidgetKind = (type: unknown): type is WidgetKind =>
+	WIDGET_KINDS.includes(type as WidgetKind);
 
 export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory> {
 	const task = await openPdf(bytes);
@@ -64,7 +68,8 @@ export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory> {
 			const annotations = (await page.getAnnotations()) as Annotation[];
 			for (const a of annotations) {
 				// A push button runs an action; it holds no value, so it is no field.
-				if (a.subtype !== 'Widget' || a.hidden || !a.fieldType || a.pushButton) continue;
+				if (a.subtype !== 'Widget' || a.hidden || !isWidgetKind(a.fieldType) || a.pushButton)
+					continue;
 				const name = a.fieldName ?? '';
 				const place = { page: index, rect: toTopLeftRect(a.rect, view, page.rotate) };
 				// One name is one value in the file: typing into any widget that
@@ -88,7 +93,9 @@ export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory> {
 					checkBox: a.checkBox ?? false,
 					radioButton: a.radioButton ?? false,
 					combo: a.combo ?? false,
-					options: (a.options ?? []).map((o) => o.exportValue),
+					options: (a.options ?? [])
+						.map((o) => o.exportValue)
+						.filter((value) => typeof value === 'string'),
 					readOnly: a.readOnly ?? false,
 					required: a.required ?? false,
 					tooltip: a.alternativeText || inherited.get(name) || undefined,
