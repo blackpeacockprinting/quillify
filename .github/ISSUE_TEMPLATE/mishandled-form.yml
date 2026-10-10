@@ -1,0 +1,50 @@
+name: A form quillify mishandles
+description: A published form quillify refuses or converts wrongly.
+type: Bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Blank forms as published only. Do not attach or link a filled copy, and do not paste anything a person typed into one.
+  - type: input
+    id: form
+    attributes:
+      label: Form
+      description: Its number and title, as printed.
+      placeholder: DD Form 2875, System Authorization Access Request
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Where it is published
+      description: The publisher's URL for the blank form. Link it. Do not attach the file.
+    validations:
+      required: true
+  - type: dropdown
+    id: outcome
+    attributes:
+      label: What happened
+      options:
+        - It was refused
+        - It converted with fields missing or extra
+        - It converted with fields off their boxes
+        - It converted and the page looks wrong
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: What you saw
+      description: What it said, or which fields and where.
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: quillify, the engine, and the browser.
+      placeholder: quillify 0.1.0, @quillmark/wasm 0.124.0, Chrome 153
+    validations:
+      required: true
