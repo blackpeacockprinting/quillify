@@ -36,3 +36,9 @@ One form per line: its number, its size in bytes, its hash, its `kind` and its `
 38 of the 59 are encrypted with an empty user password: 35 with AES-128, one with AES-256 and two with RC4.
 
 The forms are Department of Defense and Department of the Air Force forms, Standard and Optional Forms, and forms of the IRS, the VA, USCIS, the Department of Labor and the Executive Office for Immigration Review.
+
+## The Air Force files
+
+`af-epubs.manifest.json` is a second list: the 1,354 PDFs pulled from the Air Force's form lists on 10 October 2026, one per line: the form's number, title, prescribing publication, format and date as the index gives them, its list, its URL and when it was fetched, its size and hash, its kind and encryption, and what the library did with it. [`prose/research/AF_EPUBS_FORMS.md`](../prose/research/AF_EPUBS_FORMS.md) has how they were pulled and the tables. A test in the gate holds the list's totals.
+
+`npm run corpus` does not read this list. 17 of its files end `sanitize` with an error or never finish ([#80](https://github.com/tonguetoquill/quillify/issues/80), [#84](https://github.com/tonguetoquill/quillify/issues/84), [#85](https://github.com/tonguetoquill/quillify/issues/85), [#86](https://github.com/tonguetoquill/quillify/issues/86)), and a run that expects that is no check. The run that measured them is not in the repository.
