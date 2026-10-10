@@ -14,11 +14,11 @@
  * it. On a file that needs nothing it is a rewrite.
  */
 
-import wasmUrl from '@neslinesli93/qpdf-wasm/dist/qpdf.wasm?url';
 import { openPdf } from './pdfjs.js';
 import { Refused } from './refusal.js';
 import { MAX_BYTES } from './types.js';
 
+const WASM = new URL('../assets/qpdf.wasm', import.meta.url);
 const IN = '/in.pdf';
 const OUT = '/out.pdf';
 
@@ -36,11 +36,16 @@ interface Qpdf {
 let qpdf: Promise<Qpdf> | null = null;
 
 function load(): Promise<Qpdf> {
-	qpdf ??= import('@neslinesli93/qpdf-wasm').then((mod) =>
-		(mod.default as unknown as (opts: { locateFile: () => string }) => Promise<Qpdf>)({
-			locateFile: () => wasmUrl
-		})
-	);
+	qpdf ??= import('@neslinesli93/qpdf-wasm')
+		.then((mod) =>
+			(mod.default as unknown as (opts: { locateFile: () => string }) => Promise<Qpdf>)({
+				locateFile: () => WASM.href
+			})
+		)
+		.catch((cause: unknown) => {
+			qpdf = null;
+			throw new Error(`qpdf.wasm did not load from ${WASM}`, { cause });
+		});
 	return qpdf;
 }
 
