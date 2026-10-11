@@ -13,25 +13,46 @@ const snake = (text: string) =>
 /** The last segment of the LiveCycle id `form1[0].page1[0].Header[0].dateReq[0]` is `dateReq`. */
 const lastSegment = (path: string) => path.slice(path.lastIndexOf('.') + 1).replace(/\[\d+\]$/, '');
 
+const squeeze = (text: string) => text.trim().replace(/\s+/g, ' ');
+
+const lead = (words: string) => (/^[a-z]/.test(words) ? words : words ? `field_${words}` : 'field');
+
+/** The whole words of `words` that fit in `limit`, or nothing when no whole word does. */
+function whole(words: string, limit: number) {
+	if (words.length <= limit) return words;
+	const head = words.slice(0, Math.max(0, words.lastIndexOf('_', limit)));
+	return head === 'field' ? '' : head;
+}
+
+/** `words` cut to `limit`: the whole words that fit, or its first `limit` characters when no whole word does. */
+const fit = (words: string, limit: number) => whole(words, limit) || words.slice(0, limit);
+
 export function suggest(fields: readonly Field[]): FieldNaming[] {
+	// Options of one group whose tooltips read alike are told apart by their on-states.
+	const tooltips = fields.map((field) => snake(field.tooltip ?? ''));
+	const keys = fields.map((field, at) =>
+		field.kind === 'radio' && tooltips[at] ? `${tooltips[at]}\0${field.group}` : ''
+	);
+	const once = new Set<string>();
+	const alike = new Set<string>();
+	for (const key of keys) if (key) (once.has(key) ? alike : once).add(key);
+
 	const taken = new Set<string>();
-	return fields.map((field) => {
+	return fields.map((field, at) => {
+		const radio = field.kind === 'radio' ? field : undefined;
+		const said = radio && alike.has(keys[at]) ? squeeze(radio.on ?? '') : '';
+		const on = snake(said);
+		const head = on && whole(lead(tooltips[at]), MAX_LENGTH - 1 - on.length);
 		const words =
-			snake(field.tooltip ?? '') ||
-			snake(
-				field.kind === 'radio'
-					? `${lastSegment(field.group)} ${field.on ?? ''}`
-					: lastSegment(field.id)
-			);
-		let base = /^[a-z]/.test(words) ? words : words ? `field_${words}` : 'field';
-		if (base.length > MAX_LENGTH) {
-			const whole = base.slice(0, Math.max(0, base.lastIndexOf('_', MAX_LENGTH)));
-			base = whole && whole !== 'field' ? whole : base.slice(0, MAX_LENGTH);
-		}
+			on ||
+			tooltips[at] ||
+			snake(radio ? `${lastSegment(radio.group)} ${radio.on ?? ''}` : lastSegment(field.id));
+		const base = head ? `${head}_${on}` : fit(lead(words), MAX_LENGTH);
 		let name = base;
 		for (let n = 2; taken.has(name); n++) name = `${base}_${n}`;
 		taken.add(name);
-		const description = (field.tooltip ?? '').trim().replace(/\s+/g, ' ');
+		const tooltip = squeeze(field.tooltip ?? '');
+		const description = said ? `${tooltip} (${said})` : tooltip;
 		return { id: field.id, keep: !field.readOnly, name, description };
 	});
 }
