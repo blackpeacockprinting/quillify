@@ -10,6 +10,7 @@ export type Refusal =
 	| { code: 'no_fields'; xfa: boolean }
 	| { code: 'too_many_pages'; pages: number; limit: number }
 	| { code: 'too_many_fields'; fields: number; limit: number }
+	| { code: 'layout'; detail: string }
 	| {
 			code: 'unpaintable';
 			page: number;

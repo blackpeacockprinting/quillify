@@ -49,4 +49,3 @@ The host page still reaches the frame element. A rule that hides it, or a script
 - #46 qpdf.wasm is a prebuilt binary from one publisher.
 - #68 A link to an address with no scheme, or to a mailto: address, is removed.
 - #86 sanitize has no deadline. A file that pdf.js never finishes laying out leaves it pending, with its frame in the host page's body. The one kind of template known to do that, an overflow leader before a row that cannot fit, is guarded in the worker the package ships. Until there is a deadline, nothing but the size cap bounds how long a dynamic form takes: pdf.js lays out every page in its worker to count the pages, and one page can hold any number of fields. A field tree 20,000 deep, a file of 1.9 MB, keeps sanitize 99 s.
-- #139 Any failure of pdf.js's XFA layout ends sanitize with one TypeError.

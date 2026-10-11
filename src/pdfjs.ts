@@ -5,6 +5,10 @@ import type { PDFDocumentProxy } from 'pdfjs-dist';
 // inside `new Worker(...)`, the URL makes it bundle the file again.
 const WORKER = new URL('../assets/pdf.worker.js', import.meta.url);
 
+// The shipped worker rejects an open with what pdf.js's XFA layout threw, under
+// this prefix.
+const LAYOUT = 'XFA layout: ';
+
 /**
  * A document on a worker of its own, which `close` ends. A file pdf.js rejects
  * is refused here, so it carries the same code whichever stage opens it.
@@ -41,6 +45,8 @@ export async function openPdf(
 		if (!answers) throw err;
 		if (err instanceof pdfjs.PasswordException) throw new Refused({ code: 'password' });
 		if (err instanceof pdfjs.InvalidPDFException) throw new Refused({ code: 'not_pdf' });
+		if (err instanceof Error && err.message.startsWith(LAYOUT))
+			throw new Refused({ code: 'layout', detail: err.message.slice(LAYOUT.length) });
 		// pdf.js raises a plain Error for an encryption it does not know, which is
 		// what a certificate-based PubSec file looks like.
 		if (err instanceof Error && /encryp/i.test(err.message))
