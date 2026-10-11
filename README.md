@@ -86,7 +86,7 @@ Outside `code`, `kind`, `construct` and `diagnostic`, a string in a `Form`, a re
 
 ## What it does to a PDF
 
-1. **Normalize.** qpdf, compiled to WebAssembly, removes the encryption an empty password opens, folds page rotation into the page and joins each page's content streams.
+1. **Normalize.** qpdf, compiled to WebAssembly, removes the encryption an empty password opens, folds page rotation into the page and writes every object outside an object stream.
 2. **Convert.** For a dynamic form, pdf.js lays the XFA template out in a sandboxed frame, whose document takes no rule from the host page and gives it none, and the layout is redrawn as a static PDF with an AcroForm field where each XFA field sat.
 3. **Inventory.** Each widget is read: its kind, its page and rect, its flags and its tooltip.
 4. **Strip.** pdf-lib removes the form layer. Of the catalog, of each page and of each link, a named set of keys stays, and every object nothing reaches is dropped.

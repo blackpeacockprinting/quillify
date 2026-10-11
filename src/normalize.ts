@@ -5,11 +5,12 @@
  * `ignoreEncryption`, write plaintext into a file that still declares itself
  * encrypted.
  *
- * They also arrive with a page's `/Contents` as an array: DD 1610 and DD 577
- * carry eight on their first page. `--coalesce-contents` folds them into one,
- * which is what DD 689 has. `--flatten-rotation` folds a page's own quarter
- * turn into its content, since the engine rejects a page that carries
- * `/Rotate` (`rotation.browser.test.ts`).
+ * `--flatten-rotation` folds a page's own quarter turn into its content, since
+ * the engine rejects a page that carries `/Rotate`
+ * (`rotation.browser.test.ts`). `--object-streams=disable` writes every object
+ * in the open, so pdf.js and pdf-lib, which read what qpdf wrote, inflate no
+ * object stream. A page's content streams stay apart, as the engine paints
+ * them (`background.browser.test.ts`), and a Flate stream is copied as stored.
  *
  * Unconditional, so there is one path and no guessing about which files need
  * it. On a file that needs nothing it is a rewrite.
@@ -54,7 +55,7 @@ function load(): Promise<Qpdf> {
  * The same PDF with its encryption removed and a page's own quarter turn folded
  * into the page. qpdf exits non-zero on warnings it recovered from, so what is
  * tested is that it wrote an output file. A file qpdf writes nothing for is
- * refused: every later step reads these bytes as decrypted and coalesced.
+ * refused: every later step reads these bytes as decrypted.
  */
 export async function normalizePdf(bytes: Uint8Array): Promise<Uint8Array> {
 	// Before the module loads, because this is the step that allocates. The
@@ -67,7 +68,7 @@ export async function normalizePdf(bytes: Uint8Array): Promise<Uint8Array> {
 	const { FS } = mod;
 	try {
 		FS.writeFile(IN, bytes);
-		mod.callMain([IN, '--decrypt', '--flatten-rotation', '--coalesce-contents', OUT]);
+		mod.callMain([IN, '--decrypt', '--flatten-rotation', '--object-streams=disable', OUT]);
 		const out = FS.readFile(OUT);
 		if (out.byteLength > 0) return new Uint8Array(out);
 	} catch {
