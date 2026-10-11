@@ -1,9 +1,9 @@
 /**
- * Why the importer refuses a rotated page. The renderer stamps a fresh form onto
- * the background and its spine reads page geometry directly, so a page carrying
- * /Rotate is rejected there. The refusal in `inventory.ts` states that limit
- * early, where the message can name the page; this pins the engine behavior it
- * stands on, so a renderer that later handles rotation shows up as a failure here.
+ * Why the library refuses a page that still carries /Rotate after qpdf. The
+ * engine rejects such a page when it renders, and the refusal in `inventory.ts`
+ * states that limit early, where it can name the page. This pins the engine
+ * behavior it stands on, so a renderer that later handles rotation shows up as
+ * a failure here.
  */
 
 import { PDFDocument, StandardFonts, degrees } from 'pdf-lib';

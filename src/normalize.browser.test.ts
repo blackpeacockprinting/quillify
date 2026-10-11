@@ -1,6 +1,6 @@
 /**
- * Real government forms arrive locked, and pdf-lib carries no decryption. qpdf
- * runs first so the inventory and the background strip read the same decrypted
+ * Published forms arrive locked, and pdf-lib carries no decryption. qpdf runs
+ * first so the inventory and the background strip read the same decrypted
  * bytes.
  */
 

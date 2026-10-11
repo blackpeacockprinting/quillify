@@ -259,3 +259,13 @@ Adds to "The pdf.js guard lives in the worker the package ships". Decided with t
 `NOTICE` names the three files that are other projects' work, and a test holds it to the installed versions. For `qpdf.wasm` it says what the tarball lacks. The wrapper ships no license text, so the texts of zlib, of libjpeg-turbo and of the C++ runtime linked into the binary, and the notices qpdf carries in its own `NOTICE.md`, are in neither place. That is settled before a tarball goes to anyone outside the organization, with the license (#4) or with a binary built here (#46).
 
 **Unlock.** A registry (#5) changes what `private` and `files` say. A second entry point takes a consumer that cannot get what it needs from the four functions.
+
+## 10 Oct 2026: A carried test's comments are reworded
+
+Adds to "Which carried tests change, and how".
+
+**Context.** The carried modules and tests came with their comments, and some of those are false or foreign here (#59). They count a corpus this repository does not hold, name the app's wizard, its naming pass and its server, or give a cause nothing here measured. A port commit could not fix them, since its diff against the source touches imports alone.
+
+**Decision.** One pull request rewords the comments of the carried modules and of nine carried tests: `assemble` and `normalize` (the browser ones), `background`, `display-list` (the node one), `published-forms`, `radio-binding`, `real-form`, `rotation` and `xfa`. No assertion, name or value changes. With its comments removed, each file compiles to what it compiled to before.
+
+**Unlock.** None.

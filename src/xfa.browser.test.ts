@@ -1,8 +1,8 @@
 /**
- * Dynamic Adobe LiveCycle forms, which carry no fields on the page at all: ten
- * of the twenty-four published forms in the corpus are one. pdf.js's XFA layout
- * engine runs in front of the pipeline and writes each back with a field tree.
- * Three are committed; the rest sit in the local corpus, which git ignores.
+ * Dynamic Adobe LiveCycle forms, which carry no field on the page at all.
+ * `xfaToAcroForm` runs pdf.js's XFA layout ahead of the inventory and writes
+ * each back with a field tree. Three are fixtures, and `corpus/` names
+ * fourteen more.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -24,7 +24,7 @@ const FORMS = [
 		radios: 26,
 		tooltips: 39
 	},
-	// Six runs of `xfa-font-horizontal-scale`, which pdf.js emits as `scaleX()`.
+	// Its template sets `xfa-font-horizontal-scale` six times, which pdf.js emits as `scaleX()`.
 	{ name: 'DAF 988 leave request', url: leaveUrl, pages: 3, widgets: 159, radios: 0, tooltips: 156 }
 ] as const;
 
@@ -94,10 +94,11 @@ describe('a dynamic form, laid out and written back as an AcroForm', () => {
 	}, 300_000);
 
 	it('stamps no chrome over the page it just drew', async () => {
-		// pdf-lib tests for the key with `in`, not for undefined, and defaults a
-		// missing one to opaque white. Left out, every widget paints a white box
-		// with a black border over the transcription, which on this form erases the
-		// classification banners at the top and bottom of every page.
+		// For a text field, a checkbox and a dropdown pdf-lib asks whether the key
+		// is `in` the options, and defaults a missing background to white and a
+		// missing border to black. Left out, every widget of this form paints a white
+		// box with a black border over the transcription, which covers the
+		// `cui_list` banners at the top and bottom of its first two pages.
 		const { pdf, close } = await openPdf(await convert(saarUrl));
 		try {
 			const widgets = [];

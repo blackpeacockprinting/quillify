@@ -1,14 +1,15 @@
 /**
- * Every PDF the builder reads goes through qpdf first. Real government forms
- * arrive locked (a permissions wrapper with an empty user password), rotated,
- * or with a cross-reference table pdf-lib will not parse, and pdf-lib carries
- * no decryption code at all: it would either throw or, with `ignoreEncryption`,
- * write plaintext into a file that still declares itself encrypted.
+ * Every PDF the library reads goes through qpdf first. Published forms arrive
+ * locked (a permissions wrapper with an empty user password), and pdf-lib
+ * carries no decryption code at all: it would either throw or, with
+ * `ignoreEncryption`, write plaintext into a file that still declares itself
+ * encrypted.
  *
- * They also arrive with `/Contents` as an array. The spec says to concatenate
- * those and treat them as one stream; the renderer this feeds does not, and
- * paints a blank page instead. DD 1610 and DD 577 carry eight each, and
- * `--coalesce-contents` folds them into the one stream DD 689 and DD 2977 carry.
+ * They also arrive with a page's `/Contents` as an array: DD 1610 and DD 577
+ * carry eight on their first page. `--coalesce-contents` folds them into one,
+ * which is what DD 689 has. `--flatten-rotation` folds a page's own quarter
+ * turn into its content, since the engine rejects a page that carries
+ * `/Rotate` (`rotation.browser.test.ts`).
  *
  * Unconditional, so there is one path and no guessing about which files need
  * it. On a file that needs nothing it is a rewrite.
@@ -50,10 +51,10 @@ function load(): Promise<Qpdf> {
 }
 
 /**
- * The same PDF with its encryption removed and its page rotation folded into
- * the page. qpdf exits non-zero on warnings it recovered from, so the output
- * file existing is the test, not the exit code. A file qpdf writes nothing for
- * is refused: every later step reads these bytes as decrypted and coalesced.
+ * The same PDF with its encryption removed and a page's own quarter turn folded
+ * into the page. qpdf exits non-zero on warnings it recovered from, so what is
+ * tested is that it wrote an output file. A file qpdf writes nothing for is
+ * refused: every later step reads these bytes as decrypted and coalesced.
  */
 export async function normalizePdf(bytes: Uint8Array): Promise<Uint8Array> {
 	// Before the module loads, because this is the step that allocates. The
@@ -80,8 +81,8 @@ export async function normalizePdf(bytes: Uint8Array): Promise<Uint8Array> {
 			}
 		}
 	}
-	// qpdf gives its reason on stderr alone. A file the reader cannot open is
-	// refused there, under its own code; one it opens is a file only qpdf rejects.
+	// qpdf gives its reason on stderr alone. A file pdf.js cannot open is refused
+	// there, under its own code. One it opens is a file only qpdf rejects.
 	await (await openPdf(bytes)).close();
 	throw new Refused({ code: 'damaged' });
 }

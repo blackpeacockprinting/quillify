@@ -77,8 +77,7 @@ export const SNAKE_CASE = /^[a-z][a-z0-9_]*$/;
 /** A quill as files, the shape `Quill.fromTree` and a quiver both take. */
 export type QuillTree = Map<string, Uint8Array>;
 
-/** The largest file the importer opens. It bounds the compressed input. */
+/** The largest file `sanitize` opens. It bounds the compressed input. */
 export const MAX_BYTES = 8 * 1024 * 1024;
 export const MAX_PAGES = 20;
-/** More widgets than one qualify call has been measured to name correctly. */
 export const MAX_WIDGETS = 200;

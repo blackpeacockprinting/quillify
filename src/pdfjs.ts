@@ -2,7 +2,7 @@ import { Refused } from './refusal.js';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 
 // Held in a constant so that Vite copies the worker byte for byte. Written
-// inside `new Worker(...)`, the URL makes it bundle the file again (#10).
+// inside `new Worker(...)`, the URL makes it bundle the file again.
 const WORKER = new URL('../assets/pdf.worker.js', import.meta.url);
 
 /**

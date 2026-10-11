@@ -1,8 +1,8 @@
 /**
  * The assembled tree through the engine: `Quill.fromTree` accepts it, the
  * acroform backend renders the example document, and the example value lands
- * inside the widget's rect, which is what decides the rect origin the
- * pipeline emits.
+ * inside the widget's rect, which is what decides the rect origin
+ * `assembleQuill` writes.
  */
 
 import { PDFDocument, StandardFonts } from 'pdf-lib';
