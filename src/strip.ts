@@ -9,6 +9,8 @@ import {
 	PDFStream,
 	PDFString
 } from 'pdf-lib';
+import { Refused } from './refusal.js';
+import type { View } from './types.js';
 
 const names = (keys: string): Set<unknown> =>
 	new Set(keys.split(' ').map((key) => PDFName.of(key)));
@@ -52,8 +54,10 @@ const copy = (dict: PDFDict, kept: Set<unknown>) => {
  * chained after its own. The action a link keeps is a copy, so nothing the file
  * hangs on the same object is cut with it.
  *
- * Each page's MediaBox is set to its crop box, which is the frame the inventory
- * measured widgets in whenever the crop box lies inside the media box.
+ * Each page's MediaBox is set to the box of its entry of `views`, the frame the
+ * inventory measured that page's widgets in. No box of the file is read here. A
+ * file whose pages are not the objects `views` names, in that order, is one
+ * pdf.js and pdf-lib read differently, and is refused as `damaged`.
  *
  * Unlinking is not enough. A saved file carries every object the context holds,
  * reachable or not, so what the catalog no longer reaches is swept. The
@@ -63,7 +67,7 @@ const copy = (dict: PDFDict, kept: Set<unknown>) => {
  * it go in the sweep: a background that still carries a form layer is one the
  * renderer would stamp a second one over.
  */
-export async function stripAcroForm(bytes: Uint8Array): Promise<Uint8Array> {
+export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<Uint8Array> {
 	const doc = await PDFDocument.load(bytes, { updateMetadata: false });
 	const { context } = doc;
 	const at = (object: unknown, key: string) =>
@@ -95,8 +99,13 @@ export async function stripAcroForm(bytes: Uint8Array): Promise<Uint8Array> {
 	};
 
 	const pages = doc.getPages();
+	const differs = pages.some(({ ref }, index) => {
+		const viewed = views[index]?.ref;
+		return viewed?.num !== ref.objectNumber || viewed.gen !== ref.generationNumber;
+	});
+	if (differs || pages.length !== views.length) throw new Refused({ code: 'damaged' });
 	const kept = new Set<unknown>(pages.map((page) => page.ref));
-	for (const page of pages) {
+	for (const [index, page] of pages.entries()) {
 		const listed = at(page.node, 'Annots');
 		const links = (listed instanceof PDFArray ? listed.asArray() : []).filter((entry) => {
 			const link = context.lookup(entry);
@@ -111,8 +120,7 @@ export async function stripAcroForm(bytes: Uint8Array): Promise<Uint8Array> {
 			kept.add(entry);
 			return true;
 		});
-		const crop = page.getCropBox();
-		page.setMediaBox(crop.x, crop.y, crop.width, crop.height);
+		page.node.set(PDFName.of('MediaBox'), context.obj(views[index].box));
 		only(page.node, PAGE);
 		if (links.length > 0) page.node.set(PDFName.of('Annots'), context.obj(links));
 	}

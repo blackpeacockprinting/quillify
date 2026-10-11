@@ -47,6 +47,14 @@ export interface FieldInventory {
 	widgets: InventoryWidget[];
 }
 
+/** A page as pdf.js read it. */
+export interface View {
+	/** The object that is the page, by number and generation: null when pdf.js gives none. */
+	ref: { num: number; gen: number } | null;
+	/** The page's frame in PDF space, pdf.js's `view` of it, which every rect of the page is measured in. */
+	box: [x0: number, y0: number, x1: number, y1: number];
+}
+
 export type FieldType = 'string' | 'boolean' | 'enum' | 'array';
 
 export interface QualifiedField {

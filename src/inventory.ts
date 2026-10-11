@@ -3,7 +3,7 @@ import { toTopLeftRect } from './coords.js';
 import { openPdf } from './pdfjs.js';
 import { Refused } from './refusal.js';
 import { MAX_PAGES, MAX_WIDGETS, WIDGET_KINDS } from './types.js';
-import type { FieldInventory, InventoryWidget, WidgetKind } from './types.js';
+import type { FieldInventory, InventoryWidget, View, WidgetKind } from './types.js';
 
 interface Annotation {
 	subtype: string;
@@ -29,7 +29,7 @@ interface Annotation {
 const isWidgetKind = (type: unknown): type is WidgetKind =>
 	WIDGET_KINDS.includes(type as WidgetKind);
 
-export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory> {
+export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory & { views: View[] }> {
 	const { pdf, close } = await openPdf(bytes);
 	try {
 		// XFA alone is not a refusal. A hybrid form carries its XFA template beside a
@@ -68,12 +68,14 @@ export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory> {
 
 		const widgets: InventoryWidget[] = [];
 		const dims: FieldInventory['pages'] = [];
+		const views: View[] = [];
 		const seen = new Map<string, number>();
 		const byName = new Map<string, InventoryWidget>();
 		for (let index = 0; index < pdf.numPages; index++) {
 			const page = await pdf.getPage(index + 1);
 			if (page.rotate % 360 !== 0) throw new Refused({ code: 'rotated', page: index });
-			const view = page.view as [number, number, number, number];
+			const view = page.view as View['box'];
+			views.push({ ref: page.ref, box: view });
 			dims.push({ width: view[2] - view[0], height: view[3] - view[1] });
 
 			const annotations = (await page.getAnnotations()) as Annotation[];
@@ -125,7 +127,7 @@ export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory> {
 		if (widgets.length > MAX_WIDGETS)
 			throw new Refused({ code: 'too_many_fields', fields: widgets.length, limit: MAX_WIDGETS });
 		if (widgets.length === 0) throw new Refused({ code: 'no_fields', xfa });
-		return { pages: dims, widgets };
+		return { pages: dims, widgets, views };
 	} finally {
 		await close();
 	}
