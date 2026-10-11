@@ -563,3 +563,14 @@ Adds to "qpdf runs in a worker of its own for each file".
 The binary in the package ends with 2 where the command-line qpdf of 12.4.0 warns and goes on. That one copies a stream it cannot decode as stored, and rebuilds a cross-reference table that a wrong `startxref` misses, which the carried test for such a file already records as a file qpdf writes nothing for. The binary ends with 0 on each of the ten fixtures.
 
 **Unlock.** None.
+
+
+## 11 Oct 2026: The qpdf wrapper is a development dependency
+
+Replaces, in "Dependencies", the place of `@neslinesli93/qpdf-wasm` among what a consumer installs. Its version and its pin stand.
+
+**Context.** Since qpdf runs in a worker (#151), the build imports nothing from `@neslinesli93/qpdf-wasm`. The package ships the two files it takes from it, `assets/qpdf.worker.js` and `assets/qpdf.wasm`, and `npm run assets` and the tests are what read the installed copy. As a dependency it was installed by every consumer, 1.4 MB that nothing of theirs loads, from a publisher they would otherwise not meet (#46).
+
+**Decision.** It moves to `devDependencies`, still pinned exactly. A test holds the rule it follows from: the packages the build imports are the dependencies and the peer dependency, and no other is declared.
+
+**Unlock.** None.
