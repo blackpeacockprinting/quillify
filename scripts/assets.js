@@ -55,6 +55,12 @@ const wasm = readFileSync('node_modules/@neslinesli93/qpdf-wasm/dist/qpdf.wasm')
 const sha256 = hash('sha256', wasm);
 if (sha256 !== QPDF_WASM) throw new Error(`qpdf.wasm hashes to ${sha256}, expected ${QPDF_WASM}`);
 
+const qpdfWasm = JSON.parse(
+	readFileSync('node_modules/@neslinesli93/qpdf-wasm/package.json', 'utf8')
+);
+const qpdf = readFileSync('node_modules/@neslinesli93/qpdf-wasm/dist/qpdf.js', 'utf8');
+const handler = readFileSync('src/qpdf-handler.js', 'utf8');
+
 const stylesheet = readFileSync('src/xfa-layer.css', 'utf8');
 
 rmSync('assets', { recursive: true, force: true });
@@ -64,6 +70,12 @@ for (const [name, content] of [
 		'pdf.worker.js',
 		`/* The worker of pdfjs-dist ${version} (build/pdf.worker.mjs), changed: a null guard added at two sites, a page's first unsplittable node no longer taken from an overflow leader or trailer, a page set made to clear its page areas' counts when it starts another pass, an exception of the XFA layout thrown on after it is logged, and the last line, which named a source map, removed. */\n` +
 			worker
+	],
+	[
+		'qpdf.worker.js',
+		`/* dist/qpdf.js of @neslinesli93/qpdf-wasm ${qpdfWasm.version}, unchanged, and after it quillify's message handler. */\n` +
+			qpdf +
+			handler
 	],
 	['qpdf.wasm', wasm],
 	['xfa-layer.js', `export default ${JSON.stringify(stylesheet)};\n`],

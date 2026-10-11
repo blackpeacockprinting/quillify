@@ -1,4 +1,4 @@
-quillify redistributes three files that are other projects' work. Everything
+quillify redistributes four files that are other projects' work. Everything
 else it depends on is installed by its consumer and is not in the package.
 
 assets/pdf.worker.js
@@ -16,6 +16,16 @@ assets/xfa-layer.js
   under a header comment and as the text of a JavaScript module.
   Copyright 2014 Mozilla Foundation, under the Apache License 2.0
   (licenses/pdf.js-LICENSE).
+
+assets/qpdf.worker.js
+  dist/qpdf.js of @neslinesli93/qpdf-wasm 0.3.0, unchanged, under a first
+  line that says so and above a message handler that is quillify's own. It is
+  the script that loads assets/qpdf.wasm and runs it. That package declares
+  the ISC license and ships no license text. The script names no author and
+  no license. It is the JavaScript that Emscripten writes beside a binary it
+  compiles, and Emscripten's own code is under the MIT license and the
+  University of Illinois/NCSA Open Source License, whose texts are not in
+  that package, and so not in licenses/.
 
 assets/qpdf.wasm
   dist/qpdf.wasm of @neslinesli93/qpdf-wasm 0.3.0, unchanged. Its SHA-256 is

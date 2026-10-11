@@ -14,41 +14,28 @@
  *
  * Unconditional, so there is one path and no guessing about which files need
  * it. On a file that needs nothing it is a rewrite.
+ *
+ * qpdf runs in a worker of its own for each file: `assets/qpdf.worker.js`,
+ * which is qpdf-wasm's script with `qpdf-handler.js` after it. The worker ends
+ * with the call, so a trap, a grown heap and whatever qpdf's `main` leaves
+ * behind end with it, and the page's thread is free while qpdf runs.
  */
 
 import { openPdf } from './pdfjs.js';
 import { Refused } from './refusal.js';
 import { MAX_BYTES } from './types.js';
 
+// Held in a constant so that Vite copies the worker byte for byte. Written
+// inside `new Worker(...)`, the URL makes it bundle the file again.
+const WORKER = new URL('../assets/qpdf.worker.js', import.meta.url);
+// A bundler renames both files, so the worker is told where the binary is.
 const WASM = new URL('../assets/qpdf.wasm', import.meta.url);
-const IN = '/in.pdf';
-const OUT = '/out.pdf';
+const FLAGS = ['--decrypt', '--flatten-rotation', '--object-streams=disable'];
 
-interface QpdfFs {
-	writeFile(path: string, data: Uint8Array): void;
-	readFile(path: string): Uint8Array;
-	unlink(path: string): void;
-}
-
-interface Qpdf {
-	callMain(args: string[]): number;
-	FS: QpdfFs;
-}
-
-let qpdf: Promise<Qpdf> | null = null;
-
-function load(): Promise<Qpdf> {
-	qpdf ??= import('@neslinesli93/qpdf-wasm')
-		.then((mod) =>
-			(mod.default as unknown as (opts: { locateFile: () => string }) => Promise<Qpdf>)({
-				locateFile: () => WASM.href
-			})
-		)
-		.catch((cause: unknown) => {
-			qpdf = null;
-			throw new Error(`qpdf.wasm did not load from ${WASM}`, { cause });
-		});
-	return qpdf;
+/** What `assets/qpdf.worker.js` answers. `out` is missing when qpdf wrote no file. */
+interface Answer {
+	loaded: boolean;
+	out?: Uint8Array;
 }
 
 /**
@@ -58,30 +45,21 @@ function load(): Promise<Qpdf> {
  * refused: every later step reads these bytes as decrypted.
  */
 export async function normalizePdf(bytes: Uint8Array): Promise<Uint8Array> {
-	// Before the module loads, because this is the step that allocates. The
-	// emscripten heap only grows and the module is held for the life of the page,
-	// so a file refused later is memory pinned for the session.
+	// Before a worker starts, because qpdf is the step that allocates.
 	if (bytes.byteLength > MAX_BYTES)
 		throw new Refused({ code: 'too_large', bytes: bytes.byteLength, limit: MAX_BYTES });
 
-	const mod = await load();
-	const { FS } = mod;
-	try {
-		FS.writeFile(IN, bytes);
-		mod.callMain([IN, '--decrypt', '--flatten-rotation', '--object-streams=disable', OUT]);
-		const out = FS.readFile(OUT);
-		if (out.byteLength > 0) return new Uint8Array(out);
-	} catch {
-		// qpdf wrote nothing it could stand behind.
-	} finally {
-		for (const path of [IN, OUT]) {
-			try {
-				FS.unlink(path);
-			} catch {
-				// The virtual filesystem is this module's alone.
-			}
-		}
-	}
+	const worker = new Worker(WORKER);
+	// A copy, moved to the worker. A view posted as it is takes its whole buffer along.
+	const copy = bytes.slice();
+	const { loaded, out } = await new Promise<Answer>((resolve, reject) => {
+		worker.onmessage = ({ data }) => resolve(data);
+		worker.onerror = () => reject(new Error(`qpdf.worker.js did not load from ${WORKER}`));
+		worker.postMessage({ bytes: copy, flags: FLAGS, wasm: WASM.href }, [copy.buffer]);
+	}).finally(() => worker.terminate());
+	if (!loaded) throw new Error(`qpdf.wasm did not load from ${WASM}`);
+	if (out?.byteLength) return out;
+
 	// qpdf gives its reason on stderr alone. A file pdf.js cannot open is refused
 	// there, under its own code. One it opens is a file only qpdf rejects.
 	await (await openPdf(bytes)).close();
