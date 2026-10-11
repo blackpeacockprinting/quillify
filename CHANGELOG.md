@@ -7,6 +7,7 @@ What a consumer of the package can observe, by release.
 - A background passes `qpdf --check` with no warning: its trailer's `/Size` is one more than its highest object number. SF 182's said 1,739 where the highest was 1,679, and the backgrounds of the three dynamic forms and of the sample were off the same way.
 - A background carries no `/ID`. `sanitize` run twice on one file, two seconds apart, returns the same `form.pdf` byte for byte: qpdf wrote a fresh second element of the `/ID` on each run, and six published forms and the sample carried it.
 - `quillify` writes each string it puts in `Quill.yaml` and `example.md` as a JSON string literal, with a lone surrogate made U+FFFD and U+007F to U+009F, U+FFFE and U+FFFF written as `\u` escapes. A tooltip, an option or an example that holds one of them builds into a quill, the engine reads the character back, and the example renders. A lone surrogate in a tooltip is made U+FFFD in `form.json` too.
+- `sanitize(pdf)` rejects with a `TypeError` for anything that is not a `Uint8Array`, before it starts a worker. A `DataView` or a wider typed array used to get past that check, and a `DataView` left a pdf.js worker running. An `Int8Array` and a `Uint8ClampedArray`, which were read as bytes, now throw too. A `Uint8Array` made in another window is still read.
 
 ## 0.1.0
 

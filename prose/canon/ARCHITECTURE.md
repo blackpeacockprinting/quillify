@@ -56,7 +56,7 @@ Every parser of the bytes a caller hands in runs inside `sanitize`. The engine r
 
 `sanitize` resolves to a `Form` or to a refusal. It rejects in these cases, none of which is the file being declined:
 
-- The argument is not an ArrayBuffer view (`TypeError`). A `DataView` and a wider typed array get past that check (#109).
+- The argument is not a `Uint8Array` (`TypeError`), checked by its tag, so one made in another window is taken. An `ArrayBuffer`, a `DataView` and every other typed array are not, and the call starts no worker.
 - There is no `Worker` or no `document`, as in Node (`ReferenceError`, #34).
 - `assets/pdf.worker.js` or `assets/qpdf.wasm` did not load. The error names the file, and the next call tries again.
 - The frame's stylesheet did not apply, the host page hid or removed the frame, or a page laid out to nothing.
