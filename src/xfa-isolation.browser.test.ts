@@ -145,8 +145,8 @@ it("requests nothing but the package's own files while sanitize reads a form", a
 	const requested = (await commands.heard()).map((url) => new URL(url));
 
 	const own = [
-		/^\/assets\/(pdf\.worker\.js|qpdf\.wasm)$/,
-		/^\/node_modules\/\.vite\/vitest\/[0-9a-f]+\/deps\/(pdfjs-dist|@neslinesli93_qpdf-wasm)\.js$/
+		/^\/assets\/(pdf\.worker\.js|qpdf\.worker\.js|qpdf\.wasm)$/,
+		/^\/node_modules\/\.vite\/vitest\/[0-9a-f]+\/deps\/pdfjs-dist\.js$/
 	];
 	// The test server adds its client to the module a worker starts from.
 	const server = ['/@vite/client', '/node_modules/vite/dist/client/env.mjs'];
@@ -491,7 +491,8 @@ it('ends with the error for a hidden frame, and no worker, when the frame is rem
 	await expect(sanitize(saar)).rejects.toThrow(
 		'The host page hid or removed the frame the form is laid out in.'
 	);
-	expect(count.started).toBe(1);
+	// qpdf's, and the one the conversion opens the file on.
+	expect(count.started).toBe(2);
 	expect(count.live.size).toBe(0);
 }, 120_000);
 

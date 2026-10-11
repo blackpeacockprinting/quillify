@@ -19,13 +19,13 @@ it('reaches no asset through a bundler suffix or an absolute path, in any source
 	expect(found.map(({ at }) => at)).toEqual([]);
 });
 
-it('starts a worker in one place, from the constant that holds its URL', () => {
+it('starts each of its two workers in one place, from the constant that holds its URL', () => {
 	const code = sourceLines.filter(({ text }) => !text.startsWith('//') && !text.startsWith('*'));
 	expect(
-		code
-			.filter(({ text }) => /new Worker\(|new URL\(.*pdf\.worker/.test(text))
-			.map(({ text }) => text)
+		code.filter(({ text }) => /new Worker\(|new URL\(.*\.worker/.test(text)).map(({ text }) => text)
 	).toEqual([
+		"const WORKER = new URL('../assets/qpdf.worker.js', import.meta.url);",
+		'const worker = new Worker(WORKER);',
 		"const WORKER = new URL('../assets/pdf.worker.js', import.meta.url);",
 		"const port = new Worker(WORKER, { type: 'module' });"
 	]);
@@ -51,6 +51,18 @@ it('ships the qpdf.wasm whose hash is recorded', () => {
 	expect(hash('sha256', asset('qpdf.wasm')), STALE).toBe(
 		'abd933f4ccace4f732999381b21aec8b7e3726f18a5b167fafd57f88dd440876'
 	);
+});
+
+it("ships the qpdf worker as qpdf-wasm's script under a first line and above the handler", () => {
+	const installed = readFileSync('node_modules/@neslinesli93/qpdf-wasm/dist/qpdf.js', 'utf8');
+	const handler = readFileSync('src/qpdf-handler.js', 'utf8');
+	const shipped = asset('qpdf.worker.js').toString();
+	const first = shipped.slice(0, shipped.indexOf('\n') + 1);
+
+	expect(first, STALE).toBe(
+		"/* dist/qpdf.js of @neslinesli93/qpdf-wasm 0.3.0, unchanged, and after it quillify's message handler. */\n"
+	);
+	expect(shipped === first + installed + handler, STALE).toBe(true);
 });
 
 it('ships the stage stylesheet as the default export of a module', async () => {

@@ -30,6 +30,7 @@ it('packs the build, the assets and their notices, and nothing else', () => {
 			'licenses/pdf.js-LICENSE',
 			'assets/pdf.worker.js',
 			'assets/qpdf.wasm',
+			'assets/qpdf.worker.js',
 			'assets/xfa-layer.js',
 			'assets/xfa-layer.d.ts',
 			...modules.flatMap((name) => [`dist/${name}.js`, `dist/${name}.d.ts`])
@@ -73,7 +74,10 @@ it('says in NOTICE which pdf.js and which qpdf.wasm it redistributes', () => {
 	expect(notice.match(/pdfjs-dist \d+\.\d+\.\d+/g)).toEqual(
 		Array(2).fill(`pdfjs-dist ${installed('pdfjs-dist')}`)
 	);
-	expect(notice).toContain(`@neslinesli93/qpdf-wasm ${installed('@neslinesli93/qpdf-wasm')}`);
+	expect(notice.match(/@neslinesli93\/qpdf-wasm \d+\.\d+\.\d+/g)).toEqual(
+		Array(2).fill(`@neslinesli93/qpdf-wasm ${installed('@neslinesli93/qpdf-wasm')}`)
+	);
+	expect(notice).toMatch(/^assets\/qpdf\.worker\.js$/m);
 	expect(notice).toContain(hash('sha256', readFileSync('assets/qpdf.wasm')));
 });
 
