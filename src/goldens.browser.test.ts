@@ -20,7 +20,7 @@ for (const [path, golden] of Object.entries(goldens)) {
 	const [, fixture] = Object.entries(fixtures).find(([file]) =>
 		named(file).startsWith(`${form}_`)
 	)!;
-	it(`${form} inventories as it does in the fork`, async () => {
+	it(`${form} inventories as its golden records`, async () => {
 		const bytes = new Uint8Array(await (await fetch(fixture)).arrayBuffer());
 		const inventory = await inventoryPdf(await xfaToAcroForm(await normalizePdf(bytes)));
 		expect(inventory).toEqual(golden);

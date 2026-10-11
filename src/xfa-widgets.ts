@@ -24,6 +24,21 @@ export interface XfaWidget {
 }
 
 /**
+ * Where the browser paints a check box or a radio button. pdf.js gives the
+ * control the width its template sets and the height of what is left of its
+ * row, and the browser paints the largest square centered in that box.
+ */
+export function square(box: DOMRect): Pick<DOMRect, 'left' | 'top' | 'width' | 'height'> {
+	const side = Math.min(box.width, box.height);
+	return {
+		left: box.left + (box.width - side) / 2,
+		top: box.top + (box.height - side) / 2,
+		width: side,
+		height: side
+	};
+}
+
+/**
  * Every control on a laid-out page, named after what the form called it.
  *
  * What the form called it is its SOM path: the `xfaname` attributes from the
@@ -39,8 +54,8 @@ export function harvestWidgets(page: XfaPage, pageNumber: number): XfaWidget[] {
 	for (const el of layer.querySelectorAll<HTMLElement>('input, select, textarea')) {
 		const style = view.getComputedStyle(el);
 		if (style.visibility === 'hidden' || style.display === 'none') continue;
-		const rect = el.getBoundingClientRect();
-		if (rect.width <= 0 || rect.height <= 0) continue;
+		const box = el.getBoundingClientRect();
+		if (box.width <= 0 || box.height <= 0) continue;
 
 		const type = el.getAttribute('type')?.toLowerCase();
 		const tag = el.tagName.toLowerCase();
@@ -54,6 +69,8 @@ export function harvestWidgets(page: XfaPage, pageNumber: number): XfaWidget[] {
 						: type === 'radio'
 							? 'radio'
 							: 'text';
+
+		const rect = kind === 'checkbox' || kind === 'radio' ? square(box) : box;
 
 		const path = somPath(el, layer);
 		// A SOM path can recur: nine do on DAF 1288, six of them within a page, and
