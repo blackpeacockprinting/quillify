@@ -64,7 +64,7 @@ Every parser of the bytes a caller hands in runs inside `sanitize`. The engine r
 
 It can also not settle: `sanitize` has no deadline (#86), and a frame the host page removes before it has loaded leaves it pending (#99).
 
-`quillify` resolves to a tree or to problems. It rejects when `check` throws, when the engine's binary does not load, which is the engine's own `runtime::init_failed`, and on an error from `Quill.fromTree` that is not the engine's. `suggest` and `check` return at once. Neither checks the shape of its arguments: a value of the wrong shape throws a `TypeError` where the code reads through it and passes unnoticed where it does not (#116).
+`quillify` resolves to a tree or to problems. It rejects when `check` throws, when the engine's binary does not load, which is the engine's own `runtime::init_failed`, and on an error from `Quill.fromTree` that is not the engine's. `suggest` and `check` return at once. `check` throws a `TypeError` that names the slot when the naming is not shaped as its type says, since a naming can be a model's JSON. Neither checks its fields, which are `sanitize`'s to shape.
 
 ## Modules
 
