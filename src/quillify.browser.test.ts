@@ -1,6 +1,7 @@
 import { PDFDocument } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 import { fromTree, render } from '../test/engine.js';
+import { sharedNameCheckboxes } from '../test/shared-name-checkboxes.js';
 import { quillify, sanitize, suggest } from './index.js';
 import type { Field, FieldNaming, Form, Naming } from './index.js';
 
@@ -40,6 +41,23 @@ it.each(['DD1610', 'SF1152', 'DAF1288'])(
 	},
 	120_000
 );
+
+it('ticks one box alone of those that share a name and differ in on-state', async () => {
+	const sanitized = await sanitize(await sharedNameCheckboxes());
+	if (!sanitized.ok) throw new Error(`refused as ${sanitized.refusal.code}`);
+	const naming = suggest(sanitized.form.fields);
+	const { ref, quill } = await fromTree(await built(sanitized.form, naming));
+
+	const copies = ['copy', 'copy#2'];
+	const options = ['attached', 'attached#2', 'twice', 'twice#2', 'twice#3'];
+	for (const id of options) {
+		const { name } = naming.find((entry) => entry.id === id)!;
+		const filled = await render(quill, `~~~\n$quill: ${ref}\n$kind: main\n${name}: true\n~~~\n`);
+		const stamped = (await PDFDocument.load(filled)).getForm();
+		const ticked = [...options, ...copies].filter((box) => stamped.getCheckBox(box).isChecked());
+		expect(ticked).toEqual([id]);
+	}
+}, 60_000);
 
 describe('a form built by hand', () => {
 	const rect = (y: number) => ({ x: 72, y, w: 200, h: 20 });

@@ -1,5 +1,6 @@
 import { PDFDocument, PDFName } from 'pdf-lib';
 import { expect, it } from 'vitest';
+import { sharedNameCheckboxes } from '../test/shared-name-checkboxes.js';
 import { sanitize } from './index.js';
 import { MAX_BYTES } from './types.js';
 import type { Form } from './index.js';
@@ -97,6 +98,25 @@ it('gives a radio button its group, and an on-state only when the file has one',
 			on: 'first'
 		},
 		{ ...button, id: 'pick#2', places: [{ page: 0, rect: { x: 72, y: 100, w: 12, h: 12 } }] }
+	]);
+});
+
+it('gives the checkboxes of one name a field each when their on-states differ', async () => {
+	const sanitized = await sanitize(await sharedNameCheckboxes());
+	const at = (y: number) => ({ page: 0, rect: { x: 72, y, w: 12, h: 12 } });
+	const box = { required: false, readOnly: false };
+	const attached = { ...box, kind: 'radio', group: 'attached' };
+	const twice = { ...box, kind: 'radio', group: 'twice' };
+	expect(sanitized).toMatchObject({ ok: true });
+	expect(sanitized.ok && sanitized.form.fields).toStrictEqual([
+		{ ...attached, id: 'attached', places: [at(80)], on: 'is' },
+		{ ...attached, id: 'attached#2', places: [at(100)], on: 'is_not' },
+		// One on-state is one box painted twice, as SF 1152 paints each of its own.
+		{ ...box, id: 'copy', places: [at(140), at(160)], kind: 'checkbox' },
+		// Within a name of several on-states, two boxes of one state stay apart.
+		{ ...twice, id: 'twice', places: [at(200)], on: 'one' },
+		{ ...twice, id: 'twice#2', places: [at(220)], on: 'two' },
+		{ ...twice, id: 'twice#3', places: [at(240)], on: 'one' }
 	]);
 });
 
