@@ -38,6 +38,19 @@ it('packs the build, the assets and their notices, and nothing else', () => {
 	);
 });
 
+it('declares the packages the build imports as its dependencies, and no other', () => {
+	const { dependencies, peerDependencies } = JSON.parse(read('package.json'));
+	const imported = modules.flatMap((name) =>
+		Array.from(
+			read(`dist/${name}.js`).matchAll(/(?:from|import\()\s*'((?:@[^/']+\/)?[^./'][^/']*)/g),
+			([, specifier]) => specifier
+		)
+	);
+	expect([...new Set(imported)].sort()).toEqual(
+		Object.keys({ ...dependencies, ...peerDependencies }).sort()
+	);
+});
+
 it('gives plain Node, where there is no DOM, its four functions under its own name', () => {
 	const exported = execFileSync(
 		process.execPath,
