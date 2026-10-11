@@ -54,7 +54,7 @@ A file the library does not take is refused with a value, and nothing is thrown 
 | `not_pdf`         |                                                     | is not a PDF                                                                                                        |
 | `password`        |                                                     | needs a password to open                                                                                            |
 | `encryption`      |                                                     | is encrypted in a way pdf.js does not read, such as to a certificate                                                |
-| `damaged`         |                                                     | opens, and qpdf cannot rewrite it, its readers disagree on its pages, or it holds a stream the library cannot count |
+| `damaged`         |                                                     | opens, and qpdf cannot rewrite it, its pages can be read in two ways, or it holds a stream the library cannot count |
 | `portfolio`       | `attachment`, when it has a name                    | is a portfolio, whose form is an attachment                                                                         |
 | `too_many_pages`  | `pages`, `limit`                                    | has more than 20 pages                                                                                              |
 | `too_many_fields` | `fields`, `limit`                                   | has more than 200 fields                                                                                            |
@@ -89,7 +89,7 @@ Outside `code`, `kind`, `construct` and `diagnostic`, a string in a `Form`, a re
 1. **Normalize.** qpdf, compiled to WebAssembly and run in a worker of its own for each file, removes the encryption an empty password opens, folds page rotation into the page, writes every object outside an object stream and writes every stream it can decode back as one Flate stream. What it wrote is then held to 64 MiB with those streams decoded.
 2. **Convert.** For a dynamic form, pdf.js lays the XFA template out in a sandboxed frame, whose document takes no rule from the host page and gives it none, and the layout is redrawn as a static PDF with an AcroForm field where each XFA field sat.
 3. **Inventory.** Each widget is read: its kind, its page and rect, its flags and its tooltip.
-4. **Strip.** pdf-lib removes the form layer. Of the catalog, of each page and of each link, a named set of keys stays, and every object nothing reaches is dropped.
+4. **Strip.** pdf-lib removes the form layer. A table lists the keys each kind of dictionary keeps, and every other key and every object nothing reaches is dropped.
 5. **Assemble.** `Quill.yaml` and `example.md` are written from the naming and `form.json` from the places, and the background goes in as `form.pdf`.
 
 [`prose/canon/ARCHITECTURE.md`](prose/canon/ARCHITECTURE.md) has how the code is laid out, module by module, and what parses the bytes of a file. [`prose/research/XFA_INTERNALS.md`](prose/research/XFA_INTERNALS.md) has how the conversion works. [`prose/DECISIONS.md`](prose/DECISIONS.md) has what was decided at each stage and what would unlock a different answer.
@@ -128,7 +128,7 @@ Outside `code`, `kind`, `construct` and `diagnostic`, a string in a `Form`, a re
 - A radio group reaches the quill as one boolean per button, and so does a set of checkboxes that share a name and turn on as different values. Where two boxes of such a set turn on as one value, the file ticks both together and the quill has a boolean for each ([#41](https://github.com/tonguetoquill/quillify/issues/41)).
 - A field gets a name and a description and no `title`, so an editor built on the quill shows a snake_case name where the form prints a label ([#36](https://github.com/tonguetoquill/quillify/issues/36)).
 - Of a page's annotations the background keeps its links and no other, so a strikeout, a text box or a stamp left on a published form is not in it. A link stays only when it leads to an `http` or `https` address or to a place in the file ([#68](https://github.com/tonguetoquill/quillify/issues/68)).
-- The strip keeps a named set of keys of the catalog, the page tree, each page and each link, and does not read what a kept key holds: under a page's resources, the structure tree and the layers, the background has whatever the file put there. Reading those against lists of names, and the trailer with them, is v0.2.0 ([#25](https://github.com/tonguetoquill/quillify/issues/25)).
+- The strip holds the catalog, the page tree, a page, a link, a page's resources, an image and a form to a table of keys. A font, a graphics state, a color space, a pattern, a shading, a transparency group, a border, a destination, the structure tree, the mark information, the layers and the property lists of marked content are still kept whole, with whatever the file put under them. Reading those against the table is v0.2.0 ([#25](https://github.com/tonguetoquill/quillify/issues/25)).
 
 ## Working on it
 
