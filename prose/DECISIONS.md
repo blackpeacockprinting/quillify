@@ -345,3 +345,15 @@ Replaces "The API is built as proposed", and settles "Where the built API depart
 **Decision.** A quill carries no lock, as a quill from the app the code came from carries none, and the README says so. A signature placed on a filled form locks no field and writes no date beside it.
 
 **Unlock.** A consumer that signs filled forms. The lock then takes a slot on a signature widget in the engine's form schema, and here the reading of each manifest into field names.
+
+## 11 Oct 2026: Checkboxes of one name and several on-states are an exclusive group
+
+Adds to "v0.1.0 fixes four more defects of the carried code".
+
+**Context.** The value of a checkbox field in a file is the on-state of its ticked box, so boxes of one name that turn on as different values exclude each other. WH-380-E asks whether a job description `is` or `is not attached` with two such boxes. The carried inventory folds every widget of a name that is no radio button into one entry with several places. So the pair came back as one checkbox at two places, the quill bound one boolean to both, and `true` ticked both (#81). Twelve fields of WH-380-E are built that way, of its 19 checkbox fields, and no other of the 59 forms has one. Nine of the twelve hold two boxes and three hold three. Among the Air Force's files the one such form is DAF 2522, with eleven: 54 boxes that turn on as 37 values, and seven of the eleven names have two or more boxes of one value.
+
+**Decision.** Option B of #81. The checkboxes of a name fold only when every one of them turns on as the same value. When they turn on as more than one value, each box is a field, and `sanitize` returns it as a `radio` with the shared name as its `group` and its on-state as `on`. That is what a radio group already is here: one boolean for each option, tied by a group (#41). No box of such a name folds, as no radio button does, so two of its boxes that turn on as one value are two fields. Folded, they would be a field of two places beside a field with the id `name#2`, and `name#2` is also what the assembly names a field's second place: `form.json` would name two widgets alike and the engine refuses that. The ids follow the rule for a name that repeats: the name, then `name#2`, in the order the boxes are met. Boxes of one name and one on-state stay one checkbox at several places, as on SF 1152.
+
+For a consumer the kind and the ids of those fields change, so a naming stored for such a form has to be made again. WH-380-E goes from 60 fields to 75, at the same 77 places, and `corpus/manifest.json` and the total its test holds move with it. DAF 2522 is refused for its count as before, which goes from 457 to 500. No golden changes. This lands before the first tag because a field's id is what a stored naming refers to.
+
+**Unlock.** The engine's form schema gains an on-value for each widget (#41). The group can then be one field that holds the chosen value.

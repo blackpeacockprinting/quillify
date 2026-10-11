@@ -22,6 +22,7 @@ interface Annotation {
 	alternativeText?: string;
 	maxLen?: number;
 	buttonValue?: string | null;
+	exportValue?: string;
 }
 
 /** pdf.js passes on whatever name a file gives `/FT`. */
@@ -52,6 +53,19 @@ export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory> {
 			throw new Refused({ code: 'too_many_pages', pages: pdf.numPages, limit: MAX_PAGES });
 		const inherited = await tooltipsByField(bytes);
 
+		// The value of a checkbox field is the on-state of its ticked box, so boxes
+		// of one name that turn on as different values exclude each other. WH-380-E
+		// asks whether a job description `is` or `is not attached` that way. Each
+		// name's on-states are read ahead of the entries, since the first box of a
+		// name does not show what the next turns on as.
+		const states = new Map<string, Set<string | undefined>>();
+		for (let index = 0; index < pdf.numPages; index++) {
+			const page = await pdf.getPage(index + 1);
+			for (const a of (await page.getAnnotations()) as Annotation[])
+				if (a.checkBox && a.fieldName && !a.hidden)
+					states.set(a.fieldName, (states.get(a.fieldName) ?? new Set()).add(a.exportValue));
+		}
+
 		const widgets: InventoryWidget[] = [];
 		const dims: FieldInventory['pages'] = [];
 		const seen = new Map<string, number>();
@@ -73,8 +87,10 @@ export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory> {
 				// carries it fills every other. SF 1152 ships an original and a file
 				// copy sharing one field tree, so half its 60 field widgets are the
 				// other half painted again. A radio option is the exception, since
-				// its on-state is the whole point of being separate.
-				const shared = a.radioButton || !name ? undefined : byName.get(name);
+				// its on-state is the whole point of being separate, and so is a
+				// checkbox whose name turns on as more than one value.
+				const option = !!a.checkBox && (states.get(name)?.size ?? 0) > 1;
+				const shared = a.radioButton || option || !name ? undefined : byName.get(name);
 				if (shared) {
 					shared.places.push(place);
 					continue;
@@ -87,8 +103,8 @@ export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory> {
 					kind: a.fieldType,
 					places: [place],
 					multiLine: a.multiLine ?? false,
-					checkBox: a.checkBox ?? false,
-					radioButton: a.radioButton ?? false,
+					checkBox: !option && (a.checkBox ?? false),
+					radioButton: option || (a.radioButton ?? false),
 					combo: a.combo ?? false,
 					options: (a.options ?? [])
 						.map((o) => o.exportValue)
@@ -97,10 +113,10 @@ export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory> {
 					required: a.required ?? false,
 					tooltip: a.alternativeText || inherited.get(name) || undefined,
 					maxLen: a.maxLen ?? 0,
-					buttonValue: a.buttonValue ?? undefined
+					buttonValue: (option ? a.exportValue : a.buttonValue) ?? undefined
 				};
 				widgets.push(widget);
-				if (!a.radioButton && name) byName.set(name, widget);
+				if (!a.radioButton && !option && name) byName.set(name, widget);
 			}
 		}
 
