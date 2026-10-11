@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import formUrl from '../test/fixtures/DD1610_Request_and_Authorization_for_TDY_Travel.pdf?url';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFRawStream } from 'pdf-lib';
 import { normalizePdf } from './normalize.js';
 import { inventoryPdf } from './inventory.js';
 import { Refused } from './refusal.js';
@@ -69,6 +69,35 @@ describe('normalizePdf', () => {
 		doc.addPage([612, 792]);
 		const next = await PDFDocument.load(await normalizePdf(await doc.save()));
 		expect(next.getPageCount()).toBe(1);
+	}, 60_000);
+
+	it('refuses a file qpdf gives up on after it has written part of it', async () => {
+		const doc = await PDFDocument.create();
+		const sheet = doc.addPage([612, 792]);
+		// Noise, which Flate cannot shrink, so that qpdf has written part of the
+		// file by the time it reaches the second stream.
+		let seed = 1;
+		const noise = Uint8Array.from(
+			{ length: 16 * 1024 },
+			() => (seed = (seed * 1103515245 + 12345) >>> 0) >>> 16
+		);
+		// qpdf decodes an LZW stream to write it back as Flate, and ends with an
+		// error at this one, whose first code is past the table.
+		const broken = PDFRawStream.of(
+			doc.context.obj({ Filter: 'LZWDecode', Length: 6 }),
+			new Uint8Array(6).fill(0xff)
+		);
+		sheet.node.set(
+			PDFName.of('Contents'),
+			doc.context.obj([
+				doc.context.register(doc.context.flateStream(noise)),
+				doc.context.register(broken)
+			])
+		);
+
+		const refused = await normalizePdf(await doc.save()).catch((err: unknown) => err);
+		expect(refused).toBeInstanceOf(Refused);
+		expect((refused as Refused).refusal).toEqual({ code: 'damaged' });
 	}, 60_000);
 
 	it('refuses a file the reader opens and qpdf rejects', async () => {

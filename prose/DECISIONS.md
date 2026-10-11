@@ -551,3 +551,15 @@ No test hands qpdf either file. From about 180 levels of nesting to 499 qpdf tra
 Four carried test files change. `test/assets.test.ts` held that the source starts a worker in one place, and now holds two, each from the constant that holds its URL. `test/package.test.ts` adds the asset to what a tarball holds, and holds `NOTICE` to naming the wrapper's version for both of its files. In `src/xfa-isolation.browser.test.ts` the list of what `sanitize` may request gains `assets/qpdf.worker.js` and loses the test server's copy of the wrapper's module, which the page no longer imports, and the case that counts the workers of a conversion whose frame is removed counts two, qpdf's and pdf.js's, where it counted one. `src/qpdf-wasm.browser.test.ts` said in its header that `qpdf.wasm` is requested once in the life of a page. It now holds, in a case of its own, that two calls request `assets/qpdf.worker.js` and then `assets/qpdf.wasm`, twice over, from the page's own origin, and nothing else. Its carried case, that a missing `qpdf.wasm` rejects by name and the next call reads, is unchanged: the browser still answers for a request a worker makes.
 
 **Unlock.** None.
+
+## 11 Oct 2026: qpdf's file is read only when qpdf ends well
+
+Adds to "qpdf runs in a worker of its own for each file".
+
+**Context.** The qpdf worker answered with `/out.pdf` whenever `callMain` returned, and `normalizePdf` took any answer that had bytes as the rewrite (#160). The carried reason was that qpdf exits non-zero on warnings it recovered from, so the test was that a file was written. qpdf writes as it goes, though, and a run that ends with an error partway leaves a file cut short. A page with two content streams, the second under LZW with a first code past the table, is a file of 15,085 bytes: qpdf ends with 2 and leaves 14,916 bytes that stop inside the first stream, `normalizePdf` returns them, and `sanitize` refuses the file as `not_pdf`, though pdf.js opens the original. Named from the catalog, where qpdf reaches it before it has written anything, the same stream gets the file refused as `damaged`.
+
+**Decision.** The handler reads `/out.pdf` when `callMain` returns 0 or 3, and answers with no file otherwise. The codes are qpdf's own: 0 for a clean run, 3 for one that warned and wrote the whole file, 2 for an error. A run that throws answers with no file, as before, and so the file above is refused as `damaged`.
+
+The binary in the package ends with 2 where the command-line qpdf of 12.4.0 warns and goes on. That one copies a stream it cannot decode as stored, and rebuilds a cross-reference table that a wrong `startxref` misses, which the carried test for such a file already records as a file qpdf writes nothing for. The binary ends with 0 on each of the ten fixtures.
+
+**Unlock.** None.
