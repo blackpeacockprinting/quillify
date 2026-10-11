@@ -4,7 +4,7 @@ import { Refused, type Refusal } from './refusal.js';
 import { stripAcroForm } from './strip.js';
 import { xfaToAcroForm } from './xfa.js';
 import type { Field, Form } from './api.js';
-import type { InventoryWidget } from './types.js';
+import { MAX_SECONDS, type InventoryWidget } from './types.js';
 
 export type Sanitized = { ok: true; form: Form } | { ok: false; refusal: Refusal };
 
@@ -45,20 +45,29 @@ function field(widget: InventoryWidget): Field {
 /**
  * A PDF form as its fields and a background with no form layer, or the reason
  * the file is not taken. Nothing else in the package reads the file.
+ *
+ * One signal fires `MAX_SECONDS` after the call starts. A stage that is
+ * waiting on a worker then ends the worker and throws the signal's reason,
+ * as does an open that begins after it, and that reason is the refusal
+ * `too_slow`. Work on this thread is not interrupted and not timed: the
+ * strip starts no worker, so a call that has reached it returns its form.
  */
 export async function sanitize(pdf: Uint8Array): Promise<Sanitized> {
 	// Handing it anything but a Uint8Array is a mistake in the call and no fault of a file, so the call throws.
 	// The tag, not instanceof, so that a Uint8Array made in another window is taken.
 	if (Object.prototype.toString.call(pdf) !== '[object Uint8Array]')
 		throw new TypeError('sanitize takes a Uint8Array.');
+	const deadline = AbortSignal.timeout(MAX_SECONDS * 1000);
 	try {
-		const bytes = await xfaToAcroForm(await normalizePdf(pdf));
-		const { pages, widgets, views } = await inventoryPdf(bytes);
+		const bytes = await xfaToAcroForm(await normalizePdf(pdf, deadline), deadline);
+		const { pages, widgets, views } = await inventoryPdf(bytes, deadline);
 		return {
 			ok: true,
 			form: { pdf: await stripAcroForm(bytes, views), pages, fields: widgets.map(field) }
 		};
 	} catch (err) {
+		if (deadline.aborted && err === deadline.reason)
+			return { ok: false, refusal: { code: 'too_slow', limit: MAX_SECONDS } };
 		if (err instanceof Refused) return { ok: false, refusal: err.refusal };
 		throw err;
 	}

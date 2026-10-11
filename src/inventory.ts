@@ -37,15 +37,18 @@ interface Annotation {
 const isWidgetKind = (type: unknown): type is WidgetKind =>
 	WIDGET_KINDS.includes(type as WidgetKind);
 
-export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory & { views: View[] }> {
-	const { pdf, close } = await openPdf(bytes);
+export async function inventoryPdf(
+	bytes: Uint8Array,
+	signal?: AbortSignal
+): Promise<FieldInventory & { views: View[] }> {
+	const { pdf, close, within } = await openPdf(bytes, {}, signal);
 	try {
 		// XFA alone is not a refusal. A hybrid form carries its XFA template beside a
 		// complete AcroForm field tree, and pdf.js never XFA-renders one of those, so
 		// the widgets below are the real ones. A dynamic form has no field tree, and
 		// `xfaToAcroForm` has given it one by the time anything reaches here. What is
 		// left is a file that is neither, which has no field to read.
-		const { info } = (await pdf.getMetadata()) as {
+		const { info } = (await within(pdf.getMetadata())) as {
 			info: { IsXFAPresent?: boolean; IsCollectionPresent?: boolean };
 		};
 		const xfa = pdf.isPureXfa || !!info.IsXFAPresent;
@@ -54,7 +57,7 @@ export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory & 
 		// `MicrosoftIRMServices Protected PDF.pdf`. Counting the cover sheet's
 		// widgets would answer the wrong question.
 		if (info.IsCollectionPresent) {
-			const [attachment] = (await pdf.getAttachments())?.keys() ?? [];
+			const [attachment] = (await within(pdf.getAttachments()))?.keys() ?? [];
 			throw new Refused({ code: 'portfolio', attachment });
 		}
 		if (pdf.numPages > MAX_PAGES)
@@ -68,8 +71,8 @@ export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory & 
 		// name does not show what the next turns on as.
 		const states = new Map<string, Set<string | undefined>>();
 		for (let index = 0; index < pdf.numPages; index++) {
-			const page = await pdf.getPage(index + 1);
-			for (const a of (await page.getAnnotations()) as Annotation[])
+			const page = await within(pdf.getPage(index + 1));
+			for (const a of (await within(page.getAnnotations())) as Annotation[])
 				if (a.checkBox && a.fieldName && !a.hidden)
 					states.set(a.fieldName, (states.get(a.fieldName) ?? new Set()).add(a.exportValue));
 		}
@@ -80,13 +83,13 @@ export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory & 
 		const seen = new Map<string, number>();
 		const byName = new Map<string, InventoryWidget>();
 		for (let index = 0; index < pdf.numPages; index++) {
-			const page = await pdf.getPage(index + 1);
+			const page = await within(pdf.getPage(index + 1));
 			if (page.rotate % 360 !== 0) throw new Refused({ code: 'rotated', page: index });
 			const view = page.view as View['box'];
 			views.push({ ref: page.ref, box: view });
 			dims.push({ width: view[2] - view[0], height: view[3] - view[1] });
 
-			const annotations = (await page.getAnnotations()) as Annotation[];
+			const annotations = (await within(page.getAnnotations())) as Annotation[];
 			for (const a of annotations) {
 				// A push button runs an action; it holds no value, so it is no field.
 				if (a.subtype !== 'Widget' || a.hidden || !isWidgetKind(a.fieldType) || a.pushButton)
