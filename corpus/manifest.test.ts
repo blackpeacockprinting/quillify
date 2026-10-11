@@ -11,6 +11,7 @@ interface Entry {
 	url?: string;
 	pages?: number;
 	fields?: number;
+	places?: number;
 }
 
 const manifest: Entry[] = JSON.parse(readFileSync('corpus/manifest.json', 'utf8'));
@@ -22,7 +23,7 @@ function count(key: 'kind' | 'encryption' | 'outcome', forms = manifest) {
 	return counted;
 }
 
-const sum = (key: 'bytes' | 'pages' | 'fields') =>
+const sum = (key: 'bytes' | 'pages' | 'fields' | 'places') =>
 	manifest.reduce((total, form) => total + (form[key] ?? 0), 0);
 
 it('names 59 forms, each by a SHA-256 of its own', () => {
@@ -71,6 +72,7 @@ it('holds the other totals the two READMEs quote', () => {
 		megabytes: Math.round(sum('bytes') / 1e6),
 		pages: sum('pages'),
 		fields: sum('fields'),
+		places: sum('places'),
 		withUrl: manifest.filter((form) => form.url).length
-	}).toEqual({ megabytes: 24, pages: 143, fields: 3712, withUrl: 17 });
+	}).toEqual({ megabytes: 24, pages: 143, fields: 3712, places: 3670, withUrl: 17 });
 });
