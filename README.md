@@ -58,12 +58,12 @@ A file the library does not take is refused with a value, and nothing is thrown 
 | `portfolio`       | `attachment`, when it has a name                    | is a portfolio, whose form is an attachment                                 |
 | `too_many_pages`  | `pages`, `limit`                                    | has more than 20 pages                                                      |
 | `too_many_fields` | `fields`, `limit`                                   | has more than 200 fields                                                    |
-| `layout`          | `detail`                                            | is a dynamic form that pdf.js cannot lay out                                |
+| `layout`          | `detail`                                            | is a dynamic form pdf.js cannot lay out, or gives a page of no size         |
 | `no_fields`       | `xfa`                                               | has no field; `xfa` is true when it holds an XFA form that nothing laid out |
 | `rotated`         | `page`                                              | has a page that is still rotated once qpdf has flattened what it can        |
 | `unpaintable`     | `page`, `construct`, and `detail` when there is one | is a dynamic form with something on a page that the redraw does not draw    |
 
-`construct` is one of `image`, `background_image`, `svg`, `border`, `transform` and `glyph`. `detail` is the SVG element, the border style or the text that could not be drawn. For `layout` it is the message of the exception pdf.js's layout threw, in the browser's wording. The library has no sentence for a code: the caller maps `code` to its own words.
+`construct` is one of `image`, `background_image`, `svg`, `border`, `transform` and `glyph`. `detail` is the SVG element, the border style or the text that could not be drawn. For `layout` it is the message of the exception pdf.js's layout threw, in the browser's wording, or `a page has no size` when pdf.js gives a page a width or a height that is not above zero. The library has no sentence for a code: the caller maps `code` to its own words.
 
 `check` and `quillify` return the problems of a naming:
 
