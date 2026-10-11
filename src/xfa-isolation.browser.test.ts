@@ -127,7 +127,6 @@ it('gives the host document no rule and no font face, and leaves it as it was', 
 }, 120_000);
 
 it("requests nothing but the package's own files while sanitize reads a form", async () => {
-	const saar = await published(saarUrl);
 	const byFrame: string[] = [];
 	const lay = XfaStage.prototype.lay;
 	vi.spyOn(XfaStage.prototype, 'lay').mockImplementation(async function (this: XfaStage, page) {
@@ -136,8 +135,10 @@ it("requests nothing but the package's own files while sanitize reads a form", a
 		byFrame.push(...timing.getEntriesByType('resource').map((entry) => entry.name));
 		return laid;
 	});
+	// The form is fetched inside the window and named below. Fetched just before
+	// it, the request can still be reported once the listening has begun.
 	await commands.listen();
-	expect(await sanitize(saar)).toMatchObject({ ok: true });
+	expect(await sanitize(await published(saarUrl))).toMatchObject({ ok: true });
 	const requested = (await commands.heard()).map((url) => new URL(url));
 
 	const own = [
@@ -146,12 +147,13 @@ it("requests nothing but the package's own files while sanitize reads a form", a
 	];
 	// The test server adds its client to the module a worker starts from.
 	const server = ['/@vite/client', '/node_modules/vite/dist/client/env.mjs'];
+	const form = new URL(saarUrl, location.href).pathname;
 	const paths = requested.map((url) => url.pathname);
 	expect(paths).toContain('/assets/pdf.worker.js');
 	expect(requested.filter((url) => url.origin !== location.origin)).toEqual([]);
 	expect(
 		paths.filter((path) => !own.some((file) => file.test(path)) && !server.includes(path))
-	).toEqual([]);
+	).toEqual([form]);
 	expect(byFrame.filter((url) => /^https?:/.test(url))).toEqual([]);
 }, 120_000);
 
