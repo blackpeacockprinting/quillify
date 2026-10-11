@@ -381,3 +381,121 @@ it('ends a conversion with the same error when the host page takes the frame out
 		'The host page hid or removed the frame the form is laid out in.'
 	);
 }, 120_000);
+
+function countWorkers() {
+	const count = { started: 0, live: new Set<Worker>() };
+	vi.stubGlobal(
+		'Worker',
+		class extends Worker {
+			constructor(url: string | URL, options?: WorkerOptions) {
+				super(url, options);
+				count.live.add(this);
+				count.started++;
+			}
+			terminate() {
+				count.live.delete(this);
+				super.terminate();
+			}
+		}
+	);
+	return count;
+}
+
+function countObservers() {
+	const count = { started: 0, live: new Set<MutationObserver>() };
+	vi.stubGlobal(
+		'MutationObserver',
+		class extends MutationObserver {
+			observe(target: Node, options?: MutationObserverInit) {
+				super.observe(target, options);
+				count.live.add(this);
+				count.started++;
+			}
+			disconnect() {
+				count.live.delete(this);
+				super.disconnect();
+			}
+		}
+	);
+	return count;
+}
+
+/** A host page that takes a frame out of its body: in the task that put it there, or as it loads. */
+function sweepFrames(when: 'at once' | 'loaded') {
+	const append = document.body.append;
+	vi.spyOn(document.body, 'append').mockImplementation(function (this: HTMLElement, ...nodes) {
+		append.apply(this, nodes);
+		for (const node of nodes) {
+			if (!(node instanceof HTMLIFrameElement)) continue;
+			if (when === 'at once') node.remove();
+			else node.addEventListener('load', () => node.remove());
+		}
+	});
+}
+
+const REMOVED = 'The host page removed the frame the form is laid out in before it had loaded.';
+
+it('rejects `ready` when the frame leaves the document in the task that made it', async () => {
+	const watching = countObservers();
+	const stage = new XfaStage();
+	document.querySelector('iframe')!.remove();
+
+	await expect(stage.ready).rejects.toThrow(REMOVED);
+	expect(watching.started).toBe(1);
+	expect(watching.live.size).toBe(0);
+}, 20_000);
+
+it('rejects `ready` when the frame leaves for another document before it loads', async () => {
+	const watching = countObservers();
+	const stage = new XfaStage();
+	document.implementation.createHTMLDocument('').body.append(document.querySelector('iframe')!);
+
+	await expect(stage.ready).rejects.toThrow(REMOVED);
+	expect(watching.live.size).toBe(0);
+}, 20_000);
+
+it('throws on a page with no body, and leaves nothing watching', async () => {
+	const pdf = await published(trainingUrl);
+	const watching = countObservers();
+	vi.spyOn(document, 'body', 'get').mockReturnValue(null as never);
+
+	await expect(sanitize(pdf)).rejects.toThrow(TypeError);
+	expect(watching.live.size).toBe(0);
+}, 20_000);
+
+it.each([
+	['a static form', trainingUrl],
+	['a dynamic form', saarUrl]
+])(
+	'ends sanitize with an error, and no worker, when the frame is removed before it loads: %s',
+	async (_, url) => {
+		const pdf = await published(url);
+		const count = countWorkers();
+		sweepFrames('at once');
+
+		await expect(sanitize(pdf)).rejects.toThrow(REMOVED);
+		expect(count.live.size).toBe(0);
+		expect(document.querySelector('iframe')).toBeNull();
+	},
+	20_000
+);
+
+it('ends with the error for a hidden frame, and no worker, when the frame is removed as it loads', async () => {
+	const saar = await published(saarUrl);
+	const count = countWorkers();
+	sweepFrames('loaded');
+
+	await expect(sanitize(saar)).rejects.toThrow(
+		'The host page hid or removed the frame the form is laid out in.'
+	);
+	expect(count.started).toBe(1);
+	expect(count.live.size).toBe(0);
+}, 120_000);
+
+it('watches the host document no longer than the frame takes to load', async () => {
+	const watching = countObservers();
+
+	expect(await sanitize(await published(saarUrl))).toMatchObject({ ok: true });
+	expect(watching.started).toBe(1);
+	expect(watching.live.size).toBe(0);
+}, 120_000);

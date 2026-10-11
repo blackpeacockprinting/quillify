@@ -29,7 +29,8 @@ const SHELL = `<meta http-equiv="Content-Security-Policy" content="default-src '
  * it zeroes every rect, and it does that silently. The frame is hidden, out of
  * the flow and of no size instead, so the host page shows, lays out and
  * scrolls as it did, and the form inside is laid out all the same. A host page
- * can still take the frame's boxes away, and `lay` throws when one has.
+ * can still take the frame's boxes away, and `lay` throws when one has. It can
+ * take the frame out before it has loaded, and `ready` then rejects.
  *
  * The frame runs no script, and its policy lets its document load only an
  * image from `blob:` or `data:`, which is how pdf.js hands it a form's images
@@ -47,7 +48,24 @@ export class XfaStage {
 		frame.sandbox.add('allow-same-origin');
 		frame.style.cssText = 'position:fixed;width:0;height:0;border:0;visibility:hidden';
 		frame.srcdoc = SHELL;
-		this.ready = new Promise((loaded) => (frame.onload = loaded)).then(() => {
+		this.ready = new Promise<void>((loaded, removed) => {
+			// A frame that leaves the document before it has loaded never loads.
+			const left = () => {
+				if (document.contains(frame)) return;
+				watch.disconnect();
+				removed(
+					new Error('The host page removed the frame the form is laid out in before it had loaded.')
+				);
+			};
+			const watch = new MutationObserver(left);
+			frame.onload = () => {
+				watch.disconnect();
+				loaded();
+			};
+			document.body.append(frame);
+			watch.observe(document, { childList: true, subtree: true });
+			left();
+		}).then(() => {
 			const frameDocument = frame.contentDocument!;
 			const view = frameDocument.defaultView!;
 			const sheet = new view.CSSStyleSheet();
@@ -64,7 +82,6 @@ export class XfaStage {
 			if (!applies) throw new Error('The XFA stylesheet did not apply to the stage.');
 			return frameDocument;
 		});
-		document.body.append(frame);
 	}
 
 	/**

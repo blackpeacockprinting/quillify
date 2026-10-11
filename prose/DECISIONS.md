@@ -447,3 +447,13 @@ No published form on hand shows any of it. Over the 49 of the 59 forms that conv
 `stripAcroForm` now takes two arguments, so every test that calls it changes its call: 18 calls in 15 files. A test that holds an inventory passes its views. The others name the box of each page they built, and `viewsOf` in `test/views.ts` pairs it with the object pdf-lib reads as that page. The five cases that planted a `/CropBox` and held the MediaBox to it (one in `strip.test.ts`, renamed to say what the strip does with a frame, and four in `strip-actions.test.ts`) hand the strip that frame, and their assertions stand. What pdf.js makes of a crop box is held in `strip-pages.browser.test.ts`, through `sanitize`. `goldens` and `xfa-isolation` compare the `pages` and `widgets` of an inventory with the golden, where they compared the whole value. No golden changes, and no assertion of `page-identity` does.
 
 **Unlock.** A published form refused as `damaged` for its pages. The strip then has to class a page as pdf.js does, where today it refuses.
+
+## 11 Oct 2026: A frame removed before it loads ends the conversion with an error
+
+Adds to "A dynamic form is laid out in a document of its own", which leaves a frame removed before it has loaded waiting (#99).
+
+**Context.** `sanitize` puts a frame in the host page's body for every file it converts and waits for the frame's `load` event. A frame that leaves the document before then never loads, so the wait had nothing to end it: with the frame removed in the task that made it, `sanitize` was still pending at 8 s. Nothing in the library removes the frame early. A host page that sweeps elements it does not know out of its body would.
+
+**Decision.** While the frame loads, a `MutationObserver` watches the host document's tree. When a change leaves the frame out of the host document, removed or moved to another document, `ready` rejects with an error that says the host page removed the frame before it had loaded, and `sanitize` rejects with it. It is thrown and is no refusal, as the error for a hidden frame is: the file is not what failed. The observer is disconnected when the frame loads or is seen to leave, whichever is first, so it watches the host for as long as the frame takes to load and no longer. The worker is opened only after `ready` settles, so that error leaves none running. A frame that is moved within the host document in the task that made it is still there when the observer looks, and it loads where it lands. The frame goes into the body before the watch starts, so a page with no `body` gets the `TypeError` of the append and nothing is left watching. A frame removed once it has loaded ends the conversion with the error it ended with before.
+
+**Unlock.** None.

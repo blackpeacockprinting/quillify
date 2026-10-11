@@ -60,10 +60,10 @@ Every parser of the bytes a caller hands in runs inside `sanitize`. The engine r
 - The argument is not a `Uint8Array` (`TypeError`), checked by its tag, so one made in another window is taken. An `ArrayBuffer`, a `DataView` and every other typed array are not, and the call starts no worker.
 - There is no `Worker` or no `document`, as in Node (`ReferenceError`, #34).
 - `assets/pdf.worker.js` or `assets/qpdf.wasm` did not load. The error names the file, and the next call tries again.
-- The frame's stylesheet did not apply, the host page hid or removed the frame, or a page laid out to nothing.
+- The frame's stylesheet did not apply, the host page hid the frame or removed it, before it had loaded or after, or a page laid out to nothing.
 - pdf.js or pdf-lib threw something no rule maps to a refusal. The known cases are open issues: #77, #80. Any failure of pdf.js's XFA layout is one more (#139): pdf.js catches it, and what arrives is its `UnknownErrorException` saying `Cannot read properties of undefined (reading 'length')`.
 
-It can also not settle: `sanitize` has no deadline (#86), and a frame the host page removes before it has loaded leaves it pending (#99).
+It can also not settle: `sanitize` has no deadline (#86).
 
 `quillify` resolves to a tree or to problems. It rejects when `check` throws, when the engine's binary does not load, which is the engine's own `runtime::init_failed`, and on an error from `Quill.fromTree` that is not the engine's. `suggest` and `check` return at once. `check` throws a `TypeError` that names the slot when the naming is not shaped as its type says, since a naming can be a model's JSON. Neither checks its fields, which are `sanitize`'s to shape.
 
