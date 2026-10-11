@@ -13,6 +13,7 @@ What a consumer of the package can observe, by release.
 - A dynamic form with an overflow leader before a row that cannot fit no longer keeps pdf.js laying out pages for good. `sanitize` settles on DAF 1024, with an error. It still has no deadline. The pdf.js worker the package ships is changed at two more lines for it.
 - A dynamic form converts when a field is named as the subform beside it, has no name, or has a name that ends in a period. Each ended `sanitize` with pdf-lib's error, on twelve of the Air Force's published forms.
 - A dynamic form over 20 pages is refused as `too_many_pages` before a page of it is laid out in the host page. It was laid out in full first. A form over the cap that holds an image or a dashed border is refused for its pages, where it was `unpaintable`.
+- A dropdown with `;`, `>` or `|` in an option builds into a quill. The engine refuses those characters in an enum value, so `quillify` returned its problem for DAF 64 and AFMC 21 and no naming kept the field. Such a dropdown is now a string field with the first option as its example: the quill has a text box where the published form has a dropdown, and lists none of the options. A dropdown without those characters is unchanged.
 
 ## 0.1.0
 
