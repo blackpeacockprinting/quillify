@@ -1,4 +1,12 @@
-import { PDFDocument, PDFHexString, PDFName, PDFString } from 'pdf-lib';
+import {
+	PDFArray,
+	PDFDict,
+	PDFDocument,
+	PDFHexString,
+	PDFName,
+	PDFString,
+	pdfDocEncodingDecode
+} from 'pdf-lib';
 import { toTopLeftRect } from './coords.js';
 import { openPdf } from './pdfjs.js';
 import { Refused } from './refusal.js';
@@ -143,16 +151,55 @@ export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory & 
  * widget's tooltip is its field's tooltip, which is the same parent walk pdf.js
  * already does for the name.
  *
+ * The walk goes down `/Fields` through `/Kids` and joins the `/T` of each node
+ * that has one with a period, as pdf.js builds a field's name. A `/T` the two
+ * libraries decode apart finds no widget. It reads the objects themselves,
+ * since pdf-lib's form API throws on a tree it cannot type. Whatever is not
+ * the type the walk wants is passed over, and a node is read once, so a tree
+ * that loops ends.
+ *
  * pdf-lib carries no decryption, so this only reads what `normalizePdf` has
  * already decrypted.
  */
 async function tooltipsByField(bytes: Uint8Array): Promise<Map<string, string>> {
 	const found = new Map<string, string>();
 	const doc = await PDFDocument.load(bytes, { updateMetadata: false });
-	for (const field of doc.getForm().getFields()) {
-		const tip = field.acroField.dict.lookup(PDFName.of('TU'));
-		if (tip instanceof PDFString || tip instanceof PDFHexString)
-			found.set(field.getName(), tip.decodeText());
+	const acroForm = doc.catalog.lookup(PDFName.of('AcroForm'));
+	const seen = new Set<PDFDict>();
+	// Each list of nodes with the name of the field that holds it. An entry of
+	// `/Fields` is a field. A kid with no `/T` is a widget of the field above it.
+	const lists: [nodes: unknown, above: string | undefined][] = [
+		[acroForm instanceof PDFDict ? acroForm.lookup(PDFName.of('Fields')) : undefined, undefined]
+	];
+	for (let next = 0; next < lists.length; next++) {
+		const [nodes, above] = lists[next]!;
+		if (!(nodes instanceof PDFArray)) continue;
+		for (let index = 0; index < nodes.size(); index++) {
+			const node = nodes.lookup(index);
+			if (!(node instanceof PDFDict) || seen.has(node)) continue;
+			seen.add(node);
+			const part = text(node.lookup(PDFName.of('T')));
+			const name = part === undefined ? above : above === undefined ? part : `${above}.${part}`;
+			const tip = text(node.lookup(PDFName.of('TU')));
+			if (tip !== undefined && (part !== undefined || next === 0)) found.set(name ?? '', tip);
+			lists.push([node.lookup(PDFName.of('Kids')), name]);
+		}
 	}
 	return found;
+}
+
+/**
+ * A text string as pdf-lib's `decodeText` reads it: UTF-16 after a byte order
+ * mark, PDFDocEncoding without one. `decodeText` hands every character to one
+ * call, which overflows the stack near 130,000 of them.
+ */
+function text(value: unknown): string | undefined {
+	if (!(value instanceof PDFString || value instanceof PDFHexString)) return undefined;
+	const bytes = value.asBytes();
+	if (bytes[0] === 0xfe && bytes[1] === 0xff) return new TextDecoder('utf-16be').decode(bytes);
+	if (bytes[0] === 0xff && bytes[1] === 0xfe) return new TextDecoder('utf-16le').decode(bytes);
+	let decoded = '';
+	for (let at = 0; at < bytes.length; at += 8192)
+		decoded += pdfDocEncodingDecode(bytes.subarray(at, at + 8192));
+	return decoded;
 }
