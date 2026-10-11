@@ -69,6 +69,24 @@ it('answers with no file when qpdf wrote none', async () => {
 	expect(await answer(starts('() => 2'))).toEqual({ loaded: true });
 });
 
+it('answers with no file when qpdf ends with an error, though it left part of one', async () => {
+	const gaveUp = `(args, files) => {
+		files['/out.pdf'] = new Uint8Array(3);
+		return 2;
+	}`;
+
+	expect(await answer(starts(gaveUp))).toEqual({ loaded: true });
+});
+
+it('answers with the file when qpdf ends with warnings', async () => {
+	const warned = `(args, files) => {
+		files['/out.pdf'] = Uint8Array.of(7);
+		return 3;
+	}`;
+
+	expect(await answer(starts(warned))).toEqual({ loaded: true, out: Uint8Array.of(7) });
+});
+
 it('says that the module did not start', async () => {
 	const module = `() => Promise.reject(new Error('no binary'))`;
 
