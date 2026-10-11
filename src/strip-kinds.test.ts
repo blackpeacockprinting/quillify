@@ -345,27 +345,16 @@ it('keeps no key that leads to a kind and references an object the file does not
 	]);
 });
 
-it('keeps what the tags, a property list and a destination name, through a dictionary, an array and a stream', async () => {
-	const { text } = await background((node, context) => {
-		/** A dictionary that names an array, which names a stream, which names `mark`, each by reference. */
-		const naming = (mark: string) => {
-			const marked = context.register(context.obj({ Sample: PDFString.of(mark) }));
-			const stream = context.register(context.stream('x', { Sample: marked }));
-			return context.register(context.obj({ K: context.register(context.obj([stream])) }));
-		};
+it('keeps what the tags name, through a dictionary, an array and a stream', async () => {
+	const { text } = await background((_, context) => {
+		const marked = context.register(context.obj({ Sample: PDFString.of('KEPT') }));
+		const stream = context.register(context.stream('x', { Sample: marked }));
+		const tags = context.obj({ K: context.register(context.obj([stream])) });
 		context
 			.lookup(context.trailerInfo.Root, PDFDict)
-			.set(PDFName.of('StructTreeRoot'), naming('KEPT-tags'));
-		node.set(PDFName.of('Resources'), context.obj({ Properties: { P0: naming('KEPT-list') } }));
-		const link = {
-			Type: 'Annot',
-			Subtype: 'Link',
-			Rect: [0, 0, 1, 1],
-			Dest: [naming('KEPT-place')]
-		};
-		node.set(PDFName.of('Annots'), context.obj([context.register(context.obj(link))]));
+			.set(PDFName.of('StructTreeRoot'), context.register(tags));
 	});
-	for (const mark of ['KEPT-tags', 'KEPT-list', 'KEPT-place']) expect(text).toContain(mark);
+	expect(text).toContain('KEPT');
 });
 
 it('keeps no page that the page tree holds as a dictionary written in /Kids', async () => {

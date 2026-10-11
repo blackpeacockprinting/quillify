@@ -24,6 +24,7 @@ import type { View } from './types.js';
  *     Key:[kind]  one of them or an array of them
  *     Key:{kind}  a dictionary of them by name
  *     Key:^kind   a reference to one the walk reaches as that kind by another key
+ *     Key:[^kind] such a reference, or an array of them and of arrays of them
  *     Key:*       a value no row reads yet, kept whole
  *
  * A value of the first sort also stays where a kind is expected: a mask can be
@@ -34,25 +35,30 @@ import type { View } from './types.js';
  * before that which is not what its position leads to becomes null. A kind
  * `PICK` names is one of several, told apart by a key of the dictionary or a
  * position of the array, which holds a name where `PICK` writes one and a
- * number where it writes a number.
+ * number where it writes a number. Where `PICK` names a last kind, one that is
+ * told as none of the others is of that kind.
  */
 const KINDS: Record<string, string> = {
-	catalog: 'Type Pages:tree OCProperties:* StructTreeRoot:* MarkInfo:* Lang',
+	catalog: 'Type Pages:tree OCProperties:layers StructTreeRoot:* MarkInfo:* Lang',
 	tree: 'Type Parent:^tree Kids:[node] Count Resources:resources Rotate',
 	page:
 		'Type Parent:^tree Resources:resources MediaBox Contents:[content] Rotate Group:group ' +
 		'UserUnit StructParents Tabs Annots:[link]',
-	link: 'Type Subtype Rect Border:* BS:* C H QuadPoints F OC:* Contents StructParent A:action Dest:*',
+	link:
+		'Type Subtype Rect Border BS:border C H QuadPoints F OC:oc Contents StructParent A:action ' +
+		'Dest:dest',
+	border: 'Type W S D',
 	uri: 'S URI',
-	goto: 'S D:*',
+	goto: 'S D:dest',
+	dest: '0:^page 1 2 3 4 5',
 	resources:
 		'Font:{font} XObject:{xobject} ExtGState:{gstate} ColorSpace:{space} Pattern:{pattern} ' +
-		'Shading:{shading} Properties:{*} ProcSet',
+		'Shading:{shading} Properties:{oc} ProcSet',
 	content: '',
 	image:
 		'Type Subtype Width Height BitsPerComponent ColorSpace:space Decode ImageMask Mask:image ' +
-		'SMask:image SMaskInData Matte Interpolate Intent OC:* StructParent',
-	form: 'Type Subtype FormType BBox Matrix Resources:resources Group:group OC:* StructParent StructParents',
+		'SMask:image SMaskInData Matte Interpolate Intent OC:oc StructParent',
+	form: 'Type Subtype FormType BBox Matrix Resources:resources Group:group OC:oc StructParent StructParents',
 	parms:
 		'Predictor Colors BitsPerComponent Columns EarlyChange K EndOfLine EncodedByteAlign Rows ' +
 		'EndOfBlock BlackIs1 DamagedRowsBeforeError ColorTransform JBIG2Globals:data',
@@ -103,7 +109,17 @@ const KINDS: Record<string, string> = {
 		'Type FontName FontFamily FontStretch FontWeight Flags FontBBox ItalicAngle Ascent Descent ' +
 		'Leading CapHeight XHeight StemV StemH AvgWidth MaxWidth MissingWidth CharSet Lang ' +
 		'FontFile:fontfile FontFile2:fontfile FontFile3:fontfile CIDSet:data',
-	fontfile: 'Subtype Length1 Length2 Length3'
+	fontfile: 'Subtype Length1 Length2 Length3',
+	layers: 'OCGs:[ocg] D:config',
+	config:
+		'Name BaseState ON:[^ocg] OFF:[^ocg] Intent AS:[auto] Order:[^ocg] ListMode RBGroups:[^ocg] ' +
+		'Locked:[^ocg]',
+	auto: 'Event Category OCGs:[^ocg]',
+	ocg: 'Type Name Intent Usage:usage',
+	usage: 'Print:state View:state Export:state PageElement:state',
+	state: 'Subtype PrintState ViewState ExportState',
+	ocmd: 'Type OCGs:[ocg] P VE:[^ocg]',
+	marked: ''
 };
 const STREAMS = [
 	'content',
@@ -119,7 +135,7 @@ const STREAMS = [
 	'fontfile'
 ];
 const STREAM = 'Length Filter DecodeParms:[parms]';
-const PICK: Record<string, [key: string, kinds: Record<string, string>]> = {
+const PICK: Record<string, [key: string, kinds: Record<string, string>, other?: string]> = {
 	node: ['Type', { Pages: 'tree', Page: 'page' }],
 	action: ['S', { URI: 'uri', GoTo: 'goto' }],
 	xobject: ['Subtype', { Image: 'image', Form: 'form' }],
@@ -153,17 +169,20 @@ const PICK: Record<string, [key: string, kinds: Record<string, string>]> = {
 		'ShadingType',
 		{ 1: 'shaded', 2: 'shaded', 3: 'shaded', 4: 'mesh', 5: 'mesh', 6: 'mesh', 7: 'mesh' }
 	],
-	pattern: ['PatternType', { 1: 'tiling', 2: 'shadingpattern' }]
+	pattern: ['PatternType', { 1: 'tiling', 2: 'shadingpattern' }],
+	oc: ['Type', { OCG: 'ocg', OCMD: 'ocmd' }, 'marked']
 };
 
 /**
  * What a key leads to: one of a kind, a list or a map of them, or a back
- * reference to one. A bare key leads to one of the kind `''` and `*` to one of
- * the kind `'*'`, and neither kind has a row.
+ * reference to one, which may be an array of them where `many` is set. A bare
+ * key leads to one of the kind `''` and `*` to one of the kind `'*'`, and
+ * neither kind has a row.
  */
 interface Slot {
 	shape: 'one' | 'list' | 'map' | 'back';
 	kind: string;
+	many: boolean;
 }
 const SHAPES: Record<string, Slot['shape']> = { '[': 'list', '{': 'map', '^': 'back' };
 const SLOTS = new Map<string, Slot>();
@@ -171,8 +190,9 @@ const SLOTS = new Map<string, Slot>();
 function slot(text: string): Slot {
 	let read = SLOTS.get(text);
 	if (!read) {
-		const shape = SHAPES[text.charAt(0)] ?? 'one';
-		read = { shape, kind: shape === 'one' ? text : text.replace(/[[\]{}^]/g, '') };
+		const many = text.startsWith('[^');
+		const shape = many ? 'back' : (SHAPES[text.charAt(0)] ?? 'one');
+		read = { shape, kind: shape === 'one' ? text : text.replace(/[[\]{}^]/g, ''), many };
 		SLOTS.set(text, read);
 	}
 	return read;
@@ -202,13 +222,14 @@ const ROWS = new Map(
 	})
 );
 const PICKS = new Map(
-	Object.entries(PICK).map(([kind, [key, kinds]]) => [
+	Object.entries(PICK).map(([kind, [key, kinds, other]]) => [
 		kind,
 		{
 			key: keyed(key),
 			kinds: new Map<unknown, string>(
 				Object.entries(kinds).map(([told, kind]) => [keyed(told), kind])
-			)
+			),
+			other
 		}
 	])
 );
@@ -238,7 +259,10 @@ const PICKS = new Map(
  * kind that reaches it. A dictionary loses every key its kind does not list and
  * every value that is not what its key leads to, and an object the walk does
  * not reach is deleted: a saved file carries every object the context holds,
- * reachable or not. The structure tree is kept whole and can still name an
+ * reachable or not. A reference back to an object the walk did not reach as its
+ * kind is deleted, or made null in an array: a destination's page that the page
+ * tree does not hold, and a layer the default configuration names that no
+ * other key reaches. The structure tree is kept whole and can still name an
  * annotation no page lists or a page outside the page tree. So an object that
  * reads as either and is not kept is deleted outright before the walk, and the
  * files, fields and appearance streams that hung off it are then out of its
@@ -309,7 +333,7 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 	const claimed = new Map<PDFRef, Slot>();
 	const pending: [value: PDFArray | PDFDict | PDFStream, as: Slot][] = [];
 	const whole: (PDFObject | undefined)[] = [];
-	const backs: [holder: PDFDict, key: PDFName, value: PDFObject, to: Slot][] = [];
+	const backs: [holder: PDFDict | PDFArray, key: PDFName | number, to: Slot][] = [];
 
 	/** Whether what a reference names or an array holds leads nowhere: `false` while it is being read, so an array that holds itself leads somewhere. */
 	const plains = new Map<PDFRef | PDFArray, boolean>();
@@ -370,7 +394,7 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 		const pick = PICKS.get(to.kind);
 		const told = pick && under(value instanceof PDFStream ? value.dict : value, pick.key);
 		const kind = pick
-			? pick.kinds.get(told instanceof PDFNumber ? told.asNumber() : told)
+			? (pick.kinds.get(told instanceof PDFNumber ? told.asNumber() : told) ?? pick.other)
 			: to.kind;
 		const body =
 			value instanceof PDFStream ? 'stream' : value instanceof PDFArray ? 'array' : 'dict';
@@ -396,14 +420,17 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 		} else if (value instanceof PDFArray) {
 			const { keys } = ROWS.get(as.kind)!;
 			while (value.size() > keys.size) value.remove(value.size() - 1);
-			for (let i = 0; i < value.size(); i++)
-				if (!reach(value.get(i), keys.get(i)!)) value.set(i, PDFNull);
+			for (let i = 0; i < value.size(); i++) {
+				const to = keys.get(i)!;
+				if (to.shape === 'back') backs.push([value, i, to]);
+				else if (!reach(value.get(i), to)) value.set(i, PDFNull);
+			}
 		} else {
 			const dict = value instanceof PDFStream ? value.dict : value;
 			const { keys } = ROWS.get(as.kind)!;
 			for (const [key, part] of dict.entries()) {
 				const to = keys.get(key);
-				if (to?.shape === 'back') backs.push([dict, key, part, slot(to.kind)]);
+				if (to?.shape === 'back') backs.push([dict, key, to]);
 				else if (!to || !reach(part, to)) dict.delete(key);
 			}
 		}
@@ -412,6 +439,39 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 	// node or a /Kids above it: the page tree holds the page no more.
 	if (pages.some(({ ref }) => claimed.get(ref) !== slot('page')))
 		throw new Refused({ code: 'damaged' });
+	// A back reference stays when the walk reached what it names as its kind.
+	// Where the slot takes many, a value that leads nowhere stays too, and an
+	// array is read part by part, and so is each array in it. An array is read
+	// once. One the walk cut to a list of the kind stays wherever it is named.
+	// One that two such keys name by a reference stays under both, and inside an
+	// array a second reference to it does not, so no array is left holding itself.
+	// An array written in place is read here and never by `plain`, which would
+	// hold a note of each.
+	for (const [holder, key, to] of backs) {
+		const one = slot(to.kind);
+		const list = slot(`[${to.kind}]`);
+		const arrays: PDFArray[] = [];
+		const stays = (within: PDFDict | PDFArray, part: PDFObject) => {
+			const had = claimed.get(part as PDFRef);
+			if (had === one) return true;
+			if (!to.many) return false;
+			if (had) return had === list || (had === to && within instanceof PDFDict);
+			if (!(part instanceof PDFArray) && plain(part)) {
+				whole.push(part);
+				return true;
+			}
+			const value = part instanceof PDFRef ? context.lookup(part) : part;
+			if (!(value instanceof PDFArray)) return false;
+			if (part instanceof PDFRef) claimed.set(part, to);
+			arrays.push(value);
+			return true;
+		};
+		if (holder instanceof PDFArray) {
+			if (!stays(holder, holder.get(key as number))) holder.set(key as number, PDFNull);
+		} else if (!stays(holder, holder.get(key as PDFName)!)) holder.delete(key as PDFName);
+		for (let array = arrays.pop(); array; array = arrays.pop())
+			for (let i = 0; i < array.size(); i++) if (!stays(array, array.get(i))) array.set(i, PDFNull);
+	}
 	// What no row reads and what leads nowhere are kept as they are and walked
 	// last, so an object a row reaches has its row whatever else names it.
 	while (whole.length > 0) {
@@ -425,8 +485,6 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 		else if (value instanceof PDFDict) for (const part of value.values()) whole.push(part);
 		else if (value instanceof PDFStream) for (const part of value.dict.values()) whole.push(part);
 	}
-	for (const [holder, key, value, to] of backs)
-		if (claimed.get(value as PDFRef) !== to) holder.delete(key);
 
 	// The trailer's /Size is the largest object number plus one, and deleting does
 	// not lower it.
