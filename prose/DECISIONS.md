@@ -240,3 +240,22 @@ pdf.js is given the frame's document as `ownerDocument`, and it binds fonts as i
 What the conversion returns is what it returned, with one difference. The nine goldens pass untouched. Of what `displayList` and `harvestWidgets` return for every page of the three dynamic fixtures, DD 2875 and DAF 1288 are identical, and DAF 988 differs in 4 of its 418 text runs by 0.01 pt in `x` or `width`, with every box, line and widget the same. The carried stage sits at `left: -99999px`. Moved to `left: 0`, it gives the frame's numbers for all three, so the four runs follow the old stage's offset.
 
 **Unlock.** None.
+## 10 Oct 2026: A test in the gate holds the source to no request API
+
+Adds to "The pdf.js guard lives in the worker the package ships". Decided with that change (#93) and recorded here.
+
+**Context.** #10 asks for one Semgrep rule, with its own fixture, that fails the gate on a network API in `src/`. The gate's tools are Prettier, `tsc` and Vitest, each pinned and installed by `npm ci`. Semgrep would be a fourth, installed some other way on every machine and in CI.
+
+**Decision.** `test/no-network.test.ts` fails when a source module names `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource`, `sendBeacon` or `importScripts`. It is a check on six names in the modules under `src/`, and a request made some other way passes it. What holds the library to its own files is the browser test that lists every HTTP request `sanitize` makes for a dynamic form. #10's line on `?url` and `?inline` is read for the modules too: `test/assets.test.ts` holds it there, and a test file still imports a fixture by `?url`, which only the test server resolves.
+
+**Unlock.** A rule set the organization runs across its repositories.
+
+## 10 Oct 2026: The package is one entry point and a tarball of what it names
+
+**Context.** The four functions were in `src/index.ts`, and `package.json` named no entry point, so nothing a consumer could install reached them (#10, #12). No license and no registry are decided (#4, #5).
+
+**Decision.** `npm run build` compiles `src/` to `dist/` with `tsc`, beside `assets/`, so the relative URLs the source finds its worker and `qpdf.wasm` by hold in the build as they do in the source. The build has no ambient types, so a module that leaned on the bundler's would not compile. `exports` names `dist/index.js` and nothing else: a consumer cannot import a module under `dist/` or a file under `assets/` by path, and every module but the entry point stays free to change. `files` lists `dist`, `assets`, `NOTICE` and `licenses`, and npm adds `package.json` and `README.md`. `CHANGELOG.md` is not packed. The package stays `private` and `UNLICENSED`. `engines` asks for the Node the suite runs on, which a consumer's install then checks as well.
+
+`NOTICE` names the three files that are other projects' work, and a test holds it to the installed versions. For `qpdf.wasm` it says what the tarball lacks. The wrapper ships no license text, so the texts of zlib, of libjpeg-turbo and of the C++ runtime linked into the binary, and the notices qpdf carries in its own `NOTICE.md`, are in neither place. That is settled before a tarball goes to anyone outside the organization, with the license (#4) or with a binary built here (#46).
+
+**Unlock.** A registry (#5) changes what `private` and `files` say. A second entry point takes a consumer that cannot get what it needs from the four functions.
