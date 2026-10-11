@@ -35,6 +35,82 @@ describe('check', () => {
 		]);
 	});
 
+	describe('a naming that is not shaped as its type says', () => {
+		// A naming can be a model's JSON, which TypeScript never saw.
+		const entry = kept('a', 'first');
+		const each = (...values: unknown[]) => values.map((value) => ({ value }));
+		const slots: [string, string, { value: unknown }[], (value: unknown) => unknown][] = [
+			[
+				'name',
+				'a string',
+				each(undefined, null, true, 7, ['a']),
+				(name) => ({ ...naming(entry), name })
+			],
+			[
+				'description',
+				'a string',
+				each(undefined, null, true, 7, ['a']),
+				(description) => ({ ...naming(entry), description })
+			],
+			[
+				'fields',
+				'an array',
+				each(undefined, null, 'a', { 0: entry }),
+				(fields) => ({ ...naming(), fields })
+			],
+			['fields[0]', 'an object', each(undefined, null, 'a', 7), (one) => naming(one as never)],
+			[
+				'fields[0].id',
+				'a string',
+				each(undefined, null, 7),
+				(id) => naming({ ...entry, id } as never)
+			],
+			[
+				'fields[0].keep',
+				'a boolean',
+				each(undefined, null, 'false', 0, 1),
+				(keep) => naming({ ...entry, keep } as never)
+			],
+			[
+				'fields[0].name',
+				'a string',
+				each(undefined, null, true, 7, ['a']),
+				(name) => naming({ ...entry, name } as never)
+			],
+			[
+				'fields[0].description',
+				'a string',
+				each(undefined, null, true, 7, ['a']),
+				(description) => naming({ ...entry, description } as never)
+			],
+			[
+				'fields[0].example',
+				'a string',
+				each(null, true, 7, ['a']),
+				(example) => naming({ ...entry, example } as never)
+			],
+			[
+				'fields[0].text',
+				"'line', 'paragraph' or 'lines'",
+				each(null, true, 7, 'banana'),
+				(text) => naming({ ...entry, text } as never)
+			]
+		];
+		describe.each(slots)('in %s, which is to be %s', (slot, kind, values, wrong) => {
+			it.each(values)('throws for $value', ({ value }) => {
+				const call = () => check([a], wrong(value) as never);
+				expect(call).toThrow(TypeError);
+				expect(call).toThrow(`naming.${slot} is not ${kind}.`);
+			});
+		});
+
+		it('names the entry by its place in the list', () => {
+			expect(() => check([a], naming(entry, { ...entry, name: null } as never))).toThrow(
+				'naming.fields[1].name is not a string.'
+			);
+		});
+	});
+
 	it('takes a byte-order mark as a description, as the engine does', () => {
 		expect(check([a], { ...naming(kept('a', 'first')), description: '\ufeff' })).toEqual([]);
 	});

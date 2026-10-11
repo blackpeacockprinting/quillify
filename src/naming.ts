@@ -36,7 +36,36 @@ export function suggest(fields: readonly Field[]): FieldNaming[] {
 	});
 }
 
+const TEXT: ReadonlySet<unknown> = new Set(['line', 'paragraph', 'lines']);
+
+/**
+ * A naming can be a model's JSON, which TypeScript never saw. A slot of the
+ * wrong type is a mistake in the call and no fault of a name, so it throws: a
+ * pattern reads `null` as the word, and the word is a name.
+ */
+function shaped({ name, description, fields }: Naming): void {
+	const not = (slot: string, kind: string): never => {
+		throw new TypeError(`naming.${slot} is not ${kind}.`);
+	};
+	if (typeof name !== 'string') not('name', 'a string');
+	if (typeof description !== 'string') not('description', 'a string');
+	if (!Array.isArray(fields)) not('fields', 'an array');
+	fields.forEach((entry: FieldNaming | null, at) => {
+		const slot = `fields[${at}]`;
+		if (typeof entry !== 'object' || entry === null) return not(slot, 'an object');
+		if (typeof entry.id !== 'string') not(`${slot}.id`, 'a string');
+		if (typeof entry.keep !== 'boolean') not(`${slot}.keep`, 'a boolean');
+		if (typeof entry.name !== 'string') not(`${slot}.name`, 'a string');
+		if (typeof entry.description !== 'string') not(`${slot}.description`, 'a string');
+		if (entry.example !== undefined && typeof entry.example !== 'string')
+			not(`${slot}.example`, 'a string');
+		if (entry.text !== undefined && !TEXT.has(entry.text))
+			not(`${slot}.text`, "'line', 'paragraph' or 'lines'");
+	});
+}
+
 export function check(fields: readonly Field[], naming: Naming): Problem[] {
+	shaped(naming);
 	const problems: Problem[] = [];
 	if (!SNAKE_CASE.test(naming.name)) problems.push({ code: 'quill_name' });
 	if (/^\p{White_Space}*$/u.test(naming.description)) problems.push({ code: 'quill_description' });
