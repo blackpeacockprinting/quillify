@@ -77,11 +77,12 @@ function stroked(style: CSSStyleDeclaration): Edge | null {
  * the layout, and the rects here are read off it.
  *
  * What it can express is text, CSS backgrounds and borders, and inline SVG
- * `line` and `rect`. An image, a background image, another SVG shape, a border
- * style it cannot draw and a transform it cannot carry are refused with the
- * construct named: a background that is silently incomplete is worse than not
- * taking the form. A hidden element, an SVG `line` or `rect` with no stroke
- * and an element under 0.3 pt on a side are passed over.
+ * `line` and `rect`. An image, a background image, a `rect` filled with a
+ * gradient or a pattern, another SVG shape, a border style it cannot draw and a
+ * transform it cannot carry are refused with the construct named: a background
+ * that is silently incomplete is worse than not taking the form. An element
+ * hidden by its own style, an SVG `line` with no stroke, a `rect` with neither
+ * stroke nor fill and an HTML element under 0.3 pt on a side are passed over.
  */
 export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 	const { layer, origin } = page;
@@ -110,9 +111,9 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 			const svg = (el as unknown as SVGElement).ownerSVGElement;
 			if (!svg) continue;
 			const edge = stroked(style);
-			if (!edge) continue;
-			const svgRect = svg.getBoundingClientRect();
 			if (tag === 'line') {
+				if (!edge) continue;
+				const svgRect = svg.getBoundingClientRect();
 				// pdf.js writes these as percentages of the svg box ("100%", "50%").
 				const at = (key: string, span: number): number => {
 					const raw = el.getAttribute(key) ?? '0';
@@ -129,13 +130,19 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 					colour: edge.colour
 				});
 			} else {
+				// pdf.js writes every rectangle a fill, and the browser drops one that is
+				// no color: a gradient or a pattern. What is left computes to black.
+				if (!el.style.fill && !el.hasAttribute('fill')) refuse('background_image');
+				// A rectangle whose edge is hidden has a stroke of no width.
+				const fill = style.fill !== 'none' && opaque(style.fill) ? rgb(style.fill) : null;
+				if (!edge && !fill) continue;
 				const r = el.getBoundingClientRect();
 				boxes.push({
 					x: X(r.x),
 					y: Y(r.y),
 					w: +r.width.toFixed(2),
 					h: +r.height.toFixed(2),
-					fill: style.fill !== 'none' && opaque(style.fill) ? rgb(style.fill) : null,
+					fill,
 					edges: [edge, edge, edge, edge]
 				});
 			}
