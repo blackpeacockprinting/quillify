@@ -5,6 +5,7 @@ What a consumer of the package can observe, by release.
 ## Unreleased
 
 - A background passes `qpdf --check` with no warning: its trailer's `/Size` is one more than its highest object number. SF 182's said 1,739 where the highest was 1,679, and the backgrounds of the three dynamic forms and of the sample were off the same way.
+- A background carries no `/ID`. `sanitize` run twice on one file, two seconds apart, returns the same `form.pdf` byte for byte: qpdf wrote a fresh second element of the `/ID` on each run, and six published forms and the sample carried it.
 
 ## 0.1.0
 

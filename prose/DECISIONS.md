@@ -357,3 +357,15 @@ Adds to "v0.1.0 fixes four more defects of the carried code".
 For a consumer the kind and the ids of those fields change, so a naming stored for such a form has to be made again. WH-380-E goes from 60 fields to 75, at the same 77 places, and `corpus/manifest.json` and the total its test holds move with it. DAF 2522 is refused for its count as before, which goes from 457 to 500. No golden changes. This lands before the first tag because a field's id is what a stored naming refers to.
 
 **Unlock.** The engine's form schema gains an on-value for each widget (#41). The group can then be one field that holds the chosen value.
+
+## 11 Oct 2026: A background has no file identifier
+
+Adds to "A page and a link keep a named set of keys", which leaves the trailer with v0.2.0.
+
+**Context.** Two builds of DD 689, three seconds apart, differ in 29 bytes, all in the second element of the trailer's `/ID` (#27). qpdf writes that element fresh on every run, and the strip carried the trailer through. A quill is named by the hash of its files and a change to one is read as a diff, so the same bytes in have to give the same bytes out. A file identifier is how a reader pairs a file with data exported from it: the exported data records the `/ID` of the PDF it came from, and a reader compares the two. Nothing is exported from a background, which has no field. A dynamic form's background has no `/ID` already, since pdf-lib writes none for a document it creates.
+
+Of the ten fixtures, seven carry one: the six static forms and the sample. With the whole `/ID` taken out, two builds 2.1 seconds apart are the same bytes for all ten, so no date, producer string or ordering differs.
+
+**Decision.** `stripAcroForm` deletes the trailer's `/ID`, as it deletes `/Info`. A background has no file identifier, and `sanitize` run twice on one file returns one `form.pdf`. The first element, which a published form carries, goes with the second.
+
+**Unlock.** A consumer that needs to pair a filled form with its background by identifier. The identifier is then derived from the background's own bytes, so it repeats with them.
