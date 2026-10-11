@@ -14,7 +14,7 @@ Every string in a `Form` that is not a `kind` is text the author of the PDF cont
 
 `stripAcroForm` writes the background from the file's pages. It keeps a named set of keys and deletes every other:
 
-- of the catalog: `Type Pages OCProperties StructTreeRoot MarkInfo Lang`. With the rest go the form (`/AcroForm` and its XFA packet, `/NeedsRendering`), the XMP metadata, scripts, attachments, a portfolio, bookmarks, named destinations and the usage-rights signature. The trailer's `/Info` goes too.
+- of the catalog: `Type Pages OCProperties StructTreeRoot MarkInfo Lang`. With the rest go the form (`/AcroForm` and its XFA packet, `/NeedsRendering`), the XMP metadata, scripts, attachments, a portfolio, bookmarks, named destinations and the usage-rights signature. The trailer's `/Info` and `/ID` go too.
 - of a page tree node: `Type Parent Kids Count Resources Rotate`.
 - of a page: `Type Parent Resources MediaBox Contents Rotate Group UserUnit StructParents Tabs`. The crop box becomes the MediaBox.
 - of a link: `Type Subtype Rect Border BS C H QuadPoints F OC Contents StructParent A Dest`.

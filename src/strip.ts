@@ -43,7 +43,7 @@ const copy = (dict: PDFDict, kept: Set<unknown>) => {
  * `/NeedsRendering`), the XMP metadata, the scripts, attachments, portfolio and
  * bookmarks, and the usage-rights signature under `/Perms`. The signature goes
  * here because qpdf's `--remove-restrictions`, which takes it too, also strips
- * `/FT /Sig` from every signature field. The trailer's `/Info` goes too.
+ * `/FT /Sig` from every signature field. The trailer's `/Info` and `/ID` go too.
  *
  * Of a page's annotations a Link stays, when it leads to an http or https
  * address or to an explicit destination in the file, and leads there one way.
@@ -123,6 +123,7 @@ export async function stripAcroForm(bytes: Uint8Array): Promise<Uint8Array> {
 	});
 	only(doc.catalog, CATALOG);
 	context.trailerInfo.Info = undefined;
+	context.trailerInfo.ID = undefined;
 
 	for (const [ref, object] of context.enumerateIndirectObjects())
 		if (!kept.has(ref) && (is(object, 'Type', 'Page') || annotation(object))) context.delete(ref);
