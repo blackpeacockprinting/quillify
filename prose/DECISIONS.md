@@ -770,3 +770,25 @@ Measured outside the gate, with the build of each pin. The 59 forms come out as 
 pdf.js rejects an open when the page's copy and the worker are of different releases, so the worker the package ships and the `pdfjs-dist` a consumer installs move together, as the exact pin has them.
 
 **Unlock.** The next release of pdf.js. Taking it is this again: the diff of the two builds, each guard found or shown to be no longer needed (#47), the gate, and the two runs over the published forms.
+
+## 11 Oct 2026: The caps are 25 pages and 1,000 fields
+
+Replaces the caps of 20 pages and 200 fields, which "The code is carried from the fork" brought in as they were (#40).
+
+**Context.** The fork capped a form at 20 pages because each page went to a model as an image, and at 200 fields because that was as many as one naming call was measured to get right. This library sends nothing to a model. Of the 59 published forms 8 are over the field cap, and of the Air Force's 1,354 files 230 are, more than for any other reason (#54). Nothing measured the cost of a larger form, so this entry does, with the caps lifted in a probe outside the repository and in no commit.
+
+**Decision.** Each cap is a round number a quarter above the largest published form on hand that goes through every stage in under 20 seconds. A stage that turned worse than linear, or a form that took longer, would stop the field cap short of that.
+
+Each of the 237 distinct published files over 200 fields (the 8 and the 230 share one, AF 1466) went through `sanitize`, `suggest`, `quillify`, and the engine opening the quill and rendering it blank, one at a time in headless Chromium on the machine the gate runs on. They hold 201 to 2,039 fields. 226 went through every stage, the largest at 999 fields (AETC667, 0.84 s). The slowest took 2.05 s in all (AF4160, 820 fields on 11 pages, 2.01 s of it `sanitize`), and the median took 0.61 s. Over the 226 the stage maxima are `sanitize` 2.01 s, `suggest` 7 ms, `quillify` 24 ms, opening the quill 11 ms and the render 112 ms. The other 11 hold 1,009 to 2,039 fields, and `quillify` returns their problem: the engine (0.124.0) takes at most 1,000 fields in a block, as `'main' declares 1008 fields; a card-yaml block carries at most 1000`.
+
+A form built to the same size shows no stage worse than linear. Each size was run twice, and the figures are the second run. A page of 250, 500, 1,000, 2,000 and 4,000 text fields took `sanitize` 0.36, 0.50, 0.73, 1.2 and 2.2 s as an AcroForm, and 0.47, 0.73, 1.2, 2.3 and 4.5 s as a dynamic form. `suggest` took 3 ms and `quillify` 41 ms at 4,000. Past 1,000 the engine refuses the quill, so the engine is the one stage not measured at 2,000 and 4,000. At 1,000 it opened in 9 ms and rendered in 18.
+
+The field cap is 1,000. A quarter above 999 is 1,250, but the engine takes 1,000 and no more, so a form that `sanitize` returns above that would end in a problem from `quillify`, which the cap exists to say first. A quill declares at most one field for each of a form's fields, so the engine does not refuse a form at the cap for its number of fields. It can still refuse one for something else: a form of 1,000 dropdowns that share one list of 1,000 options gave a quill past the engine's node budget (`quill::yaml_parse_error`), and two Air Force files end in `quill::format_literal_reserved_char`. The stage that is the limit is the engine's. The refusal for the 11 above it stays `too_many_fields`.
+
+The page cap is 25. pdf.js's page count of all 1,395 distinct files on hand runs to 19 (AF1174, which `sanitize` refuses as `unpaintable`) and 18 (SF 2809, which converts, 106 fields, 2.6 s in all, and SF 85, which has no field). A quarter above 18 is 22.5, and the round number is 25. A built form of 25, 50, 100 and 200 pages, one field on each, took `sanitize` 0.33, 0.33, 0.37 and 0.45 s as an AcroForm and 0.44, 0.60, 0.93 and 1.7 s as a dynamic form.
+
+The refusal codes do not change, and `limit` in each names the new value. `corpus/manifest.test.ts` changes with the corpus: the 8 forms refused for their fields are expected to convert, so 57 convert and 2 are refused, and the totals take in their 54 pages, 2,878 fields and 2,838 places. `src/caps.browser.test.ts` writes both caps out as numbers, where the tests that built a form from `MAX_PAGES` and `MAX_WIDGETS` follow the constants. `corpus/af-epubs.manifest.json` is the record of one run and stays as it is.
+
+Memory is not measured. Time is the one cost this entry bounds.
+
+**Unlock.** A published form over either cap, which needs the measurement again. A newer engine that takes more than 1,000 fields in a block moves the field cap with it. A consumer whose review step cannot take a form of 1,000 fields reads `form.fields.length` and decides for itself.
