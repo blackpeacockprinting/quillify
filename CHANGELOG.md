@@ -4,6 +4,8 @@ What a consumer of the package can observe, by release.
 
 ## Unreleased
 
+- A background passes `qpdf --check` with no warning: its trailer's `/Size` is one more than its highest object number. SF 182's said 1,739 where the highest was 1,679, and the backgrounds of the three dynamic forms and of the sample were off the same way.
+
 ## 0.1.0
 
 11 October 2026. The importer of `tonguetoquill/web-app-afa-demo@842ef4207cb5` as a library, on `@quillmark/wasm` 0.124.0.
