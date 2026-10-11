@@ -24,12 +24,19 @@ const BOX: [number, number, number, number] = [0, 0, 612, 792];
 const IMAGE = { Type: 'XObject', Subtype: 'Image', Width: 1, Height: 1, BitsPerComponent: 8 };
 const FORM = { Type: 'XObject', Subtype: 'Form', BBox: [0, 0, 1, 1] };
 
-/** The background of one 612 by 792 page, with what `plant` hangs on it. */
-async function background(plant: (page: PDFDict, context: PDFContext) => void) {
+type Plant = (page: PDFDict, context: PDFContext) => void;
+
+/** What the strip makes of one 612 by 792 page, with what `plant` hangs on it. */
+async function stripped(plant: Plant) {
 	const source = await PDFDocument.create();
 	plant(source.addPage([612, 792]).node, source.context);
 	const saved = await source.save({ useObjectStreams: false });
-	const bytes = await stripAcroForm(saved, await viewsOf(saved, [BOX]));
+	return stripAcroForm(saved, await viewsOf(saved, [BOX]));
+}
+
+/** The background of that page. */
+async function background(plant: Plant) {
+	const bytes = await stripped(plant);
 	const doc = await PDFDocument.load(bytes);
 	const page = doc.getPage(0).node;
 	return { doc, page, text: new TextDecoder('latin1').decode(bytes) };
@@ -189,18 +196,17 @@ it("keeps of a stream's dictionary its length and how it decodes, and no file it
 	expect(text).not.toContain('PRIVATE');
 });
 
-it("gives an object one kind: a page's content that its resources name as a form is no form", async () => {
-	const { page } = await background((node, context) => {
+it('refuses as damaged a file whose page names one stream as its content and, in its resources, as a form', async () => {
+	const file = stripped((node, context) => {
 		const both = context.register(context.stream('q Q', FORM));
 		node.set(PDFName.of('Contents'), both);
 		node.set(PDFName.of('Resources'), context.obj({ XObject: { Fm0: both } }));
 	});
-	expect(streamKeys(under(page, 'Contents'))).toEqual(['Length']);
-	expect(keys(under(page, 'Resources', 'XObject') as PDFDict)).toEqual([]);
+	await expect(file).rejects.toMatchObject({ refusal: { code: 'damaged' } });
 });
 
-it("gives an object one kind: an image that another's /DecodeParms names as its globals is the image", async () => {
-	const { page } = await background((node, context) => {
+it("refuses as damaged a file whose image is the globals of another image's /DecodeParms", async () => {
+	const file = stripped((node, context) => {
 		const both = context.register(context.stream('x', IMAGE));
 		const other = context.stream('x', { ...IMAGE, DecodeParms: { K: 0, JBIG2Globals: both } });
 		node.set(
@@ -208,16 +214,49 @@ it("gives an object one kind: an image that another's /DecodeParms names as its 
 			context.obj({ XObject: { Im0: both, Im1: context.register(other) } })
 		);
 	});
-	expect(streamKeys(under(page, 'Resources', 'XObject', 'Im0'))).toEqual([
-		'BitsPerComponent',
-		'Height',
-		'Length',
-		'Subtype',
-		'Type',
-		'Width'
-	]);
-	const other = under(page, 'Resources', 'XObject', 'Im1') as PDFRawStream;
-	expect(keys(other.dict.lookup(PDFName.of('DecodeParms'), PDFDict))).toEqual(['K']);
+	await expect(file).rejects.toMatchObject({ refusal: { code: 'damaged' } });
+});
+
+it('refuses as damaged a file whose /Font and /XObject name one dictionary as their map', async () => {
+	const file = stripped((node, context) => {
+		const both = context.register(
+			context.obj({ X0: context.register(context.stream('q Q', FORM)) })
+		);
+		node.set(PDFName.of('Resources'), context.obj({ Font: both, XObject: both }));
+	});
+	await expect(file).rejects.toMatchObject({ refusal: { code: 'damaged' } });
+});
+
+it('refuses as damaged a file whose /Font names an image the walk has reached, and deletes the entry where the walk reaches it first', async () => {
+	const plant =
+		(...maps: string[]): Plant =>
+		(node, context) => {
+			const image = context.register(context.stream('x', IMAGE));
+			const resources = Object.fromEntries(maps.map((map) => [map, { X0: image }]));
+			node.set(PDFName.of('Resources'), context.obj(resources));
+		};
+	await expect(stripped(plant('XObject', 'Font'))).rejects.toMatchObject({
+		refusal: { code: 'damaged' }
+	});
+	const { page } = await background(plant('Font', 'XObject'));
+	expect(keys(under(page, 'Resources', 'Font') as PDFDict)).toEqual([]);
+	expect(keys(under(page, 'Resources', 'XObject') as PDFDict)).toEqual(['X0']);
+});
+
+it('keeps under each key an object that two keys of one kind name', async () => {
+	const { page } = await background((node, context) => {
+		const form = context.register(context.stream('q Q', FORM));
+		const mask = context.register(context.stream('x', IMAGE));
+		const image = context.register(context.stream('x', { ...IMAGE, Mask: mask, SMask: mask }));
+		const XObject = { Fm0: form, Fm1: form, Im0: image, Im1: mask };
+		node.set(PDFName.of('Resources'), context.obj({ XObject }));
+	});
+	const held = under(page, 'Resources', 'XObject') as PDFDict;
+	expect(keys(held)).toEqual(['Fm0', 'Fm1', 'Im0', 'Im1']);
+	expect(held.get(PDFName.of('Fm1'))).toBe(held.get(PDFName.of('Fm0')));
+	const image = (under(held, 'Im0') as PDFRawStream).dict;
+	expect(image.get(PDFName.of('Mask'))).toBe(held.get(PDFName.of('Im1')));
+	expect(image.get(PDFName.of('SMask'))).toBe(held.get(PDFName.of('Im1')));
 });
 
 it('keeps under a key that leads nowhere a number by reference, and neither a dictionary nor an array that holds itself', async () => {
@@ -409,6 +448,22 @@ it('refuses as damaged a file whose first page names as its /Contents the /Kids 
 	first.node.set(PDFName.of('Contents'), kids);
 	const saved = await source.save({ useObjectStreams: false });
 	await expect(stripAcroForm(saved, await viewsOf(saved, [BOX, BOX]))).rejects.toMatchObject({
+		refusal: { code: 'damaged' }
+	});
+});
+
+it('refuses as damaged a file whose page sits under a page tree node that reads as an annotation', async () => {
+	const source = await PDFDocument.create();
+	const { context } = source;
+	const page = source.addPage([612, 792]);
+	const tree = source.catalog.get(PDFName.of('Pages'));
+	const inner = context.register(
+		context.obj({ Type: 'Pages', Parent: tree, Kids: [page.ref], Count: 1, Rect: [0, 0, 1, 1] })
+	);
+	page.node.set(PDFName.of('Parent'), inner);
+	source.catalog.Pages().set(PDFName.of('Kids'), context.obj([inner]));
+	const saved = await source.save({ useObjectStreams: false });
+	await expect(stripAcroForm(saved, await viewsOf(saved, [BOX]))).rejects.toMatchObject({
 		refusal: { code: 'damaged' }
 	});
 });
