@@ -4,6 +4,10 @@ What a consumer of the package can observe, by release.
 
 ## Unreleased
 
+## 0.1.0
+
+11 October 2026. The importer of `tonguetoquill/web-app-afa-demo@842ef4207cb5` as a library, on `@quillmark/wasm` 0.124.0.
+
 - `sanitize(pdf)` reads a PDF form into a `Form`: a background with no form layer, the page sizes and one `Field` for each field a person can fill. A file it does not take comes back as a `Refusal`, a code with its data.
 - Checkboxes that share a field name and turn on as different values come back from `sanitize` as one `radio` field for each box, with the shared name as `group` and the box's value as `on`. The first keeps the name as its `id` and the next is `name#2`. Checkboxes of one name that all turn on as one value stay one `checkbox` at several places.
 - `suggest(fields)` names each field from its tooltip or its field name, and `check(fields, naming)` lists the problems of a naming. A naming of the wrong shape, a name that is no string for one, ends `check` and `quillify` with a `TypeError` that names the slot.
