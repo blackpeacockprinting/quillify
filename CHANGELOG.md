@@ -25,6 +25,7 @@ What a consumer of the package can observe, by release.
 - A dynamic form with a page pdf.js gives no size is refused as `layout`, with `a page has no size` as its `detail`: a width or a height that is no number, zero or negative. The first ended `sanitize` with pdf-lib's `TypeError`, and the others came back as forms on a page of the wrong size.
 - `sanitize` runs qpdf in a worker of its own for each file and ends it with the call, so a page no longer stops converting after about 386 files, a file that crashes qpdf no longer breaks the files after it, and the page's thread is free while qpdf runs. The package ships a fourth asset for it, `assets/qpdf.worker.js`, a classic worker that a bundler has to copy and a host page has to allow, and it fetches `qpdf.wasm` itself, once for each file. A file costs about 20 to 30 ms more. A missing `qpdf.worker.js` rejects with an error that names it, as a missing `qpdf.wasm` does. A file that sends qpdf into a loop used to stop the page and now leaves its one call pending with a worker busy: `sanitize` still has no deadline.
 - A file that qpdf gives up on partway is refused as `damaged`. `sanitize` used to go on with the part qpdf had written, a file cut short: a page whose second content stream is LZW that cannot be decoded was refused as `not_pdf`.
+- The package no longer depends on `@neslinesli93/qpdf-wasm`. It ships the two files it takes from it, so a consumer installs `pdfjs-dist` and `pdf-lib` and brings the engine as a peer.
 
 ## 0.1.0
 
