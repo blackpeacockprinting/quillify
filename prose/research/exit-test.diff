@@ -1,0 +1,252 @@
+diff --git a/src/lib/components/PdfImportWizard/wizard.svelte.ts b/src/lib/components/PdfImportWizard/wizard.svelte.ts
+index 694f7fe0..a2a4912d 100644
+--- a/src/lib/components/PdfImportWizard/wizard.svelte.ts
++++ b/src/lib/components/PdfImportWizard/wizard.svelte.ts
+@@ -13,16 +13,20 @@ import {
+ 	type Document,
+ 	type RenderSession
+ } from '$lib/services/quillmark/types';
+-import { assembleQuill, QUILL_VERSION } from '$lib/services/pdf-import/assemble';
++import {
++	check,
++	quillify,
++	sanitize,
++	type Form,
++	type Naming,
++	type Problem,
++	type Refusal as Declined
++} from 'quillify';
+ import { qualifyForm } from '$lib/services/pdf-import/client';
+ import { readEmbeddedSource } from '$lib/services/pdf-import/embedded';
+-import { inventoryPdf, PdfImportRefusal } from '$lib/services/pdf-import/inventory';
+-import { normalizePdf } from '$lib/services/pdf-import/normalize';
+-import { stripAcroForm } from '$lib/services/pdf-import/strip';
+-import { xfaToAcroForm } from '$lib/services/pdf-import/xfa';
++import { PdfImportRefusal } from '$lib/services/pdf-import/inventory';
+ import { quillZip, quillZipName } from '$lib/services/pdf-import/zip';
+ import {
+-	SNAKE_CASE,
+ 	type FieldInventory,
+ 	type FieldType,
+ 	type QualifiedField,
+@@ -31,6 +35,9 @@ import {
+ } from '$lib/services/pdf-import/types';
+ import { getErrorMessage } from '$lib/errors';
+ 
++/** The version the package writes into every quill it builds. */
++const QUILL_VERSION = '0.1.0';
++
+ export type Step = 'upload' | 'restore' | 'fields' | 'use';
+ export type Mode = 'open' | 'build';
+ 
+@@ -69,7 +76,7 @@ export class PdfImportWizard {
+ 
+ 	#bytes: Uint8Array | null = null;
+ 	#run$: AbortController | null = null;
+-	#background: Uint8Array | null = null;
++	#sanitized: Form | null = null;
+ 	#tree: QuillTree | null = null;
+ 	#doc: Document | null = null;
+ 	#session: RenderSession | null = null;
+@@ -110,16 +117,47 @@ export class PdfImportWizard {
+ 
+ 	/** Why the fields step cannot continue, or null. */
+ 	get fieldsProblem(): string | null {
+-		if (!this.form) return null;
+-		if (!SNAKE_CASE.test(this.form.quill.name)) return 'The format name must be snake_case.';
+-		const kept = this.form.fields.filter((f) => f.keep);
+-		if (kept.length === 0) return 'Keep at least one field.';
+-		const names = kept.map((f) => f.name);
+-		const dup = names.find((n, i) => names.indexOf(n) !== i);
+-		if (dup) return `Two fields are named ${dup}.`;
+-		const bad = names.find((n) => !SNAKE_CASE.test(n));
+-		if (bad) return `${bad} is not snake_case.`;
+-		return null;
++		if (!this.form || !this.#sanitized) return null;
++		const [problem] = check(this.#sanitized.fields, this.#naming());
++		return problem ? this.#worded(problem) : null;
++	}
++
++	/** The fields step as the package takes it: the words a person can edit, and nothing the form decides. */
++	#naming(): Naming {
++		const { quill, fields } = this.form!;
++		return {
++			name: quill.name,
++			description: quill.description,
++			fields: fields.map((f) => ({
++				id: f.widget,
++				keep: f.keep,
++				name: f.name,
++				description: f.description,
++				...(f.example === undefined ? {} : { example: f.example }),
++				...(this.kindOf(f) === 'Tx'
++					? { text: f.type === 'array' ? 'lines' : f.multiline ? 'paragraph' : 'line' }
++					: {})
++			}))
++		};
++	}
++
++	#worded(problem: Problem): string {
++		switch (problem.code) {
++			case 'quill_name':
++				return 'The format name must be snake_case.';
++			case 'quill_description':
++				return 'Say what the format is for.';
++			case 'nothing_kept':
++				return 'Keep at least one field.';
++			case 'duplicate_name':
++				return `Two fields are named ${problem.name}.`;
++			case 'field_name':
++				return `${this.form?.fields.find((f) => f.widget === problem.id)?.name} is not snake_case.`;
++			case 'engine':
++				return problem.message;
++			default:
++				return `The format cannot be built (${problem.code}).`;
++		}
+ 	}
+ 
+ 	async load(file: File, model: { provider: string; id: string } | null): Promise<void> {
+@@ -150,13 +188,8 @@ export class PdfImportWizard {
+ 		this.#run$ = run;
+ 		try {
+ 			this.busy = 'Reading the PDF';
+-			// Before anything reads it: real forms arrive locked, rotated, or with
+-			// their fields only in an XFA template, and both the widget geometry and
+-			// the background have to come from the same bytes.
+ 			if (file) {
+-				const read = await xfaToAcroForm(
+-					await normalizePdf(new Uint8Array(await file.arrayBuffer()))
+-				);
++				const read = new Uint8Array(await file.arrayBuffer());
+ 				if (run.signal.aborted) return;
+ 				this.#bytes = read;
+ 			}
+@@ -193,25 +226,16 @@ export class PdfImportWizard {
+ 				return;
+ 			}
+ 
+-			const { inventory, pages } = await inventoryPdf(bytes);
++			const read = await sanitize(bytes);
+ 			if (run.signal.aborted) return;
+-			if (inventory.widgets.length === 0)
+-				throw new PdfImportRefusal(
+-					`${this.fileName} has no fillable fields to read. A format is built from a form's own boxes, so this one has to be filled by hand or rebuilt with fields.`
+-				);
++			if (!read.ok) throw new PdfImportRefusal(declined(read.refusal, this.fileName));
++			const inventory = inventoryOf(read.form);
+ 			this.busy = 'Naming the fields';
+-			const [form, background] = await Promise.all([
+-				qualifyForm(
+-					inventory,
+-					pages.map((p) => p.png),
+-					model,
+-					run.signal
+-				),
+-				stripAcroForm(bytes)
+-			]);
++			// The package makes no page raster, so the model names from the inventory alone.
++			const form = await qualifyForm(inventory, [], model, run.signal);
+ 			if (run.signal.aborted) return;
+ 			this.inventory = inventory;
+-			this.#background = background;
++			this.#sanitized = read.form;
+ 			this.form = form;
+ 			this.step = 'fields';
+ 		} catch (err) {
+@@ -273,7 +297,7 @@ export class PdfImportWizard {
+ 	}
+ 
+ 	async build(): Promise<void> {
+-		if (!this.form || !this.inventory || !this.#background) return;
++		if (!this.form || !this.#sanitized) return;
+ 		const epoch = this.#epoch;
+ 		this.error = null;
+ 		try {
+@@ -281,7 +305,11 @@ export class PdfImportWizard {
+ 			this.#freeHandles();
+ 			if (!quillmarkService.isReady()) await quillmarkService.initialize();
+ 			if (epoch !== this.#epoch) return;
+-			const tree = assembleQuill($state.snapshot(this.form), this.inventory, this.#background);
++			const built = await quillify(this.#sanitized, this.#naming());
++			if (epoch !== this.#epoch) return;
++			if (!built.ok)
++				throw new Error(built.problems.map((problem) => this.#worded(problem)).join(' '));
++			const { tree } = built;
+ 			const { ref, quill } = await quillmarkService.registerLocalQuill(tree);
+ 			if (epoch !== this.#epoch) return;
+ 			const doc = quill.exampleDocument() ?? quill.seedDocument();
+@@ -338,7 +366,7 @@ export class PdfImportWizard {
+ 		this.markdown = '';
+ 		this.restored = null;
+ 		this.#bytes = null;
+-		this.#background = null;
++		this.#sanitized = null;
+ 		this.#tree = null;
+ 	}
+ 
+@@ -352,6 +380,65 @@ export class PdfImportWizard {
+ 	}
+ }
+ 
++const KIND = { text: 'Tx', checkbox: 'Btn', radio: 'Btn', choice: 'Ch', signature: 'Sig' } as const;
++
++/**
++ * The package's fields in the shape the naming route and the fields step read.
++ * A field's printed name is its id, and a radio button's is its group's.
++ */
++function inventoryOf(form: Form): FieldInventory {
++	return {
++		pages: [...form.pages],
++		widgets: form.fields.map((field) => ({
++			id: field.id,
++			name: field.kind === 'radio' ? field.group : field.id.replace(/^#\d+$/, ''),
++			kind: KIND[field.kind],
++			places: [...field.places],
++			multiLine: field.kind === 'text' && field.multiline,
++			checkBox: field.kind === 'checkbox',
++			radioButton: field.kind === 'radio',
++			// A `Form` does not say whether a choice drops down or lists.
++			combo: false,
++			options: field.kind === 'choice' ? [...field.options] : [],
++			readOnly: field.readOnly,
++			required: field.required,
++			...(field.tooltip === undefined ? {} : { tooltip: field.tooltip }),
++			maxLen: (field.kind === 'text' && field.maxLength) || 0,
++			...(field.kind === 'radio' && field.on !== undefined ? { buttonValue: field.on } : {})
++		}))
++	};
++}
++
++/** This app's words for each reason the package gives for not taking a file. */
++function declined(refusal: Declined, fileName: string): string {
++	switch (refusal.code) {
++		case 'too_large':
++			return 'This PDF is over 8 MB. Pick a smaller one.';
++		case 'not_pdf':
++			return 'This file is not a PDF the reader can open.';
++		case 'damaged':
++			return 'This PDF could not be read. Open it in a PDF reader, save a fresh copy, and import that.';
++		case 'password':
++			return 'This PDF is password protected. Remove the password first.';
++		case 'encryption':
++			return 'This PDF uses an encryption this app cannot open, which is usually a certificate-based one. Save an unencrypted copy and try that.';
++		case 'rotated':
++			return `Page ${refusal.page + 1} carries a rotation. The renderer stamps unrotated pages only, so save a flattened copy and import that.`;
++		case 'portfolio':
++			return `This PDF is a cover sheet: the form itself rides inside it as an attachment${refusal.attachment ? ` (${refusal.attachment})` : ''}, and this app cannot open it there. Open it in a reader that can unwrap it, save a plain copy, and import that.`;
++		case 'no_fields':
++			return refusal.xfa
++				? 'This PDF declares an Adobe LiveCycle template but carries no fields on the page and none that could be laid out from the template either. There is nothing here to turn into a format.'
++				: `${fileName} has no fillable fields to read. A format is built from a form's own boxes, so this one has to be filled by hand or rebuilt with fields.`;
++		case 'too_many_pages':
++			return `This PDF has ${refusal.pages} pages; the limit is ${refusal.limit}.`;
++		case 'too_many_fields':
++			return `This form has ${refusal.fields} fields; the importer reads up to ${refusal.limit} in one pass. Import the pages you need as a shorter form.`;
++		case 'unpaintable':
++			return `Page ${refusal.page + 1} of this form carries something the importer cannot redraw (${refusal.detail ?? refusal.construct}). Print it to a flat PDF and import that.`;
++	}
++}
++
+ /**
+  * Fields the document carries, `$` payload items aside. `cards` holds the
+  * composable cards only, so the main card is counted alongside them.
