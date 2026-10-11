@@ -1,6 +1,7 @@
 /**
  * A dynamic form pdf.js cannot lay out is refused as `layout`, with the message
- * of the exception pdf.js's layout threw.
+ * of the exception pdf.js's layout threw. One it lays out to a page of no size
+ * is refused under the same code.
  */
 
 import { PDFArray, PDFDict, PDFDocument, PDFName, PDFRawStream, decodePDFRawStream } from 'pdf-lib';
@@ -73,6 +74,26 @@ it('refuses a page set that is used up, as its page area is, with the stack over
 		refusal: { code: 'layout', detail: expect.stringMatching(/^(?!XFA layout).*(stack|recursion)/) }
 	});
 }, 60_000);
+
+// pdf.js lays these out and throws nothing. It gives the page no number for a
+// side, or a side that is not above zero.
+it.each([
+	['0 pt short', 'short="0pt" long="792pt"'],
+	['longer than a number holds', `short="612pt" long="2${'0'.repeat(308)}pt"`],
+	['less than nothing short', 'short="-612pt" long="792pt"']
+])(
+	'refuses a page area whose medium is %s as layout, for a page of no size',
+	async (_, medium) => {
+		const form = await templateForm(
+			`<template xmlns="http://www.xfa.org/schema/xfa-template/3.3/"><subform name="form1" layout="tb"><pageSet><pageArea name="Page1"><contentArea w="612pt" h="792pt"/><medium ${medium}/></pageArea></pageSet>${sheet('a')}</subform></template>`
+		);
+		expect(await sanitize(form)).toEqual({
+			ok: false,
+			refusal: { code: 'layout', detail: 'a page has no size' }
+		});
+	},
+	60_000
+);
 
 it('leaves no worker and no frame when it refuses a layout', async () => {
 	const count = { started: 0, live: new Set<Worker>() };
