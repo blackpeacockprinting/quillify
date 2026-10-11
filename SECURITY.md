@@ -8,7 +8,7 @@ The bytes of a PDF nobody vouches for go in. A quill comes out, and other people
 
 ## A form's strings are the file's
 
-Every string in a `Form` that is not a `kind` is text the author of the PDF controls: a field's `id`, its `tooltip`, a choice's `options`, a radio's `group` and `on`. So are the `attachment` and `detail` of a `Refusal`, the `description` that `suggest` copies from a tooltip, and whatever the engine's `message` quotes in a `Problem`. A consumer shows each in a UI as text.
+Every string in a `Form` that is not a `kind` is text the author of the PDF controls: a field's `id`, its `tooltip`, a choice's `options`, a radio's `group` and `on`. So are the `attachment` and `detail` of a `Refusal`, the `description` that `suggest` copies from a tooltip, and whatever the engine's `message` quotes in a `Problem`. A consumer shows each in a UI as text. `quillify` writes each string it puts in `Quill.yaml` and `example.md` as a JSON string literal, after a lone surrogate has become U+FFFD, and writes U+007F to U+009F, U+FFFE and U+FFFF, which JSON leaves raw and the engine's YAML reader refuses (U+0085 apart), as `\u` escapes. A tooltip it puts in `form.json` has a lone surrogate made U+FFFD as well, since the engine's JSON reader refuses the escape JSON writes for one.
 
 ## What the background keeps
 
@@ -54,6 +54,5 @@ The host page still reaches the frame element. A rule that hides it, or a script
 - #84 A dynamic form with a field named as the subform beside it ends sanitize with an error.
 - #85 pdf.js fails on three dynamic forms with a TypeError the guard does not cover.
 - #86 pdf.js never finishes opening DAF 1024, and sanitize never settles. Its frame stays in the host page's body.
-- #89 A control character from the file is written raw into Quill.yaml.
 - #95 A host page's zoom moves a dynamic form's fields with no error.
 - #99 A frame the host page removes before it loads leaves sanitize pending.
