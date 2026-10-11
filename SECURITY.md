@@ -46,14 +46,13 @@ The host page still reaches the frame element. A rule that hides it, or a script
 
 - #25 The background keeps whatever strip does not name. This holds for the trailer and for what a kept value holds, as above.
 - #28 A CropBox larger than the MediaBox moves every field off its box.
-- #29 A dynamic form is laid out in full before its page and field caps are read.
 - #30 The size cap bounds the compressed input only.
 - #46 qpdf.wasm is a prebuilt binary from one publisher.
 - #68 A link to an address with no scheme, or to a mailto: address, is removed.
 - #69 A page that names its /Type by reference is cut from the background without a refusal.
 - #77 A tooltip of 130,000 characters ends sanitize with a RangeError.
 - #80 A field tree pdf-lib cannot walk ends sanitize with pdf-lib's error.
-- #86 sanitize has no deadline. A file that pdf.js never finishes laying out leaves it pending, with its frame in the host page's body. The one kind of template known to do that, an overflow leader before a row that cannot fit, is guarded in the worker the package ships.
+- #86 sanitize has no deadline. A file that pdf.js never finishes laying out leaves it pending, with its frame in the host page's body. The one kind of template known to do that, an overflow leader before a row that cannot fit, is guarded in the worker the package ships. Until there is a deadline, nothing but the size cap bounds how long a dynamic form takes: pdf.js lays out every page in its worker to count the pages, and one page can hold any number of fields.
 - #95 A host page's zoom moves a dynamic form's fields with no error.
 - #99 A frame the host page removes before it loads leaves sanitize pending.
 - #139 Any failure of pdf.js's XFA layout ends sanitize with one TypeError.

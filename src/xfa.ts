@@ -22,6 +22,7 @@ import type { PDFAcroField, PDFRef } from 'pdf-lib';
 import { displayList, type DisplayList, type Run } from './display-list.js';
 import { openPdf } from './pdfjs.js';
 import { Refused } from './refusal.js';
+import { MAX_PAGES } from './types.js';
 import { XfaStage } from './xfa-layer.js';
 import { harvestWidgets, type XfaWidget } from './xfa-widgets.js';
 
@@ -47,6 +48,9 @@ export async function xfaToAcroForm(bytes: Uint8Array): Promise<Uint8Array> {
 		opened = await openPdf(bytes, { enableXfa: true, ownerDocument: await stage.ready });
 		const { pdf } = opened;
 		if (!pdf.isPureXfa) return bytes;
+		// pdf.js counts a dynamic form's pages as it opens the file.
+		if (pdf.numPages > MAX_PAGES)
+			throw new Refused({ code: 'too_many_pages', pages: pdf.numPages, limit: MAX_PAGES });
 		const out = await PDFDocument.create();
 		const fonts = new Map<StandardFonts, PDFFont>();
 		const widgets: XfaWidget[] = [];
