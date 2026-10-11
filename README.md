@@ -138,4 +138,4 @@ The gate is `npm run build`, Prettier, `tsc` and the tests, in node and in headl
 
 ## Status
 
-Nothing is released, and a tarball is `npm run build && npm pack`. [#1](https://github.com/tonguetoquill/quillify/issues/1) is the sequence to v0.1.0, which is the importer of `tonguetoquill/web-app-afa-demo@842ef4207cb5` as a library. The four functions and their types are a proposal until [#3](https://github.com/tonguetoquill/quillify/issues/3) is settled. The license ([#4](https://github.com/tonguetoquill/quillify/issues/4)) and the package's name and registry ([#5](https://github.com/tonguetoquill/quillify/issues/5)) are undecided, so the package is private and unlicensed.
+Nothing is released, and a tarball is `npm run build && npm pack`. [#1](https://github.com/tonguetoquill/quillify/issues/1) is the sequence to v0.1.0, which is the importer of `tonguetoquill/web-app-afa-demo@842ef4207cb5` as a library. The four functions and their types are the API of v0.1.0. The package is private and unlicensed, and installs from a release's tarball. [`prose/DECISIONS.md`](prose/DECISIONS.md) has each of those choices and what would change it.

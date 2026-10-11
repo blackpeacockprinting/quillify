@@ -24,6 +24,10 @@ Of a page's annotations only a link stays, and only one that leads one way: by a
 
 What a kept value holds is not read: a `/Resources` dictionary, a `/Border` array or a destination array can reference anything.
 
+## What it cannot see
+
+The background is the file's pages, so whatever a page shows goes into every quill built from it. The library is for a blank form as published. Handed a copy that a person filled in, it takes the entries out with the form layer, and only there. A copy flattened in full has no field left and is refused as `no_fields`. One flattened in part holds those entries as page content, which nothing here can tell from printed text. A field that holds a value is no sign of one: seven of the 59 measured forms have such a field as published. The check is the consumer's: a person looks at the pages before a quill is shared.
+
 ## Where a file is read
 
 Each pdf.js read runs on a worker of its own, started from the file the package ships and ended with the read. qpdf runs as WebAssembly on the calling thread. pdf-lib reads what qpdf wrote, or for a dynamic form the redraw this library painted from the layout.
