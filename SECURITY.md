@@ -12,17 +12,24 @@ Every string in a `Form` that is not a `kind` is text the author of the PDF cont
 
 ## What the background keeps
 
-`stripAcroForm` writes the background from the file's pages. It keeps a named set of keys and deletes every other:
+`stripAcroForm` writes the background from the file's pages. One table in `strip.ts`, `KINDS`, lists the keys each kind of dictionary keeps and what each key leads to. A walk from the catalog gives each object one kind, the first that reaches it, and deletes every key its kind does not list, every value that is not what its key leads to, and every object it does not reach. It keeps:
 
 - of the catalog: `Type Pages OCProperties StructTreeRoot MarkInfo Lang`. With the rest go the form (`/AcroForm` and its XFA packet, `/NeedsRendering`), the XMP metadata, scripts, attachments, a portfolio, bookmarks, named destinations and the usage-rights signature. The trailer's `/Info` and `/ID` go too.
 - of a page tree node: `Type Parent Kids Count Resources Rotate`.
-- of a page: `Type Parent Resources MediaBox Contents Rotate Group UserUnit StructParents Tabs`. The MediaBox is written from pdf.js's view of the page, the frame its fields were measured in, and no box of the file is carried over.
+- of a page: `Type Parent Resources MediaBox Contents Rotate Group UserUnit StructParents Tabs Annots`. The MediaBox is written from pdf.js's view of the page, the frame its fields were measured in, and no box of the file is carried over.
 - of a link: `Type Subtype Rect Border BS C H QuadPoints F OC Contents StructParent A Dest`.
 - of a link's action: `S URI`, or `S D`.
+- of a `/Resources`: `Font XObject ExtGState ColorSpace Pattern Shading Properties ProcSet`. A stream or a dictionary under its `/XObject` stays only when it is an image or a form.
+- of an image: `Type Subtype Width Height BitsPerComponent ColorSpace Decode ImageMask Mask SMask SMaskInData Matte Interpolate Intent OC StructParent`.
+- of a form: `Type Subtype FormType BBox Matrix Resources Group OC StructParent StructParents`. An application's private data under `/PieceInfo` goes, with the date beside it.
+- of the dictionary of a stream of any kind `STREAMS` names (a content stream, an image, a form and the global segments of a JBIG2 image), beside the keys of its kind: `Length Filter DecodeParms`. A stream that names a file outside (`/F`, `/FFilter`, `/FDecodeParms`) keeps none of the three.
+- of a `/DecodeParms`: `Predictor Colors BitsPerComponent Columns EarlyChange K EndOfLine EncodedByteAlign Rows EndOfBlock BlackIs1 DamagedRowsBeforeError ColorTransform JBIG2Globals`.
 
-Of a page's annotations only a link stays, and only one that leads one way: by an `/A` or by a `/Dest`, never both, with nothing chained by `/Next`. That way is a `/URI` that begins `http://` or `https://` in either case, a `/GoTo` to an explicit destination, or an explicit `/Dest`. The action it keeps is a copy. Every other object that says `/Type /Annot`, has a `/Rect` or is a widget is deleted, as is a page object the page tree does not hold, and then every object the catalog no longer reaches. A file whose pages pdf-lib reads as other objects than pdf.js did, or as more or fewer, is refused as `damaged`, so the page under a field is the page pdf.js found the field on.
+A number, a name, a string, a boolean, null or an array of those, read through any reference and never an array that holds itself, stays under any listed key, where a kind is expected too: a string written as an entry of `/XObject` or as a page's `/Contents` stays as written. A key that leads to no kind keeps nothing else. A key that leads to one of a kind or an array of them keeps no array inside that array. A `/Parent` stays when it names a page tree node the walk reached. An object that two keys reach as two kinds keeps the first, and the second key is deleted.
 
-What a kept value holds is not read: a `/Resources` dictionary, a `/Border` array or a destination array can reference anything.
+Of a page's annotations only a link stays, and only one that leads one way: by an `/A` or by a `/Dest`, never both, with nothing chained by `/Next`. That way is a `/URI` that begins `http://` or `https://` in either case, a `/GoTo` to an explicit destination, or an explicit `/Dest`. The action it keeps is a copy. Every other object that says `/Type /Annot`, has a `/Rect` or is a widget is deleted, as is a page object the page tree does not hold. A file whose pages pdf-lib reads as other objects than pdf.js did, or as more or fewer, is refused as `damaged`. So is a file whose page another key reaches before the page tree does, or whose page sits under a page tree node or a `/Kids` array that another key reaches first: an object has one kind, and that page would be none. The page under a field is then the page pdf.js found the field on.
+
+Some values are still kept whole, and what they hold is not read: a font, a graphics state, a color space, a pattern, a shading, a transparency group, a border, a destination, the layers, the property lists of marked content (the `/Properties` of a `/Resources`), the structure tree and the mark information can each reference anything (#25). An object one of them names stays as the file wrote it unless a row reaches it too.
 
 ## What it cannot see
 
@@ -48,7 +55,7 @@ The host page still reaches the frame element. A rule that hides it, or a script
 
 ## Not handled
 
-- #25 The background keeps whatever strip does not name. This holds for the trailer and for what a kept value holds, as above.
+- #25 The background keeps some values whole, with whatever they reference: those listed above.
 - The bound on what a file comes to leaves four things out.
   - qpdf's memory before the file is refused. qpdf reads an object stream whole, in its worker: a file of 1.04 MB whose object stream inflates to 1 GiB grows it to 1,075,445,760 bytes. The memory goes with the worker. A cap on it is a setting of qpdf's build (#46).
   - qpdf's time. It decodes a stream to write it back: about 4 s for a file of 1.04 MB whose page inflates to 1 GiB, and as long for one of 3,072 bytes that holds 1 GiB under two Flate filters. The page's thread is free meanwhile, and nothing ends qpdf early (#86).
