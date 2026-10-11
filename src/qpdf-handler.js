@@ -12,8 +12,10 @@ onmessage = async ({ data: { bytes, flags, wasm } }) => {
 	let out;
 	try {
 		qpdf.FS.writeFile('/in.pdf', bytes);
-		qpdf.callMain(['/in.pdf', ...flags, '/out.pdf']);
-		out = qpdf.FS.readFile('/out.pdf');
+		// qpdf ends with 0, or with 3 when it warned. After an error the file is
+		// as far as qpdf got with it.
+		if ([0, 3].includes(qpdf.callMain(['/in.pdf', ...flags, '/out.pdf'])))
+			out = qpdf.FS.readFile('/out.pdf');
 	} catch {
 		// qpdf wrote nothing it could stand behind.
 	}

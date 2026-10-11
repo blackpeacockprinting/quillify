@@ -32,7 +32,7 @@ const WORKER = new URL('../assets/qpdf.worker.js', import.meta.url);
 const WASM = new URL('../assets/qpdf.wasm', import.meta.url);
 const FLAGS = ['--decrypt', '--flatten-rotation', '--object-streams=disable'];
 
-/** What `assets/qpdf.worker.js` answers. `out` is missing when qpdf wrote no file. */
+/** What `assets/qpdf.worker.js` answers. `out` is the file of a run qpdf ended well. */
 interface Answer {
 	loaded: boolean;
 	out?: Uint8Array;
@@ -40,9 +40,10 @@ interface Answer {
 
 /**
  * The same PDF with its encryption removed and a page's own quarter turn folded
- * into the page. qpdf exits non-zero on warnings it recovered from, so what is
- * tested is that it wrote an output file. A file qpdf writes nothing for is
- * refused: every later step reads these bytes as decrypted.
+ * into the page. The worker answers with qpdf's file only when qpdf ended
+ * well, with or without warnings, since an error leaves the file cut short. A
+ * file it answers nothing for is refused: every later step reads these bytes
+ * as decrypted.
  */
 export async function normalizePdf(bytes: Uint8Array): Promise<Uint8Array> {
 	// Before a worker starts, because qpdf is the step that allocates.
