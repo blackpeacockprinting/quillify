@@ -48,20 +48,20 @@ Checkboxes that share a field name and turn on as different values are `radio` f
 
 A file the library does not take is refused with a value, and nothing is thrown for it. Ten of the 59 forms are refused, so a caller meets this branch often.
 
-| `code`            | It carries                                          | The file                                                                    |
-| ----------------- | --------------------------------------------------- | --------------------------------------------------------------------------- |
-| `too_large`       | `bytes`, `limit`                                    | is over 8 MiB                                                               |
-| `not_pdf`         |                                                     | is not a PDF                                                                |
-| `password`        |                                                     | needs a password to open                                                    |
-| `encryption`      |                                                     | is encrypted in a way pdf.js does not read, such as to a certificate        |
-| `damaged`         |                                                     | opens, and qpdf cannot rewrite it, or its readers disagree on its pages     |
-| `portfolio`       | `attachment`, when it has a name                    | is a portfolio, whose form is an attachment                                 |
-| `too_many_pages`  | `pages`, `limit`                                    | has more than 20 pages                                                      |
-| `too_many_fields` | `fields`, `limit`                                   | has more than 200 fields                                                    |
-| `layout`          | `detail`                                            | is a dynamic form pdf.js cannot lay out, or gives a page of no size         |
-| `no_fields`       | `xfa`                                               | has no field; `xfa` is true when it holds an XFA form that nothing laid out |
-| `rotated`         | `page`                                              | has a page that is still rotated once qpdf has flattened what it can        |
-| `unpaintable`     | `page`, `construct`, and `detail` when there is one | is a dynamic form with something on a page that the redraw does not draw    |
+| `code`            | It carries                                          | The file                                                                                                            |
+| ----------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `too_large`       | `bytes`, `limit`                                    | is over 8 MiB, or comes to over 64 MiB with its streams decoded. `limit` says which                                 |
+| `not_pdf`         |                                                     | is not a PDF                                                                                                        |
+| `password`        |                                                     | needs a password to open                                                                                            |
+| `encryption`      |                                                     | is encrypted in a way pdf.js does not read, such as to a certificate                                                |
+| `damaged`         |                                                     | opens, and qpdf cannot rewrite it, its readers disagree on its pages, or it holds a stream the library cannot count |
+| `portfolio`       | `attachment`, when it has a name                    | is a portfolio, whose form is an attachment                                                                         |
+| `too_many_pages`  | `pages`, `limit`                                    | has more than 20 pages                                                                                              |
+| `too_many_fields` | `fields`, `limit`                                   | has more than 200 fields                                                                                            |
+| `layout`          | `detail`                                            | is a dynamic form pdf.js cannot lay out, or gives a page of no size                                                 |
+| `no_fields`       | `xfa`                                               | has no field; `xfa` is true when it holds an XFA form that nothing laid out                                         |
+| `rotated`         | `page`                                              | has a page that is still rotated once qpdf has flattened what it can                                                |
+| `unpaintable`     | `page`, `construct`, and `detail` when there is one | is a dynamic form with something on a page that the redraw does not draw                                            |
 
 `construct` is one of `image`, `background_image`, `svg`, `border`, `transform` and `glyph`. `detail` is the SVG element, the border style or the text that could not be drawn. For `layout` it is the message of the exception pdf.js's layout threw, in the browser's wording, or `a page has no size` when pdf.js gives a page a width or a height that is not above zero. The library has no sentence for a code: the caller maps `code` to its own words.
 
@@ -86,7 +86,7 @@ Outside `code`, `kind`, `construct` and `diagnostic`, a string in a `Form`, a re
 
 ## What it does to a PDF
 
-1. **Normalize.** qpdf, compiled to WebAssembly and run in a worker of its own for each file, removes the encryption an empty password opens, folds page rotation into the page and writes every object outside an object stream.
+1. **Normalize.** qpdf, compiled to WebAssembly and run in a worker of its own for each file, removes the encryption an empty password opens, folds page rotation into the page, writes every object outside an object stream and writes every stream it can decode back as one Flate stream. What it wrote is then held to 64 MiB with those streams decoded.
 2. **Convert.** For a dynamic form, pdf.js lays the XFA template out in a sandboxed frame, whose document takes no rule from the host page and gives it none, and the layout is redrawn as a static PDF with an AcroForm field where each XFA field sat.
 3. **Inventory.** Each widget is read: its kind, its page and rect, its flags and its tooltip.
 4. **Strip.** pdf-lib removes the form layer. Of the catalog, of each page and of each link, a named set of keys stays, and every object nothing reaches is dropped.
@@ -102,7 +102,7 @@ Outside `code`, `kind`, `construct` and `diagnostic`, a string in a `Form`, a re
 
 ## What it needs
 
-- A browser, for `sanitize`. A dynamic form is laid out by the browser, in a hidden frame of no size that is in the host page's body while a file converts, and the pdf.js worker, the qpdf worker and qpdf's binary load as a browser loads them ([#34](https://github.com/tonguetoquill/quillify/issues/34)). `suggest`, `check` and `quillify` need no DOM.
+- A browser, for `sanitize`. A dynamic form is laid out by the browser, in a hidden frame of no size that is in the host page's body while a file converts, and the pdf.js worker, the qpdf worker and qpdf's binary load as a browser loads them ([#34](https://github.com/tonguetoquill/quillify/issues/34)). The browser's `DecompressionStream` counts what a file's streams decode to, and Chromium is the one browser measured. `suggest`, `check` and `quillify` need no DOM.
 - `@quillmark/wasm` 0.124.0 or later, as a peer.
 - A bundler that follows `new URL('../assets/…', import.meta.url)`, which is how the build finds the three files it loads at run time: `pdf.worker.js`, a module worker, `qpdf.worker.js`, a classic worker, and `qpdf.wasm`. Vite 8.3 is the one bundler measured ([#101](https://github.com/tonguetoquill/quillify/issues/101)).
 - A host page that lets a worker start from each of the two scripts where the bundler puts them, and lets the qpdf worker fetch `qpdf.wasm` from there and compile it. `sanitize` starts one qpdf worker for each file and ends it, so `qpdf.worker.js` and `qpdf.wasm` are requested again for each file.
@@ -117,7 +117,7 @@ Outside `code`, `kind`, `construct` and `diagnostic`, a string in a `Form`, a re
 
 ## Limits
 
-- A form over 20 pages or 200 fields is refused ([#40](https://github.com/tonguetoquill/quillify/issues/40)). A dynamic form over the page cap is refused before a page of it is laid out in the host page. pdf.js has laid out every page in its worker by then, to count them, and the form's fields are counted once its pages, 20 at most, have been laid out and redrawn. The 8 MiB cap bounds the file as stored, whatever its streams inflate to ([#30](https://github.com/tonguetoquill/quillify/issues/30)).
+- A form over 20 pages or 200 fields is refused ([#40](https://github.com/tonguetoquill/quillify/issues/40)). A dynamic form over the page cap is refused before a page of it is laid out in the host page. pdf.js has laid out every page in its worker by then, to count them, and the form's fields are counted once its pages, 20 at most, have been laid out and redrawn. A file over 8 MiB is refused, and so is one that comes to more than 64 MiB with its streams decoded, or that has qpdf write or hold more than that. A stream that cannot be counted gets its file refused as `damaged`: one the browser's decoder rejects, and one under RunLength, under a filter the library does not know or under more than one filter before an image codec. So does a name that is `/ObjStm` or `/XRef` or begins with one, anywhere in the file qpdf wrote: those are the types of the two streams pdf-lib inflates as it parses, and a stream typed as one that is neither keeps the name. No published form on hand is refused for any of these. An image counts as stored, whatever its pixels come to ([#163](https://github.com/tonguetoquill/quillify/issues/163)).
 - `sanitize` has no deadline, so a file that pdf.js never finishes laying out, or that qpdf never finishes rewriting, leaves it pending with a worker busy ([#86](https://github.com/tonguetoquill/quillify/issues/86)).
 - A dynamic form with an image or a dashed border is refused ([#42](https://github.com/tonguetoquill/quillify/issues/42)), and so is one whose text holds a character the standard fonts cannot encode, most often a tab ([#87](https://github.com/tonguetoquill/quillify/issues/87)). One that converts is redrawn in Helvetica, Times or Courier, whatever face it was published in ([#44](https://github.com/tonguetoquill/quillify/issues/44)), and its signature fields are left out with their captions ([#43](https://github.com/tonguetoquill/quillify/issues/43)): 236 of the 590 dynamic Air Force forms the recorded run converted have one, and in 83 a printed caption goes with it ([`prose/research/SIGNING.md`](prose/research/SIGNING.md)). A field with a barcode, a password, an image or no control of its own is left out the same way ([#114](https://github.com/tonguetoquill/quillify/issues/114)). A rectangle's border is redrawn half its width inside where the layout has it, a rounded corner square, and every box under every line and all the text ([#111](https://github.com/tonguetoquill/quillify/issues/111)).
 - A dynamic form is redrawn as pdf.js lays it out, which is not always as Acrobat shows it. On DAF 1288 the rows of Yes and No boxes sit up to two lines from the statements they answer ([#120](https://github.com/tonguetoquill/quillify/issues/120)). What a script or a data binding fills in at layout is missing: DD 2875's last page number, and the list of DAF 1288's two grade boxes, which come out as text fields ([#121](https://github.com/tonguetoquill/quillify/issues/121)). No dynamic form's redrawn page has been set beside the published form in Acrobat.
