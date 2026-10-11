@@ -11,6 +11,7 @@ What a consumer of the package can observe, by release.
 - A background keeps a form's layers (`/OCProperties`) and their default state as the file has them, and so does the rendered form. Content in a layer that is off on screen or in print stays in the background, and a reader that ignores optional content shows it.
 - A dynamic form whose one page area may occur once in its page set converts where it ended `sanitize` with pdf.js's `Cannot read properties of undefined (reading 'length')`: AF 715, AF 716 and DAF 357 do, to two pages each. The pdf.js worker the package ships is changed at a third line for it.
 - A dynamic form with an overflow leader before a row that cannot fit no longer keeps pdf.js laying out pages for good. `sanitize` settles on DAF 1024, with an error. It still has no deadline. The pdf.js worker the package ships is changed at two more lines for it.
+- A dynamic form converts when a field is named as the subform beside it, has no name, or has a name that ends in a period. Each ended `sanitize` with pdf-lib's error, on twelve of the Air Force's published forms.
 
 ## 0.1.0
 

@@ -1,5 +1,11 @@
 import {
+	PDFAcroCheckBox,
+	PDFAcroComboBox,
+	PDFAcroRadioButton,
+	PDFAcroText,
+	PDFCheckBox,
 	PDFDocument,
+	PDFDropdown,
 	PDFFont,
 	PDFField,
 	PDFHexString,
@@ -7,9 +13,12 @@ import {
 	PDFOperator,
 	PDFOperatorNames,
 	PDFPage,
+	PDFRadioGroup,
+	PDFTextField,
 	StandardFonts,
 	rgb
 } from 'pdf-lib';
+import type { PDFAcroField, PDFRef } from 'pdf-lib';
 import { displayList, type DisplayList, type Run } from './display-list.js';
 import { openPdf } from './pdfjs.js';
 import { Refused } from './refusal.js';
@@ -209,13 +218,28 @@ function standard14(run: Run): StandardFonts {
  * passed as undefined. Left out, each paints a white box with a black border
  * over the page. A radio option takes those defaults whatever is passed, with
  * a border of no width.
+ *
+ * The fields are flat, each made from pdf-lib's own field class with its whole
+ * name as its `/T`. pdf-lib's form would read a period in the name as a level
+ * of its field tree, and holds no name as both a field and the parent of one,
+ * which a field named as the subform beside it asks for. pdf.js joins the `/T`
+ * of a field's ancestors with periods, so the inventory reads the whole name.
  */
 function stamp(doc: PDFDocument, widgets: XfaWidget[]): void {
-	const form = doc.getForm();
+	const { acroForm } = doc.getForm();
 	const pages = doc.getPages();
 	const chrome = { borderWidth: 0, backgroundColor: undefined, borderColor: undefined };
-	const groups = new Map<string, ReturnType<typeof form.createRadioGroup>>();
+	const groups = new Map<string, PDFRadioGroup>();
 	const states = new Map<string, Set<string>>();
+	const rooted = <Acro extends PDFAcroField, Made>(
+		acro: Acro,
+		name: string,
+		of: (acro: Acro, ref: PDFRef, doc: PDFDocument) => Made
+	): Made => {
+		acro.setPartialName(name);
+		acroForm.addField(acro.ref);
+		return of(acro, acro.ref, doc);
+	};
 
 	for (const widget of widgets) {
 		const page = pages[widget.page];
@@ -229,7 +253,8 @@ function stamp(doc: PDFDocument, widgets: XfaWidget[]): void {
 		if (widget.kind === 'radio' && widget.group) {
 			let group = groups.get(widget.group);
 			if (!group) {
-				groups.set(widget.group, (group = form.createRadioGroup(widget.group)));
+				group = rooted(PDFAcroRadioButton.create(doc.context), widget.group, PDFRadioGroup.of);
+				groups.set(widget.group, group);
 				states.set(widget.group, new Set());
 			}
 			// Two members of one group cannot share an on-state, or picking either
@@ -243,19 +268,19 @@ function stamp(doc: PDFDocument, widgets: XfaWidget[]): void {
 			continue;
 		}
 		if (widget.kind === 'checkbox') {
-			const tick = form.createCheckBox(widget.name);
+			const tick = rooted(PDFAcroCheckBox.create(doc.context), widget.name, PDFCheckBox.of);
 			tick.addToPage(page, box);
 			tooltip(tick, widget.tooltip);
 			continue;
 		}
 		if (widget.kind === 'choice') {
-			const dropdown = form.createDropdown(widget.name);
+			const dropdown = rooted(PDFAcroComboBox.create(doc.context), widget.name, PDFDropdown.of);
 			dropdown.addOptions(widget.options.length ? widget.options : ['']);
 			dropdown.addToPage(page, box);
 			tooltip(dropdown, widget.tooltip);
 			continue;
 		}
-		const field = form.createTextField(widget.name);
+		const field = rooted(PDFAcroText.create(doc.context), widget.name, PDFTextField.of);
 		if (widget.kind === 'multiline') field.enableMultiline();
 		field.addToPage(page, box);
 		tooltip(field, widget.tooltip);
