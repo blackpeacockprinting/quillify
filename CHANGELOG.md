@@ -8,6 +8,7 @@ What a consumer of the package can observe, by release.
 - A background carries no `/ID`. `sanitize` run twice on one file, two seconds apart, returns the same `form.pdf` byte for byte: qpdf wrote a fresh second element of the `/ID` on each run, and six published forms and the sample carried it.
 - `quillify` writes each string it puts in `Quill.yaml` and `example.md` as a JSON string literal, with a lone surrogate made U+FFFD and U+007F to U+009F, U+FFFE and U+FFFF written as `\u` escapes. A tooltip, an option or an example that holds one of them builds into a quill, the engine reads the character back, and the example renders. A lone surrogate in a tooltip is made U+FFFD in `form.json` too.
 - `sanitize(pdf)` rejects with a `TypeError` for anything that is not a `Uint8Array`, before it starts a worker. A `DataView` or a wider typed array used to get past that check, and a `DataView` left a pdf.js worker running. An `Int8Array` and a `Uint8ClampedArray`, which were read as bytes, now throw too. A `Uint8Array` made in another window is still read.
+- A background keeps a form's layers (`/OCProperties`) and their default state as the file has them, and so does the rendered form. Content in a layer that is off on screen or in print stays in the background, and a reader that ignores optional content shows it.
 
 ## 0.1.0
 
