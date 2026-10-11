@@ -279,3 +279,69 @@ Adds to "Which carried tests change, and how" and to "v0.1.0 fixes four more def
 **Decision.** The printed square and the widget are both the largest square centered in the control's box. The goldens of DD 2875, DAF 988 and DAF 1288 change in the rect of each of their 13, 54 and 57 buttons and in nothing else: each new rect is that square of the old one, to a hundredth of a point. In those 124 rects they are no longer the fork's dump, and the test that compares them no longer says they are.
 
 **Unlock.** A browser that paints the control elsewhere in its box. The test that reads the pixels fails then.
+
+## 11 Oct 2026: The API is the four functions as built
+
+Replaces "The API is built as proposed", and settles "Where the built API departs from the proposal".
+
+**Context.** #3 asked the maintainer to confirm four functions and to choose what `quillify` returns: the checked tree, the tree proven to open in the caller's engine, or a live `Quill` handle. It has had no answer, and the first release does not wait for one. The API was built as the first of the three. Nothing found since argues for another: both callers in the app the code came from take the tree, and the suite opens, renders and reads back every fixture's quill, which is the proof the second option would move into every call.
+
+**Decision.** The API of v0.1.0 is what `src/index.ts` exports: `sanitize`, `suggest`, `check` and `quillify`, with `quillify` returning the tree once `Quill.fromTree` has taken it. The four departures from #3's signatures stand as recorded. A read-only field stays out of a quill whatever its entry says. That costs the 14 Air Force files whose every field is read-only, which build nothing. The one-line rule for a description stays the engine's.
+
+**Unlock.** The maintainer's answer on #3. Before a consumer imports the package a rename is one pull request, and after it a breaking release. For the read-only rule, a consumer that has to fill a field its form marks read-only.
+
+## 11 Oct 2026: No license while the package stays in the organization
+
+**Context.** The repository is private, and the one consumer in view is the organization's own app (#4). The package redistributes the pdf.js worker, under Apache-2.0 and changed at two marked sites, and `qpdf.wasm`. `NOTICE` says what the tarball carries of each and which license texts it lacks.
+
+**Decision.** No license is granted. `package.json` says `UNLICENSED`, and there is no `LICENSE` file.
+
+**Unlock.** The first install outside the organization, or a public registry (#5). Before either, the licensor picks a license, and the texts `qpdf.wasm` ships without are supplied or the binary is built here (#46).
+
+## 11 Oct 2026: No registry, and the name is quillify
+
+**Context.** The app has to be able to install the package, and there is one app (#5). On 9 October `quillify`, `@tonguetoquill/quillify`, `@quillmark/quillify` and `@airmark/quillify` were all unregistered on npm.
+
+**Decision.** The package is named `quillify` and marked `private`, so it cannot be published by accident. Each release attaches a tarball, an SBOM and `SHA256SUMS` to its GitHub release, and a consumer installs the tarball by path.
+
+**Unlock.** A second consumer, or the app's maintainers wanting a version range where they have a file in their tree. A registry is then one line in `package.json` and one in the consumer, after the license.
+
+## 11 Oct 2026: The engine is a peer, and its floor is the version the gate runs on
+
+**Context.** A `Quill` handle from one copy of the engine is refused by another, so an app ends up with one copy or with none that works (#6). The engine moves quickly: eleven minor releases in three weeks, two of which began refusing a background that the one before took. The gate runs on 0.124.0. A reviewer ran the suite on 0.122.0 once, and it passed.
+
+**Decision.** `@quillmark/wasm` is a peer dependency with one comparator, `>=0.124.0`, and an exact development pin at the same version. The floor is the version the gate runs on at a release. An older version that passed once is not held by anything from one change to the next, so it is not promised. The pin moves in a pull request of its own, so a test that goes red there points at the engine.
+
+**Unlock.** A consumer that cannot move its engine up to the floor. The gate is then run on its version, and the floor moves down to it for as long as that run stays in CI.
+
+## 11 Oct 2026: A release is not signed
+
+**Context.** A release is a tarball on a GitHub release page, and nothing a consumer can check ties it to this repository (#7). `web-app#1438` settled the same question for the app's container images. GitHub's attestations need Enterprise Cloud for a private repository, and the organization's signing key is not available to this one.
+
+**Decision.** A release carries `SHA256SUMS` and the output of `npm sbom`, and no signature. The sums show that a file is the one the release lists, to someone who trusts the release page.
+
+**Unlock.** The app's images signed with a key this repository can use. A release is then signed the same way.
+
+## 11 Oct 2026: SF 1152 stays as its publisher serves it
+
+**Context.** SF 1152 names its author in its info dictionary and in its XMP packet (#55). The fixture is that file byte for byte, which the manifest's test holds. `CONTRIBUTING.md` bars a name that we add and leaves a publisher's own metadata alone. The strip drops both places, so the name reaches no background and no form filled from one.
+
+**Decision.** The fixture stays as published. Scrubbed, it would be our file under our hash and no longer the published form. Dropped, the suite would lose the one fixture that paints every field twice over one field tree.
+
+**Unlock.** A request from the publisher or from the person named, or a rule of the organization against any name in a repository. A generated file of the same shape then takes its place, as `test/dd2977-shape.ts` stands in for a form that was not carried.
+
+## 11 Oct 2026: A source whose fields hold values is read like any other
+
+**Context.** The library is for a blank form as published, and nothing stops someone handing it a copy that a person filled in (#33). Values held in the form layer leave with the widgets. A copy flattened in full has no field left and is refused for that. One flattened in part is another matter: its entries are page content beside live fields, and they become the background of a quill other people load. The library cannot tell printed text from typed text. What it can see is a field that holds a value, and that is the wrong sign. Seven of the 59 federal forms have such a field as published (page stamps, button captions, a `1`, a space), none of it a person's entry, and an entry that was flattened is in no field.
+
+**Decision.** `sanitize` neither reports nor refuses a source whose fields hold values. `SECURITY.md` says what the library cannot see, and that the check on it is the consumer's: a person looks at the pages before a quill is shared.
+
+**Unlock.** A consumer that wants to warn on a filled source, with a count that shows a field's value is a sign worth a property on `Form`.
+
+## 11 Oct 2026: A quill carries nothing of what signing locks
+
+**Context.** A published form says what signing a field locks, and on the nine fixtures it says so in the XFA and nowhere else: none of the 13 signature fields in a form layer has a `/Lock`, and 25 of the 28 in the XFA have a manifest ([`research/SIGNING.md`](research/SIGNING.md), #124). A form filled from a quill keeps each of the 13 as an unsigned widget with its name and its tooltip. `form.json` has no slot for a lock, and it is the engine's schema, which every other quill shares.
+
+**Decision.** A quill carries no lock, as a quill from the app the code came from carries none, and the README says so. A signature placed on a filled form locks no field and writes no date beside it.
+
+**Unlock.** A consumer that signs filled forms. The lock then takes a slot on a signature widget in the engine's form schema, and here the reading of each manifest into field names.
