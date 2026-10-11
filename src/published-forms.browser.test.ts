@@ -1,7 +1,7 @@
 /**
- * Real forms, run through the real path with no model in it. Four of the six
+ * Six published forms through the stages `sanitize` runs, in its order. Four
  * arrive locked, and DD 1610, DD 577 and DD 689 are hybrid LiveCycle forms:
- * qpdf unlocks them, and an XFA template beside a field tree is not a refusal.
+ * qpdf unlocks them, and an XFA template beside a field tree is no refusal.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -19,8 +19,9 @@ import { stripAcroForm } from './strip.js';
 import { xfaToAcroForm } from './xfa.js';
 
 /**
- * `pages`, `widgets` and `signatures` are what each published file holds.
- * `tooltips` is how many of its widgets `inventoryPdf` finds hover text for.
+ * `pages` is how many pages each published file holds. The rest count what
+ * `inventoryPdf` reads from it: its entries as `widgets`, the signature fields
+ * among them, and those it finds hover text for.
  */
 const CORPUS = [
 	{ name: 'DD 1610 TDY', url: tdyUrl, pages: 3, widgets: 46, signatures: 2, tooltips: 46 },
@@ -49,7 +50,7 @@ const CORPUS = [
 		tooltips: 41
 	},
 	{ name: 'SF 182 training', url: trainingUrl, pages: 9, widgets: 84, signatures: 5, tooltips: 84 },
-	// 60 widget annotations, 30 fields: the form ships an original and a file
+	// 60 field widgets, 30 fields: the form ships an original and a file
 	// copy over one field tree, so every box is painted twice.
 	{
 		name: 'SF 1152 beneficiary',
@@ -84,9 +85,8 @@ async function inflated(bytes: Uint8Array): Promise<string> {
 describe('the published forms', () => {
 	for (const form of CORPUS) {
 		it(`${form.name} inventories, and its background survives`, async () => {
-			// The wizard's own chain. `xfaToAcroForm` returns these unchanged: they
-			// are hybrid or plain, not dynamic, and the dynamic class is
-			// xfa.svelte.test.ts's.
+			// `xfaToAcroForm` returns these unchanged, since each is hybrid or plain.
+			// xfa.browser.test.ts has the dynamic forms.
 			const original = new Uint8Array(await (await fetch(form.url)).arrayBuffer());
 			const bytes = await xfaToAcroForm(await normalizePdf(original));
 

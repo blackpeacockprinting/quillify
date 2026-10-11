@@ -42,7 +42,7 @@ const copy = (dict: PDFDict, kept: Set<unknown>) => {
  * the rest of the catalog go the form (`/AcroForm` with its XFA packet,
  * `/NeedsRendering`), the XMP metadata, the scripts, attachments, portfolio and
  * bookmarks, and the usage-rights signature under `/Perms`. The signature goes
- * here and not through qpdf's `--remove-restrictions`, which also strips
+ * here because qpdf's `--remove-restrictions`, which takes it too, also strips
  * `/FT /Sig` from every signature field. The trailer's `/Info` goes too.
  *
  * Of a page's annotations a Link stays, when it leads to an http or https
@@ -52,8 +52,8 @@ const copy = (dict: PDFDict, kept: Set<unknown>) => {
  * chained after its own. The action a link keeps is a copy, so nothing the file
  * hangs on the same object is cut with it.
  *
- * Each page's MediaBox is set to its visible box so the engine's page frame is
- * the one the inventory measured widgets in.
+ * Each page's MediaBox is set to its crop box, which is the frame the inventory
+ * measured widgets in whenever the crop box lies inside the media box.
  *
  * Unlinking is not enough. A saved file carries every object the context holds,
  * reachable or not, so what the catalog no longer reaches is swept. The
@@ -70,7 +70,7 @@ export async function stripAcroForm(bytes: Uint8Array): Promise<Uint8Array> {
 		object instanceof PDFDict ? object.lookup(PDFName.of(key)) : undefined;
 	const is = (object: unknown, key: string, name: string): object is PDFDict =>
 		at(object, key) === PDFName.of(name);
-	/** It says it is one, it has a place on a page, or it is a widget, as the fork told one. */
+	/** An annotation need not say it is one: a `/Rect` or a `/Subtype /Widget` is enough. */
 	const annotation = (object: unknown) =>
 		is(object, 'Type', 'Annot') ||
 		at(object, 'Rect') !== undefined ||

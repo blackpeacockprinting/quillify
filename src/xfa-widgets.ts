@@ -3,7 +3,10 @@ import type { XfaPage } from './xfa-layer.js';
 export type XfaKind = 'text' | 'multiline' | 'checkbox' | 'radio' | 'choice';
 
 export interface XfaWidget {
-	/** The SOM path, which becomes the AcroForm field name. */
+	/**
+	 * `p<page>.<SOM path>`, with `#n` where that repeats. It is the AcroForm field
+	 * name of every control but a radio, whose field is its group's.
+	 */
 	name: string;
 	kind: XfaKind;
 	page: number;
@@ -21,13 +24,11 @@ export interface XfaWidget {
 }
 
 /**
- * Every control on a laid-out page, with the name the form gave it.
+ * Every control on a laid-out page, named after what the form called it.
  *
- * The name does not come from `el.name`: of 831 fields across the ten dynamic
- * forms in the corpus, 803 carry neither a name nor an id, and the 28 that do
- * are radio group ids like `exclGroup8817-display`. It lives on the enclosing
- * `div.xfaField` as `xfaname`, and the SOM path is those attributes from the
- * layer root down.
+ * What the form called it is its SOM path: the `xfaname` attributes from the
+ * layer root down to the control. Its `id` or `name` is read only when there
+ * is none.
  */
 export function harvestWidgets(page: XfaPage, pageNumber: number): XfaWidget[] {
 	const { layer, origin } = page;
@@ -55,9 +56,9 @@ export function harvestWidgets(page: XfaPage, pageNumber: number): XfaWidget[] {
 							: 'text';
 
 		const path = somPath(el, layer);
-		// A SOM path can recur: nine do across daf1288, and every field on its
-		// second page starts `Page1.`. The page and an occurrence count make the
-		// AcroForm name unique without losing what the form called it.
+		// A SOM path can recur: nine do on DAF 1288, six of them within a page, and
+		// every field on its second page starts `Page1.`. The page and an occurrence
+		// count make the AcroForm name unique without losing what the form called it.
 		const base = `p${pageNumber}.${path}`;
 		const count = (seen.get(base) ?? 0) + 1;
 		seen.set(base, count);
@@ -103,7 +104,7 @@ function exclusion(el: HTMLElement, layer: HTMLElement): HTMLElement | null {
 	return found && layer.contains(found) ? found : null;
 }
 
-/** The hover text a filler reads, which covers 740 of the 831 fields. */
+/** The hover text a filler reads. */
 function tooltipOf(el: HTMLElement): string | undefined {
 	const field = el.closest<HTMLElement>('.xfaField');
 	const direct =

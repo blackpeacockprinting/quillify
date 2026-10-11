@@ -20,15 +20,15 @@ import { harvestWidgets, type XfaWidget } from './xfa-widgets.js';
  * A dynamic Adobe LiveCycle form as an ordinary static AcroForm, or the input
  * unchanged when it is not one.
  *
- * Ten of the twenty-four published federal forms in the corpus are dynamic: the
- * fields exist only as XML inside `/AcroForm /XFA`, `/Fields` is empty, and the
- * one page in the file is the "Please wait" notice. Converting one takes an XFA
- * layout engine, and pdf.js has one. This runs it, reads the geometry the browser
- * solved off the DOM, and writes both the printed page and the fields back out
- * as a PDF the rest of the pipeline already takes.
+ * In a dynamic form the fields exist only as XML inside `/AcroForm /XFA`:
+ * `/Fields` is empty, and the one page in the file is a placeholder, most often
+ * a "Please wait" notice. Converting one takes an XFA layout engine, and pdf.js
+ * has one. This runs it, reads the geometry the browser solved off the DOM, and
+ * writes both the printed page and the fields back out as a PDF the later
+ * stages already take.
  *
- * Normalization, not a second pipeline: bytes in, bytes out, and everything
- * downstream is unchanged.
+ * It is a normalization: bytes in, bytes out, and every later stage reads the
+ * result as it reads a static form.
  */
 export async function xfaToAcroForm(bytes: Uint8Array): Promise<Uint8Array> {
 	const stage = new XfaStage();
@@ -200,14 +200,15 @@ function standard14(run: Run): StandardFonts {
 
 /**
  * The fields, as the shapes the inventory already understands. Radios become a
- * real AcroForm radio group rather than N booleans: `form@0.2.0` carries no
- * per-widget on-state, so N booleans would let every option of an exclusive
- * group be ticked at once and would stamp one chosen value into all of them.
+ * real AcroForm radio group, so the inventory reads each option's group and
+ * on-state as it reads a static form's.
  *
- * `backgroundColor` and `borderColor` are passed explicitly because pdf-lib
- * tests for the key with `in`, not for undefined, and defaults a missing one to
- * opaque white. Left out, all 831 widgets paint a white box with a black border
- * over the page, which on DD 2875 erases the UNCLASSIFIED banners.
+ * For a text field, a checkbox and a dropdown pdf-lib asks whether
+ * `backgroundColor` and `borderColor` are `in` the options, and defaults a
+ * missing background to white and a missing border to black, so both are
+ * passed as undefined. Left out, each paints a white box with a black border
+ * over the page. A radio option takes those defaults whatever is passed, with
+ * a border of no width.
  */
 function stamp(doc: PDFDocument, widgets: XfaWidget[]): void {
 	const form = doc.getForm();
@@ -261,14 +262,11 @@ function stamp(doc: PDFDocument, widgets: XfaWidget[]): void {
 	}
 }
 
-/**
- * `/TU`, which the inventory reads as the widget's hover text. It covers 740 of
- * the corpus's 831 XFA fields.
- */
+/** `/TU`, which the inventory reads as the widget's tooltip. */
 function tooltip(field: PDFField, text?: string): void {
 	if (!text) return;
-	// On the widget just added, not the field: `addToPage` and `addOptionToPage`
-	// push into `/Kids`, so writing to all of them gives every option of a radio
+	// Written on the widget just added. `addToPage` and `addOptionToPage` push
+	// into `/Kids`, so writing to every kid would give each option of a radio
 	// group the last option's caption.
 	const widget = field.acroField.getWidgets().at(-1);
 	widget?.dict.set(PDFName.of('TU'), PDFHexString.fromText(text));

@@ -1,7 +1,7 @@
 /**
  * The transform guard, which decides whether a laid-out element can be redrawn
- * at all. It asks whether the primitives can carry the matrix, not whether the
- * matrix is the identity: three of the ten dynamic forms offset an element by a
+ * at all. It asks whether the primitives can carry the matrix. Asking whether
+ * the matrix is the identity would refuse a form that offsets an element by a
  * translation the rects already hold.
  */
 

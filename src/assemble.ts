@@ -1,6 +1,6 @@
 import type { InventoryWidget, QualifiedField, QualifiedForm, QuillTree } from './types.js';
 
-/** What the assembly reads of a field, of the form and of a widget. The carried tests hand it a title, which it does not read. */
+/** What the assembly reads of a field, of the form and of a widget. Its tests hand it a title, which it does not read. */
 type Named = Omit<QualifiedField, 'label'>;
 type Qualified = {
 	quill: Pick<QualifiedForm['quill'], 'name' | 'description'> & { title?: string };
@@ -8,7 +8,7 @@ type Qualified = {
 };
 type Placed = Pick<InventoryWidget, 'id' | 'kind' | 'places' | 'tooltip'>;
 
-/** Every format the importer builds is a first version. */
+/** Every quill the library builds is a first version. */
 export const QUILL_VERSION = '0.1.0';
 
 /** YAML takes a JSON string literal verbatim. */
@@ -25,7 +25,7 @@ function groupId(name: string): string {
 
 /**
  * A `default:` says nobody need answer the field. A required field declares
- * none, so the blueprint leaves its cell empty for the author.
+ * none, a boolean apart: it defaults to false either way.
  */
 function fieldYaml(field: Named): string[] {
 	const lines = [`    ${q(field.name)}:`];
@@ -150,7 +150,7 @@ export function assembleQuill(
 	return tree;
 }
 
-/** Each place gets its own widget name; they share a schema field, not an identity. */
+/** Each place gets its own widget name, and all of a field's places name one schema field. */
 function placeName(id: string, index: number): string {
 	return index === 0 ? id : `${id}#${index + 1}`;
 }

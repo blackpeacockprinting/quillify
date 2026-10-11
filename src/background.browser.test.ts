@@ -1,8 +1,7 @@
 /**
- * The background is the point: a format built from a form has to show the
- * form. Five backgrounds, three of them published forms, each read by both
- * renderers: the two do not agree about `/Contents` arrays, and a page whose
- * streams are not joined paints blank in one of them.
+ * A quill built from a form has to show the form. Five backgrounds, three of
+ * them published forms, each painted by pdf.js and by the engine after qpdf
+ * joins its content streams.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -60,7 +59,7 @@ describe('the background a built format stamps over', () => {
 			const inventory = await inventoryPdf(bytes);
 			const background = await stripAcroForm(bytes);
 
-			// Ours: the file came out of qpdf and the strip with its page intact.
+			// pdf.js: the file came out of qpdf and the strip with its page intact.
 			expect(await inkFromPdf(background), `${probe.name} background`).toBeGreaterThan(0.004);
 
 			const fields: QualifiedField[] = inventory.widgets.map((w, i) => ({

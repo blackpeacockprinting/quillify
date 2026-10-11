@@ -40,7 +40,7 @@ export interface Run {
 	italic: boolean;
 	colour: Colour;
 	letterSpacing: number;
-	/** What the browser measured. The stamp pins the run to it. */
+	/** What the browser measured, which `drawRuns` scales the run to. */
 	width: number;
 }
 
@@ -74,12 +74,14 @@ function stroked(style: CSSStyleDeclaration): Edge | null {
 
 /**
  * Turn a laid-out XFA page into primitives in page points. The browser solved
- * the layout, so every number here is exact rather than estimated.
+ * the layout, and the rects here are read off it.
  *
  * What it can express is text, CSS backgrounds and borders, and inline SVG
- * `line` and `rect`. Anything else is refused with its construct named: a
- * silently incomplete background of a government form is worse than not taking
- * the form.
+ * `line` and `rect`. An image, a background image, another SVG shape, a border
+ * style it cannot draw and a transform it cannot carry are refused with the
+ * construct named: a background that is silently incomplete is worse than not
+ * taking the form. A hidden element, an SVG `line` or `rect` with no stroke
+ * and an element under 0.3 pt on a side are passed over.
  */
 export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 	const { layer, origin } = page;
@@ -144,8 +146,8 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 		const rect = el.getBoundingClientRect();
 		if (rect.width < 0.3 || rect.height < 0.3) continue;
 
-		// A control's own chrome is the browser's, not the form's, and an AcroForm
-		// widget is stamped where it was. The printed square a checkmark goes in is
+		// A control's own chrome belongs to the browser, and an AcroForm widget is
+		// stamped where the control was. The printed square a checkmark goes in is
 		// the exception: nothing else draws it. It is square and top-aligned inside
 		// the field box, which is taller than the painted control.
 		const type = el.getAttribute('type')?.toLowerCase();
@@ -216,8 +218,8 @@ function svgOnly(tag: string): boolean {
 
 /**
  * One run per visual line, with the box the browser measured it into. Splitting
- * on the rect top rather than on the wrap point is what keeps a wrapped
- * paragraph's second line at its own baseline.
+ * where the rect top changes is what keeps a wrapped paragraph's second line at
+ * its own baseline.
  */
 function collectText(
 	layer: HTMLElement,

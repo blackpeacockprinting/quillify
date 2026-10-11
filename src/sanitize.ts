@@ -47,7 +47,7 @@ function field(widget: InventoryWidget): Field {
  * the file is not taken. Nothing else in the package reads the file.
  */
 export async function sanitize(pdf: Uint8Array): Promise<Sanitized> {
-	// An ArrayBuffer or a string would get as far as qpdf, fail there, and come back as a damaged file.
+	// Handing it an ArrayBuffer or a string is a mistake in the call and no fault of a file, so the call throws.
 	if (!ArrayBuffer.isView(pdf)) throw new TypeError('sanitize takes a Uint8Array.');
 	try {
 		const bytes = await xfaToAcroForm(await normalizePdf(pdf));

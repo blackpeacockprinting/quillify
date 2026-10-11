@@ -2,7 +2,7 @@
  * The whole import against a three-page form with 50 widgets, built in the
  * shape of DD Form 2977: text, button and choice, three of them push buttons,
  * which are no fields. Inventory, strip, assemble and render all run, and the
- * assertions are what the pipeline promises about the form's kinds, pages,
+ * assertions are what those stages promise about the form's kinds, pages,
  * rects and render.
  */
 
@@ -16,7 +16,7 @@ import type { FieldInventory, QualifiedField, QualifiedForm } from './types.js';
 
 let bytes: Uint8Array;
 
-/** What the naming pass returns, with the types the server derives from the widgets. */
+/** A name for every widget, with the type its kind gives it. */
 function qualify(inventory: FieldInventory): QualifiedForm {
 	const fields: QualifiedField[] = inventory.widgets.map((w, i) => ({
 		widget: w.id,

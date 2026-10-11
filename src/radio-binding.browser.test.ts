@@ -4,8 +4,8 @@
  * `form@0.2.0` carries no per-widget on-state, so the stamper writes the chosen
  * value into every widget of the group. Twelve boxes, all reading `option_3`.
  *
- * The day `BoundField` grows an on-value this test fails, and that is the
- * signal to change how `assemble.ts` writes a group.
+ * The day `form.json` carries an on-value for a widget this test fails, and
+ * that is the signal to change how `assemble.ts` writes a group.
  */
 
 import { describe, expect, it } from 'vitest';

@@ -1,7 +1,7 @@
 /**
  * Writes test/fixtures/acroform-sample.pdf: one Letter page with three text
- * fields, a checkbox, a dropdown and a Link annotation, the input the PDF
- * import pipeline is tested against.
+ * fields, a checkbox, a dropdown and a Link annotation, the synthetic form the
+ * tests read beside the published ones.
  */
 
 import { writeFileSync } from 'node:fs';

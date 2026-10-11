@@ -31,21 +31,19 @@ const isWidgetKind = (type: unknown): type is WidgetKind =>
 export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory> {
 	const { pdf, close } = await openPdf(bytes);
 	try {
-		// XFA alone is not a refusal. A LiveCycle form is usually hybrid: the XFA
-		// template rides along beside a complete AcroForm field tree, and pdf.js
-		// never XFA-renders one of those, so the widgets below are the real ones.
-		// A dynamic form has no field tree, and `xfaToAcroForm` has already given
-		// it one by the time anything reaches here; what is left is a file that is
-		// neither, which has nothing to read either way.
+		// XFA alone is not a refusal. A hybrid form carries its XFA template beside a
+		// complete AcroForm field tree, and pdf.js never XFA-renders one of those, so
+		// the widgets below are the real ones. A dynamic form has no field tree, and
+		// `xfaToAcroForm` has given it one by the time anything reaches here. What is
+		// left is a file that is neither, which has no field to read.
 		const { info } = (await pdf.getMetadata()) as {
 			info: { IsXFAPresent?: boolean; IsCollectionPresent?: boolean };
 		};
 		const xfa = pdf.isPureXfa || !!info.IsXFAPresent;
-		// A catalog that declares a collection is a portfolio or a wrapper, and
-		// its first page is a cover sheet by construction. AF 3070A is the
-		// Microsoft Purview shape: the real three-page form is a 1.5 MB attachment
-		// encrypted to a tenant nobody here has a licence for, and counting the
-		// cover sheet's widgets answers the wrong question.
+		// A catalog that declares a collection is a portfolio: its pages are a cover
+		// sheet, and the form is an attachment. AF 3070A is one, around a file named
+		// `MicrosoftIRMServices Protected PDF.pdf`. Counting the cover sheet's
+		// widgets would answer the wrong question.
 		if (info.IsCollectionPresent) {
 			const [attachment] = (await pdf.getAttachments())?.keys() ?? [];
 			throw new Refused({ code: 'portfolio', attachment });
@@ -73,7 +71,7 @@ export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory> {
 				const place = { page: index, rect: toTopLeftRect(a.rect, view, page.rotate) };
 				// One name is one value in the file: typing into any widget that
 				// carries it fills every other. SF 1152 ships an original and a file
-				// copy sharing one field tree, so half its 60 annotations are the
+				// copy sharing one field tree, so half its 60 field widgets are the
 				// other half painted again. A radio option is the exception, since
 				// its on-state is the whole point of being separate.
 				const shared = a.radioButton || !name ? undefined : byName.get(name);
@@ -122,10 +120,10 @@ export async function inventoryPdf(bytes: Uint8Array): Promise<FieldInventory> {
  *
  * Acrobat writes `/T` and `/TU` on the field and puts bare widget annotations in
  * `/Kids`. pdf.js walks `/Parent` for `/T` and inherits `/FT`, but reads `/TU`
- * straight off the annotation, so every kid of a split field arrives unlabelled:
- * 16 of EOIR-28's 53, 32 of VA 26-1880's 81, all 60 of SF 1152's. A widget's
- * tooltip is its field's tooltip, which is the same parent walk pdf.js already
- * does for the name.
+ * straight off the annotation, so every kid of a split field arrives unlabeled:
+ * 16 of EOIR-28's 53 widgets, 32 of VA 26-1880's 81, 60 of SF 1152's 63. A
+ * widget's tooltip is its field's tooltip, which is the same parent walk pdf.js
+ * already does for the name.
  *
  * pdf-lib carries no decryption, so this only reads what `normalizePdf` has
  * already decrypted.
