@@ -6,8 +6,7 @@
  *
  * Shipped as a module's text and adopted on the stage's own document, so none
  * of it reaches the host page.
- * On a pdfjs-dist upgrade the copy goes stale silently; the fixed-rect
- * assertion in xfa.browser.test.ts is what notices.
+ * test/package.test.ts holds the copy to the installed file, line for line.
  */
 
 :root{

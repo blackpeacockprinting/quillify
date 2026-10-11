@@ -4,16 +4,30 @@
 	"private": true,
 	"license": "UNLICENSED",
 	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		}
+	},
+	"files": [
+		"dist",
+		"assets",
+		"NOTICE",
+		"licenses"
+	],
 	"engines": {
 		"node": ">=24"
 	},
 	"scripts": {
-		"gate": "npm run assets && npm run lint && npm run check && npm test",
+		"gate": "npm run build && npm run lint && npm run check && npm test",
 		"lint": "prettier --check .",
 		"format": "prettier --write .",
 		"check": "tsc",
 		"test": "vitest run",
 		"assets": "node scripts/assets.js",
+		"build": "npm run assets && node -e \"fs.rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json",
 		"corpus": "npm run assets && vitest run --config corpus/vitest.config.ts"
 	},
 	"devDependencies": {

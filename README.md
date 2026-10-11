@@ -99,7 +99,7 @@ Outside `code`, `kind`, `construct` and `diagnostic`, a string in a `Form`, a re
 
 - A browser, for `sanitize`. A dynamic form is laid out by the browser, in a hidden frame of no size that is in the host page's body while a file converts, and the pdf.js worker and qpdf's binary load as a browser loads them ([#34](https://github.com/tonguetoquill/quillify/issues/34)). `suggest`, `check` and `quillify` need no DOM.
 - `@quillmark/wasm` 0.124.0 or later, as a peer.
-- A bundler, for now. The package is not built or packed yet, and its source finds its pdf.js worker and `qpdf.wasm` with `new URL('../assets/…', import.meta.url)`. Vite 8.3 is the one bundler measured ([#10](https://github.com/tonguetoquill/quillify/issues/10)).
+- A bundler that follows `new URL('../assets/…', import.meta.url)`, which is how the build finds the pdf.js worker and the `qpdf.wasm` it ships. Vite 8.3 is the one bundler measured ([#101](https://github.com/tonguetoquill/quillify/issues/101)).
 
 ## Measured
 
@@ -129,8 +129,8 @@ npx playwright install --only-shell chromium
 npm run gate
 ```
 
-The gate is `npm run assets`, Prettier, `tsc` and the tests, in node and in headless Chromium. [`CONTRIBUTING.md`](CONTRIBUTING.md) has how a change lands, and [`prose/research/`](prose/research/README.md) the research the XFA conversion rests on.
+The gate is `npm run build`, Prettier, `tsc` and the tests, in node and in headless Chromium. [`CONTRIBUTING.md`](CONTRIBUTING.md) has how a change lands, and [`prose/research/`](prose/research/README.md) the research the XFA conversion rests on.
 
 ## Status
 
-Nothing is released. [#1](https://github.com/tonguetoquill/quillify/issues/1) is the sequence to v0.1.0, which is the importer of `tonguetoquill/web-app-afa-demo@842ef4207cb5` as a library. The four functions and their types are a proposal until [#3](https://github.com/tonguetoquill/quillify/issues/3) is settled. The license ([#4](https://github.com/tonguetoquill/quillify/issues/4)) and the package's name and registry ([#5](https://github.com/tonguetoquill/quillify/issues/5)) are undecided, so the package is private and unlicensed.
+Nothing is released, and a tarball is `npm run build && npm pack`. [#1](https://github.com/tonguetoquill/quillify/issues/1) is the sequence to v0.1.0, which is the importer of `tonguetoquill/web-app-afa-demo@842ef4207cb5` as a library. The four functions and their types are a proposal until [#3](https://github.com/tonguetoquill/quillify/issues/3) is settled. The license ([#4](https://github.com/tonguetoquill/quillify/issues/4)) and the package's name and registry ([#5](https://github.com/tonguetoquill/quillify/issues/5)) are undecided, so the package is private and unlicensed.
