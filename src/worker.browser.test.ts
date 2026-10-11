@@ -8,11 +8,13 @@ import { GlobalWorkerOptions, PDFWorker } from 'pdfjs-dist';
 import { afterEach, expect, it, vi } from 'vitest';
 import { commands } from 'vitest/browser';
 import reserveUrl from '../test/fixtures/DAF1288_Application_for_Ready_Reserve_Assignment.pdf?url';
+import sampleUrl from '../test/fixtures/acroform-sample.pdf?url';
 import { openPdf } from './pdfjs.js';
 import { Refused } from './refusal.js';
 import { sanitize } from './sanitize.js';
 
 const reserve = async () => new Uint8Array(await (await fetch(reserveUrl)).arrayBuffer());
+const sample = async () => new Uint8Array(await (await fetch(sampleUrl)).arrayBuffer());
 
 afterEach(() => {
 	vi.unstubAllGlobals();
@@ -54,6 +56,18 @@ it('ends the worker of an open it refuses', async () => {
 	expect(count.started).toBe(1);
 	expect(count.live.size).toBe(0);
 }, 60_000);
+
+it.each([
+	['a DataView', (bytes: Uint8Array) => new DataView(bytes.buffer)],
+	['a Uint16Array', (bytes: Uint8Array) => new Uint16Array(bytes.buffer, 0, bytes.length >> 1)]
+])('starts no worker for %s', async (_, view) => {
+	const count = countWorkers();
+
+	await expect(sanitize(view(await sample()) as never)).rejects.toThrow(
+		'sanitize takes a Uint8Array.'
+	);
+	expect(count.started).toBe(0);
+});
 
 it('destroys the task and the PDFWorker of a document it closes', async () => {
 	const create = vi.spyOn(PDFWorker, 'create');

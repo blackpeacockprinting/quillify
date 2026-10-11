@@ -177,6 +177,16 @@ it('takes the bytes as a Uint8Array: a good file as an ArrayBuffer is an error',
 	await expect(sanitize(buffer as never)).rejects.toThrow(TypeError);
 });
 
+it.each([
+	['Int8Array', Int8Array],
+	['Uint8ClampedArray', Uint8ClampedArray]
+])('takes only a Uint8Array: %s is an error', async (_, View) => {
+	const { buffer } = await fixture('acroform-sample');
+	await expect(sanitize(new View(buffer as ArrayBuffer) as never)).rejects.toThrow(
+		'sanitize takes a Uint8Array.'
+	);
+});
+
 it('takes a Uint8Array that another frame made', async () => {
 	const frame = document.body.appendChild(document.createElement('iframe'));
 	const other = frame.contentWindow as Window & typeof globalThis;
