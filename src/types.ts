@@ -87,5 +87,12 @@ export type QuillTree = Map<string, Uint8Array>;
 
 /** The largest file `sanitize` opens. It bounds the compressed input. */
 export const MAX_BYTES = 8 * 1024 * 1024;
+/**
+ * The most a file may come to once qpdf has it: the file qpdf writes together
+ * with what its Flate streams decode to, and qpdf's own memory. Of 1,423
+ * published files the largest comes to 15,046,490 bytes (DAF 57), and qpdf's
+ * memory is 17,235,968 bytes after each.
+ */
+export const MAX_INFLATED_BYTES = 64 * 1024 * 1024;
 export const MAX_PAGES = 20;
 export const MAX_WIDGETS = 200;
