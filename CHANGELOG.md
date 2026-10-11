@@ -10,3 +10,4 @@ What a consumer of the package can observe, by release.
 - `@quillmark/wasm` is a peer dependency, at 0.124.0 or later.
 - Each pdf.js read runs on a worker of its own, started from the worker the package ships. pdf.js's global worker settings are neither read nor written.
 - The package carries its pdf.js worker (6.3.289 with a null guard at two sites), `qpdf.wasm` and its stage stylesheet in `assets/`, and loads them from there.
+- A dynamic form is laid out in a sandboxed frame with a document of its own. No rule of the host page applies inside it, and the form's rules and fonts do not reach the host. The frame is hidden and has no size. It is in the host page's body while `sanitize` converts a file, dynamic or not, and is removed when that stage ends.

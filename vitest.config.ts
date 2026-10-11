@@ -11,10 +11,25 @@ const withhold: BrowserCommand<[asset: string]> = ({ page }, asset) =>
 const serve: BrowserCommand<[asset: string]> = ({ page }, asset) =>
 	page.unroute(`**/assets/${asset}*`);
 
+// A page's resource timing leaves out what its workers ask for, so a test that
+// holds the library to its own files has the browser list every HTTP request.
+const requested: string[] = [];
+const note = (request: { url(): string }) => void requested.push(request.url());
+const listen: BrowserCommand<[]> = ({ page }) => {
+	requested.length = 0;
+	page.context().on('request', note);
+};
+const heard: BrowserCommand<[]> = ({ page }) => {
+	page.context().off('request', note);
+	return [...requested];
+};
+
 declare module 'vitest/browser' {
 	interface BrowserCommands {
 		withhold(asset: string): Promise<void>;
 		serve(asset: string): Promise<void>;
+		listen(): Promise<void>;
+		heard(): Promise<string[]>;
 	}
 }
 
@@ -37,7 +52,7 @@ export default defineConfig({
 						headless: true,
 						screenshotFailures: false,
 						provider: playwright(),
-						commands: { withhold, serve },
+						commands: { withhold, serve, listen, heard },
 						instances: [{ browser: 'chromium' }]
 					}
 				}

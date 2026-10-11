@@ -31,11 +31,13 @@ import { harvestWidgets, type XfaWidget } from './xfa-widgets.js';
  * downstream is unchanged.
  */
 export async function xfaToAcroForm(bytes: Uint8Array): Promise<Uint8Array> {
-	const { pdf, close } = await openPdf(bytes, { enableXfa: true });
-	let stage: XfaStage | undefined;
+	const stage = new XfaStage();
+	let opened: Awaited<ReturnType<typeof openPdf>> | undefined;
 	try {
+		// pdf.js adds the faces a form embeds to this document's font set.
+		opened = await openPdf(bytes, { enableXfa: true, ownerDocument: await stage.ready });
+		const { pdf } = opened;
 		if (!pdf.isPureXfa) return bytes;
-		stage = new XfaStage();
 		const out = await PDFDocument.create();
 		const fonts = new Map<StandardFonts, PDFFont>();
 		const widgets: XfaWidget[] = [];
@@ -54,8 +56,8 @@ export async function xfaToAcroForm(bytes: Uint8Array): Promise<Uint8Array> {
 		stamp(out, widgets);
 		return await out.save();
 	} finally {
-		stage?.close();
-		await close();
+		stage.close();
+		await opened?.close();
 	}
 }
 

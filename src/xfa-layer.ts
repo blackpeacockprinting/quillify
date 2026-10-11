@@ -21,23 +21,50 @@ const NO_LINKS = {
 	getAnchorUrl: () => ''
 };
 
+const SHELL = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src blob: data:">`;
+
 /**
- * Somewhere offscreen to lay XFA pages out. `display: none` is not an option: it
- * zeroes every rect, and it does that silently. The container sits off the left
- * edge instead, and the viewer stylesheet is injected beside it rather than into
- * the app's own, because `XfaLayer.render` emits a DOM with no style of its own
- * and the app must not inherit the rules that give it one.
+ * Somewhere out of sight to lay XFA pages out: a frame, whose document takes no
+ * rule from the host page and gives it none. `display: none` is not an option:
+ * it zeroes every rect, and it does that silently. The frame is hidden, out of
+ * the flow and of no size instead, so the host page shows, lays out and
+ * scrolls as it did, and the form inside is laid out all the same. A host page
+ * can still take the frame's boxes away, and `lay` throws when one has.
+ *
+ * The frame runs no script, and its policy lets its document load only an
+ * image from `blob:` or `data:`, which is how pdf.js hands it a form's images
+ * and the stylesheet its field background. A face of the form is not the
+ * document's to load: pdf.js makes it in the host page's realm, from the
+ * file's bytes or a `local()` name.
  */
 export class XfaStage {
-	readonly #root: HTMLDivElement;
+	readonly #frame = document.createElement('iframe');
+	/** The frame's document, once the stylesheet `XfaLayer.render` counts on applies in it. */
+	readonly ready: Promise<Document>;
 
 	constructor() {
-		this.#root = document.createElement('div');
-		this.#root.style.cssText = 'position:absolute;left:-99999px;top:0;background:#fff';
-		const style = document.createElement('style');
-		style.textContent = css;
-		this.#root.append(style);
-		document.body.append(this.#root);
+		const frame = this.#frame;
+		frame.sandbox.add('allow-same-origin');
+		frame.style.cssText = 'position:fixed;width:0;height:0;border:0;visibility:hidden';
+		frame.srcdoc = SHELL;
+		this.ready = new Promise((loaded) => (frame.onload = loaded)).then(() => {
+			const frameDocument = frame.contentDocument!;
+			const view = frameDocument.defaultView!;
+			const sheet = new view.CSSStyleSheet();
+			sheet.replaceSync(css);
+			frameDocument.adoptedStyleSheets = [sheet];
+
+			// A sheet that did not apply leaves every field at its content size,
+			// and the rects read off it are wrong with no error.
+			const probe = frameDocument.createElement('div');
+			probe.className = 'xfaLayer';
+			frameDocument.body.append(probe);
+			const applies = view.getComputedStyle(probe).position === 'absolute';
+			probe.remove();
+			if (!applies) throw new Error('The XFA stylesheet did not apply to the stage.');
+			return frameDocument;
+		});
+		document.body.append(frame);
 	}
 
 	/**
@@ -52,12 +79,13 @@ export class XfaStage {
 		if (!xfa) throw new Error(`XFA page ${page.pageNumber} laid out to nothing.`);
 		const viewport = pdfjs.XfaLayer.getPageViewport(xfa, { scale: 1, rotation: 0 });
 
-		const host = document.createElement('div');
+		const frameDocument = await this.ready;
+		const host = frameDocument.createElement('div');
 		host.style.cssText = `position:relative;overflow:hidden;background:#fff;width:${viewport.width}px;height:${viewport.height}px`;
-		const layer = document.createElement('div');
+		const layer = frameDocument.createElement('div');
 		layer.className = 'xfaLayer';
 		host.append(layer);
-		this.#root.append(host);
+		frameDocument.body.append(host);
 
 		pdfjs.XfaLayer.render({
 			viewport: viewport.clone({ dontFlip: true }),
@@ -66,8 +94,12 @@ export class XfaStage {
 			linkService: NO_LINKS as never,
 			intent: 'display'
 		});
-		await document.fonts.ready;
+		await frameDocument.fonts.ready;
 
+		// A frame the host page hid or took out gives the wrapper no box. A box of
+		// no width is the file's: a page under a point wide.
+		if (!host.getClientRects().length)
+			throw new Error('The host page hid or removed the frame the form is laid out in.');
 		return {
 			layer,
 			origin: host.getBoundingClientRect(),
@@ -77,6 +109,6 @@ export class XfaStage {
 	}
 
 	close(): void {
-		this.#root.remove();
+		this.#frame.remove();
 	}
 }
