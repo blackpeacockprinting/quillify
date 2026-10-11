@@ -55,6 +55,8 @@
 	"DAF988_Leave_Request_Authorization.pdf": {
 		"form": "DAF 988",
 		"publisher": "static.e-publishing.af.mil",
+		"url": "https://static.e-publishing.af.mil/production/1/saf_fm/form/daf988/daf988.pdf",
+		"verified": "2026-10-10T08:21:04Z",
 		"kind": "dynamic",
 		"encryption": "AESv2, R4, empty user password",
 		"sha256": "c9ea8e6b5e91d49ffce71012bda14bcb13be0dc19242945a321ff5f50dff3904"
@@ -62,6 +64,8 @@
 	"DAF1288_Application_for_Ready_Reserve_Assignment.pdf": {
 		"form": "DAF 1288",
 		"publisher": "static.e-publishing.af.mil",
+		"url": "https://static.e-publishing.af.mil/production/1/af_a1/form/daf1288/daf1288.pdf",
+		"verified": "2026-10-10T08:01:10Z",
 		"kind": "dynamic",
 		"encryption": "AESv2, R4, empty user password",
 		"sha256": "f72990b29decd6992ef89f76709acdfefe2ea5b3a5749f6899b46ba2e93a6cd9"

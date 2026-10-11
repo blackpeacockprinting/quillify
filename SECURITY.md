@@ -30,7 +30,7 @@ Each pdf.js read runs on a worker of its own, started from the file the package 
 
 pdf.js lays an XFA form out in a DOM so its fields get positions. That DOM is built in an `<iframe>` with a document of its own. `sanitize` makes the frame for every file that reaches the conversion, dynamic or not, because pdf.js binds a form's fonts as it opens the file. The frame is hidden and has no size. It is in the host page's body until that stage ends.
 
-The frame has `sandbox="allow-same-origin"`, so it runs no script, and its document carries the policy `default-src 'none'; img-src blob: data:`. The stylesheet the layout needs is adopted on that document, and the conversion ends with an error if it does not apply. No rule of the host page applies inside the frame's document, and the form's rules and fonts do not reach the host.
+The frame has `sandbox="allow-same-origin"`, so it runs no script, and its document carries the policy `default-src 'none'; img-src blob: data:`. That policy lets a form's images in: pdf.js hands the frame each image on a dynamic form's page as a `blob:` URL, the browser loads it there, and the page is then refused as `unpaintable`. The stylesheet the layout needs is adopted on that document, and the conversion ends with an error if it does not apply. No rule of the host page applies inside the frame's document, and the form's rules and fonts do not reach the host.
 
 The policy governs what the frame's document loads, and it names no font source. A form's font face is not the document's to load: pdf.js makes each face in the host page's realm, from the file's bytes or a `local()` name, and adds it to the frame's font set. The library never gives pdf.js a URL to fetch a font from.
 
