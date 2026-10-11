@@ -10,6 +10,7 @@ What a consumer of the package can observe, by release.
 - `sanitize(pdf)` rejects with a `TypeError` for anything that is not a `Uint8Array`, before it starts a worker. A `DataView` or a wider typed array used to get past that check, and a `DataView` left a pdf.js worker running. An `Int8Array` and a `Uint8ClampedArray`, which were read as bytes, now throw too. A `Uint8Array` made in another window is still read.
 - A background keeps a form's layers (`/OCProperties`) and their default state as the file has them, and so does the rendered form. Content in a layer that is off on screen or in print stays in the background, and a reader that ignores optional content shows it.
 - A dynamic form whose one page area may occur once in its page set converts where it ended `sanitize` with pdf.js's `Cannot read properties of undefined (reading 'length')`: AF 715, AF 716 and DAF 357 do, to two pages each. The pdf.js worker the package ships is changed at a third line for it.
+- A dynamic form with an overflow leader before a row that cannot fit no longer keeps pdf.js laying out pages for good. `sanitize` settles on DAF 1024, with an error. It still has no deadline. The pdf.js worker the package ships is changed at two more lines for it.
 
 ## 0.1.0
 

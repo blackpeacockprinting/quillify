@@ -101,11 +101,11 @@ Every `Rect` is `{ x, y, w, h }` from the top left of its page, in the page's ow
 
 ## Assets and the build
 
-The package carries three files that are not its own code: the pdf.js worker, `qpdf.wasm` and a slice of pdf.js's viewer stylesheet. `npm run assets` writes the worker and `qpdf.wasm` to `assets/` from `node_modules`, and the stylesheet from `src/xfa-layer.css` as a module, with a declaration file beside it. It stops unless the installed worker has each line it guards at the count of sites the guard is written for, two for the null guard and one for the page set, and ends in its source map line, and `qpdf.wasm` has the recorded hash.
+The package carries three files that are not its own code: the pdf.js worker, `qpdf.wasm` and a slice of pdf.js's viewer stylesheet. `npm run assets` writes the worker and `qpdf.wasm` to `assets/` from `node_modules`, and the stylesheet from `src/xfa-layer.css` as a module, with a declaration file beside it. It stops unless the installed worker has each line it guards at the count of sites the guard is written for, two for the null guard, one for each of the overflow leader's two lines and one for the page set, and ends in its source map line, and `qpdf.wasm` has the recorded hash.
 
 | File | What it is | How the source loads it |
 | --- | --- | --- |
-| `pdf.worker.js` | The pdf.js worker with a null guard at two sites and a page set that clears its page areas' counts when it starts another pass | `new URL('../assets/pdf.worker.js', import.meta.url)` in `pdfjs.ts`, handed to `new Worker` |
+| `pdf.worker.js` | The pdf.js worker with a null guard at two sites, an overflow leader that leaves a page's first unsplittable node as it was, and a page set that clears its page areas' counts when it starts another pass | `new URL('../assets/pdf.worker.js', import.meta.url)` in `pdfjs.ts`, handed to `new Worker` |
 | `qpdf.wasm` | qpdf, compiled to WebAssembly by `@neslinesli93/qpdf-wasm` | `new URL('../assets/qpdf.wasm', import.meta.url)` in `normalize.ts`, handed to qpdf's loader |
 | `xfa-layer.js` | The XFA rules of pdf.js's viewer stylesheet, as a module's text | A static import in `xfa-layer.ts` |
 

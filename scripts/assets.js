@@ -12,6 +12,18 @@ const GUARDS = [
 	},
 	{
 		sites: 1,
+		line: 'const savedMethod = extraNode[$getSubformParent];',
+		guarded:
+			'const savedMethod = extraNode[$getSubformParent]; const savedFirst = root[$extra].firstUnsplittable;'
+	},
+	{
+		sites: 1,
+		line: 'extraNode[$getSubformParent] = savedMethod;',
+		guarded:
+			'extraNode[$getSubformParent] = savedMethod; root[$extra].firstUnsplittable = savedFirst;'
+	},
+	{
+		sites: 1,
 		line: 'this[$extra].pageSetIndex = -1;',
 		guarded: 'this[$extra].pageSetIndex = -1; this[$cleanPage]();'
 	}
@@ -44,7 +56,7 @@ mkdirSync('assets');
 for (const [name, content] of [
 	[
 		'pdf.worker.js',
-		`/* The worker of pdfjs-dist ${version} (build/pdf.worker.mjs), changed: a null guard added at two sites, a page set made to clear its page areas' counts when it starts another pass, and the last line, which named a source map, removed. */\n` +
+		`/* The worker of pdfjs-dist ${version} (build/pdf.worker.mjs), changed: a null guard added at two sites, a page's first unsplittable node no longer taken from an overflow leader or trailer, a page set made to clear its page areas' counts when it starts another pass, and the last line, which named a source map, removed. */\n` +
 			worker
 	],
 	['qpdf.wasm', wasm],

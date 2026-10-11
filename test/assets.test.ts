@@ -74,6 +74,14 @@ it('ships the pdf.js worker as the installed one but for the notice, the guards 
 	expect(differing, STALE).toEqual([
 		[UNGUARDED, GUARDED],
 		[UNGUARDED, GUARDED],
+		[
+			'const savedMethod = extraNode[$getSubformParent];',
+			'const savedMethod = extraNode[$getSubformParent]; const savedFirst = root[$extra].firstUnsplittable;'
+		],
+		[
+			'extraNode[$getSubformParent] = savedMethod;',
+			'extraNode[$getSubformParent] = savedMethod; root[$extra].firstUnsplittable = savedFirst;'
+		],
 		['this[$extra].pageSetIndex = -1;', 'this[$extra].pageSetIndex = -1; this[$cleanPage]();'],
 		['//# sourceMappingURL=pdf.worker.mjs.map', '']
 	]);
