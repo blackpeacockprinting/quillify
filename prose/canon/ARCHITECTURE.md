@@ -60,7 +60,7 @@ Every parser of the bytes a caller hands in runs inside `sanitize`. The engine r
 - The argument is not a `Uint8Array` (`TypeError`), checked by its tag, so one made in another window is taken. An `ArrayBuffer`, a `DataView` and every other typed array are not, and the call starts no worker.
 - There is no `Worker` or no `document`, as in Node (`ReferenceError`, #34).
 - `assets/pdf.worker.js` or `assets/qpdf.wasm` did not load. The error names the file, and the next call tries again.
-- The frame's stylesheet did not apply, the host page hid the frame or removed it, before it had loaded or after, or a page laid out to nothing.
+- The frame's stylesheet did not apply, the host page hid the frame or removed it, before it had loaded or after, the host page's zoom on the frame could not be undone, or a page laid out to nothing.
 - pdf.js or pdf-lib threw something no rule maps to a refusal. The known cases are open issues: #77, #80. Any failure of pdf.js's XFA layout is one more (#139): pdf.js catches it, and what arrives is its `UnknownErrorException` saying `Cannot read properties of undefined (reading 'length')`.
 
 It can also not settle: `sanitize` has no deadline (#86).

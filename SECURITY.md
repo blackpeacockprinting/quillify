@@ -40,7 +40,7 @@ The frame has `sandbox="allow-same-origin"`, so it runs no script, and its docum
 
 The policy governs what the frame's document loads, and it names no font source. A form's font face is not the document's to load: pdf.js makes each face in the host page's realm, from the file's bytes or a `local()` name, and adds it to the frame's font set. The library never gives pdf.js a URL to fetch a font from.
 
-The host page still reaches the frame element. A rule that hides it, or a script that takes it out of the document once it has loaded, ends the conversion with an error that says the host page hid or removed the frame. A frame taken out before it has loaded ends the conversion with an error that says so, before a worker starts: until the frame loads, a `MutationObserver` on the host document watches for it leaving. A `zoom` on the frame or an ancestor scales the layout, and nothing reports it (#95).
+The host page still reaches the frame element. A rule that hides it, or a script that takes it out of the document once it has loaded, ends the conversion with an error that says the host page hid or removed the frame. A frame taken out before it has loaded ends the conversion with an error that says so, before a worker starts: until the frame loads, a `MutationObserver` on the host document watches for it leaving. A `zoom` on the frame or an ancestor scales the layout inside it. The frame sets a zoom of its own that undoes its ancestors', read from `Element.currentCSSZoom`, and before a page is measured the conversion ends with an error that names the host page's zoom unless the zoom in effect on the frame is exactly 1. A browser that has `zoom` and no `currentCSSZoom` gets neither, and a zoom there scales the layout with nothing to report it.
 
 ## Not handled
 
@@ -51,5 +51,4 @@ The host page still reaches the frame element. A rule that hides it, or a script
 - #77 A tooltip of 130,000 characters ends sanitize with a RangeError.
 - #80 A field tree pdf-lib cannot walk ends sanitize with pdf-lib's error.
 - #86 sanitize has no deadline. A file that pdf.js never finishes laying out leaves it pending, with its frame in the host page's body. The one kind of template known to do that, an overflow leader before a row that cannot fit, is guarded in the worker the package ships. Until there is a deadline, nothing but the size cap bounds how long a dynamic form takes: pdf.js lays out every page in its worker to count the pages, and one page can hold any number of fields.
-- #95 A host page's zoom moves a dynamic form's fields with no error.
 - #139 Any failure of pdf.js's XFA layout ends sanitize with one TypeError.

@@ -19,11 +19,13 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { commands } from 'vitest/browser';
 import saarUrl from '../test/fixtures/DD2875_System_Authorization_Access_Request.pdf?url';
 import trainingUrl from '../test/fixtures/SF182_Authorization_Agreement_and_Certification_of_Training.pdf?url';
+import { displayList } from './display-list.js';
 import { inventoryPdf } from './inventory.js';
 import { normalizePdf } from './normalize.js';
 import { sanitize } from './sanitize.js';
 import { xfaToAcroForm } from './xfa.js';
 import { XfaStage } from './xfa-layer.js';
+import { harvestWidgets } from './xfa-widgets.js';
 import type { FieldInventory } from './types.js';
 
 const [golden] = Object.values(
@@ -498,4 +500,80 @@ it('watches the host document no longer than the frame takes to load', async () 
 	expect(await sanitize(await published(saarUrl))).toMatchObject({ ok: true });
 	expect(watching.started).toBe(1);
 	expect(watching.live.size).toBe(0);
+}, 120_000);
+
+/** The fields of DD 2875, and what the two readers return for each of its pages. */
+async function readers(saar: Uint8Array) {
+	const pages: unknown[] = [];
+	const lay = XfaStage.prototype.lay;
+	vi.spyOn(XfaStage.prototype, 'lay').mockImplementation(async function (this: XfaStage, page) {
+		const laid = await lay.call(this, page);
+		pages.push([displayList(laid, page.pageNumber), harvestWidgets(laid, page.pageNumber)]);
+		return laid;
+	});
+	const { pages: sizes, widgets } = await inventory(saar);
+	vi.restoreAllMocks();
+	return { fields: { pages: sizes, widgets }, pages };
+}
+
+async function under<T>(rules: string, read: () => Promise<T>): Promise<T> {
+	const host = document.createElement('style');
+	host.textContent = rules;
+	document.head.append(host);
+	try {
+		return await read();
+	} finally {
+		host.remove();
+	}
+}
+
+it("reads DD 2875 as on a bare page, text, boxes and fields, under a host page's zoom", async () => {
+	const saar = await published(saarUrl);
+	const bare = await readers(saar);
+	expect(bare.fields).toEqual(golden);
+	expect(bare.pages).toHaveLength(3);
+
+	for (const rules of [
+		'html { zoom: 1.5 }',
+		'body { zoom: 2 }',
+		'iframe { zoom: 1.5 }',
+		'iframe { zoom: 2 }',
+		'html { zoom: 0.9 }',
+		'body { zoom: 1.1 }',
+		'html { zoom: 1.1 } body { zoom: 1.25 } iframe { zoom: 2 }'
+	])
+		expect(await under(rules, () => readers(saar)), rules).toEqual(bare);
+}, 120_000);
+
+const ZOOMED = "The host page's zoom scales the frame the form is laid out in.";
+
+// The frame's zoom times its ancestors' is a 32-bit float. At 1.7 no zoom on
+// the frame makes the product 1, and the layout differs at any other product.
+it.each([
+	'iframe { zoom: 1.5 !important }',
+	'html { zoom: 1.5 } iframe { zoom: 1 !important }',
+	'html { zoom: 1.7 }'
+])(
+	'ends a conversion with an error when the zoom of %s cannot be undone',
+	async (rules) => {
+		const saar = await published(saarUrl);
+		await expect(under(rules, () => sanitize(saar))).rejects.toThrow(ZOOMED);
+		expect(document.querySelector('iframe')).toBeNull();
+	},
+	120_000
+);
+
+it('ends a conversion with the same error when the zoom is set once the frame is made', async () => {
+	const saar = await published(saarUrl);
+	const lay = XfaStage.prototype.lay;
+	vi.spyOn(XfaStage.prototype, 'lay').mockImplementationOnce(function (this: XfaStage, page) {
+		return under('html { zoom: 1.5 }', () => lay.call(this, page));
+	});
+	await expect(sanitize(saar)).rejects.toThrow(ZOOMED);
+}, 120_000);
+
+it('reads DD 2875 as its golden where the browser has no currentCSSZoom', async () => {
+	vi.spyOn(Element.prototype, 'currentCSSZoom', 'get').mockReturnValue(undefined as never);
+	const { pages, widgets } = await inventory(await published(saarUrl));
+	expect({ pages, widgets }).toEqual(golden);
 }, 120_000);
