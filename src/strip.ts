@@ -141,7 +141,13 @@ export async function stripAcroForm(bytes: Uint8Array): Promise<Uint8Array> {
 		else if (value instanceof PDFDict) pending.push(...value.values());
 		else if (value instanceof PDFStream) pending.push(...value.dict.values());
 	}
-	for (const [ref] of context.enumerateIndirectObjects())
+	// The trailer's /Size is the largest object number plus one, and deleting does
+	// not lower it.
+	let largest = 0;
+	for (const [ref] of context.enumerateIndirectObjects()) {
 		if (!reached.has(ref)) context.delete(ref);
+		else if (ref.objectNumber > largest) largest = ref.objectNumber;
+	}
+	context.largestObjectNumber = largest;
 	return doc.save({ useObjectStreams: false });
 }

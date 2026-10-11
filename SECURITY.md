@@ -46,7 +46,6 @@ The host page still reaches the frame element. A rule that hides it, or a script
 - #28 A CropBox larger than the MediaBox moves every field off its box.
 - #29 A dynamic form is laid out in full before its page and field caps are read.
 - #30 The size cap bounds the compressed input only.
-- #31 SF 182's background declares more objects than it holds.
 - #46 qpdf.wasm is a prebuilt binary from one publisher.
 - #68 A link to an address with no scheme, or to a mailto: address, is removed.
 - #69 A page that names its /Type by reference is cut from the background without a refusal.
