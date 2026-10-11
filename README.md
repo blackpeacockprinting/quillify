@@ -87,7 +87,7 @@ Outside `code`, `kind`, `construct` and `diagnostic`, a string in a `Form`, a re
 4. **Strip.** pdf-lib removes the form layer. Of the catalog, of each page and of each link, a named set of keys stays, and every object nothing reaches is dropped.
 5. **Assemble.** `Quill.yaml` and `example.md` are written from the naming and `form.json` from the places, and the background goes in as `form.pdf`.
 
-[`prose/research/XFA_INTERNALS.md`](prose/research/XFA_INTERNALS.md) has how the conversion works. [`prose/DECISIONS.md`](prose/DECISIONS.md) has what was decided at each stage and what would unlock a different answer.
+[`prose/canon/ARCHITECTURE.md`](prose/canon/ARCHITECTURE.md) has how the code is laid out, module by module, and what parses the bytes of a file. [`prose/research/XFA_INTERNALS.md`](prose/research/XFA_INTERNALS.md) has how the conversion works. [`prose/DECISIONS.md`](prose/DECISIONS.md) has what was decided at each stage and what would unlock a different answer.
 
 ## What it leaves to the consumer
 
