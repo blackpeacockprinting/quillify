@@ -11,8 +11,16 @@ type Placed = Pick<InventoryWidget, 'id' | 'kind' | 'places' | 'tooltip'>;
 /** Every quill the library builds is a first version. */
 export const QUILL_VERSION = '0.1.0';
 
-/** YAML takes a JSON string literal verbatim. */
-const q = (s: string) => JSON.stringify(s);
+/**
+ * A string as a YAML double-quoted scalar. JSON writes it, from a well formed
+ * string, and the characters the engine's reader refuses and JSON leaves raw
+ * (U+007F to U+009F, U+FFFE and U+FFFF) are written as `\u` escapes.
+ */
+const q = (s: string) =>
+	JSON.stringify(s.toWellFormed()).replace(
+		/[\u007f-\u009f\ufffe\uffff]/g,
+		(c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`
+	);
 
 /** A group id is snake_case; a radio group's PDF name is whatever its author typed. */
 function groupId(name: string): string {
@@ -124,7 +132,7 @@ export function assembleQuill(
 				schema_field: f.name,
 				page: place.page,
 				rect: place.rect,
-				...(w.tooltip ? { tooltip: w.tooltip } : {})
+				...(w.tooltip ? { tooltip: w.tooltip.toWellFormed() } : {})
 			}));
 		}),
 		widgets: signatures.flatMap((f) => {
@@ -134,7 +142,7 @@ export function assembleQuill(
 				type: 'signature',
 				page: place.page,
 				rect: place.rect,
-				...(w.tooltip ? { tooltip: w.tooltip } : {})
+				...(w.tooltip ? { tooltip: w.tooltip.toWellFormed() } : {})
 			}));
 		})
 	};
