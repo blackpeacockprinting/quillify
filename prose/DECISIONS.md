@@ -269,3 +269,13 @@ Adds to "Which carried tests change, and how".
 **Decision.** One pull request rewords the comments of the carried modules and of nine carried tests: `assemble` and `normalize` (the browser ones), `background`, `display-list` (the node one), `published-forms`, `radio-binding`, `real-form`, `rotation` and `xfa`. No assertion, name or value changes. With its comments removed, each file compiles to what it compiled to before.
 
 **Unlock.** None.
+
+## 10 Oct 2026: A dynamic form's check box is the square the browser paints
+
+Adds to "Which carried tests change, and how" and to "v0.1.0 fixes four more defects of the carried code".
+
+**Context.** pdf.js gives a check box or a radio button the width its template sets and the height of what is left of its row, so its box is seldom square. On each of the 124 buttons of the three dynamic fixtures it is taller than it is wide, by 3.4 to 10.6 pt. The browser paints the control as the largest square centered in that box. The carried code drew the square a check mark goes in at the top of the box and stamped the widget over all of it (#119). The printed square sat 1.7 to 5.3 pt above the control and its label's line, on DAF 988 over a word of the line above, and the engine's tick was drawn low in the widget, mostly under the square. A comment in the carried `display-list.ts` said the control is top-aligned in its box. A test now reads the browser's pixels and finds it centered.
+
+**Decision.** The printed square and the widget are both the largest square centered in the control's box. The goldens of DD 2875, DAF 988 and DAF 1288 change in the rect of each of their 13, 54 and 57 buttons and in nothing else: each new rect is that square of the old one, to a hundredth of a point. In those 124 rects they are no longer the fork's dump, and the test that compares them no longer says they are.
+
+**Unlock.** A browser that paints the control elsewhere in its box. The test that reads the pixels fails then.
