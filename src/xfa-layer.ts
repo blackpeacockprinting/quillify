@@ -30,7 +30,8 @@ const SHELL = `<meta http-equiv="Content-Security-Policy" content="default-src '
  * the flow and of no size instead, so the host page shows, lays out and
  * scrolls as it did, and the form inside is laid out all the same. A host page
  * can still take the frame's boxes away, and `lay` throws when one has. It can
- * take the frame out before it has loaded, and `ready` then rejects.
+ * take the frame out before it has loaded, and `ready` then rejects. And it
+ * can zoom the frame, which the frame undoes, or `lay` throws.
  *
  * The frame runs no script, and its policy lets its document load only an
  * image from `blob:` or `data:`, which is how pdf.js hands it a form's images
@@ -63,6 +64,10 @@ export class XfaStage {
 				loaded();
 			};
 			document.body.append(frame);
+			// A zoom on the frame or an ancestor scales the layout inside it. The
+			// frame's own zoom undoes its ancestors', where the browser tells it.
+			const zoom = document.body.currentCSSZoom;
+			if (zoom) frame.style.zoom = String(1 / zoom);
 			watch.observe(document, { childList: true, subtree: true });
 			left();
 		}).then(() => {
@@ -117,6 +122,11 @@ export class XfaStage {
 		// no width is the file's: a page under a point wide.
 		if (!host.getClientRects().length)
 			throw new Error('The host page hid or removed the frame the form is laid out in.');
+		// The frame's zoom times its ancestors' is a 32-bit float, and for some
+		// zooms no value brings it to 1. A rule marked `!important` beats the
+		// frame's own.
+		if ((this.#frame.currentCSSZoom ?? 1) !== 1)
+			throw new Error("The host page's zoom scales the frame the form is laid out in.");
 		return {
 			layer,
 			origin: host.getBoundingClientRect(),
