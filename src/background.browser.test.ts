@@ -1,9 +1,10 @@
 /**
  * A quill built from a form has to show the form. Five backgrounds, three of
- * them published forms, each painted by pdf.js and by the engine after qpdf
- * joins its content streams.
+ * them published forms, each painted by pdf.js and by the engine with its
+ * first page's content streams as the file has them.
  */
 
+import { PDFArray, PDFDocument } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 import tdyUrl from '../test/fixtures/DD1610_Request_and_Authorization_for_TDY_Travel.pdf?url';
 import appointmentUrl from '../test/fixtures/DD577_Appointment_Termination_Record.pdf?url';
@@ -20,7 +21,7 @@ import type { QualifiedField, QualifiedForm } from './types.js';
 
 const fetched = (url: string) => async () => new Uint8Array(await (await fetch(url)).arrayBuffer());
 
-/** `streams` is what the file carries before qpdf coalesces them. */
+/** `streams` is how many content streams the first page has, in the file and in its background. */
 const CASES = [
 	{ name: 'dd1610', source: fetched(tdyUrl), streams: 8 },
 	{ name: 'dd0577', source: fetched(appointmentUrl), streams: 8 },
@@ -58,6 +59,8 @@ describe('the background a built format stamps over', () => {
 			const bytes = await normalizePdf(await probe.source());
 			const inventory = await inventoryPdf(bytes);
 			const background = await stripAcroForm(bytes, inventory.views);
+			const contents = (await PDFDocument.load(background)).getPage(0).node.Contents();
+			expect(contents instanceof PDFArray ? contents.size() : 1).toBe(probe.streams);
 
 			// pdf.js: the file came out of qpdf and the strip with its page intact.
 			expect(await inkFromPdf(background), `${probe.name} background`).toBeGreaterThan(0.004);

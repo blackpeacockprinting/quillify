@@ -42,6 +42,14 @@ describe('normalizePdf', () => {
 		}
 	}, 120_000);
 
+	it('writes a file with no object stream', async () => {
+		const holds = (pdf: Uint8Array) => new TextDecoder('latin1').decode(pdf).includes('/ObjStm');
+		const original = await form();
+		expect(holds(original)).toBe(true);
+
+		expect(holds(await normalizePdf(original))).toBe(false);
+	}, 60_000);
+
 	it('refuses a file over the ceiling before qpdf allocates for it', async () => {
 		await expect(normalizePdf(new Uint8Array(MAX_BYTES + 1))).rejects.toMatchObject({
 			refusal: { code: 'too_large', bytes: MAX_BYTES + 1, limit: MAX_BYTES }
@@ -49,8 +57,8 @@ describe('normalizePdf', () => {
 	});
 
 	it('refuses a file qpdf cannot rewrite, and takes the next one', async () => {
-		// Everything downstream reads these bytes as decrypted and coalesced, so
-		// the input handed back unchanged would be read under a promise nobody kept.
+		// Everything downstream reads these bytes as decrypted, so the input
+		// handed back unchanged would be read under a promise nobody kept.
 		const refused = await normalizePdf(new TextEncoder().encode('just words')).catch(
 			(err: unknown) => err
 		);

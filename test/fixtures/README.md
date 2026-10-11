@@ -17,7 +17,7 @@ Ten PDFs. Nine are blank published forms, kept byte for byte as they were collec
 
 A locked file is encrypted with AES-128 and opens with the empty user password. The fields are the entries of a form's inventory: each radio button is one, and a field painted in two places is one. For a dynamic form the pages and fields are what the conversion lays out: the file itself stores one "Please wait" page and no field. [`../goldens/`](../goldens) has the inventory of each published form, field by field.
 
-Five of the nine store their first page as eight content streams, which qpdf joins: DD 1610, DD 577, SF 144, SF 1152 and SF 182.
+Five of the nine store their first page as eight content streams: DD 1610, DD 577, SF 144, SF 1152 and SF 182.
 
 ## What each is here for
 
