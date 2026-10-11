@@ -1,6 +1,11 @@
 import { PDFDict, PDFDocument, PDFName, PDFString, type PDFRef } from 'pdf-lib';
 import { expect, it } from 'vitest';
+import { viewsOf } from '../test/views.js';
 import { stripAcroForm } from './strip.js';
+
+/** The background of a file of one 612 by 792 page. */
+const strip = async (source: Uint8Array) =>
+	stripAcroForm(source, await viewsOf(source, [[0, 0, 612, 792]]));
 
 const latin1 = (bytes: Uint8Array) => new TextDecoder('latin1').decode(bytes);
 
@@ -73,7 +78,7 @@ it('keeps the link on a tagged page, and nothing of the attachment or the note b
 	const carried = [...ATTACHED, 'NOTE-AUTHOR', 'NOTE-TEXT'];
 	for (const marker of carried) expect(latin1(source)).toContain(marker);
 
-	const background = await stripAcroForm(source);
+	const background = await strip(source);
 	expect(await annotationSubtypes(background)).toEqual(['Link']);
 	for (const marker of carried) expect(latin1(background)).not.toContain(marker);
 });
@@ -101,7 +106,7 @@ it('tells a widget from a link when /Subtype is an indirect reference', async ()
 	);
 	page.node.set(PDFName.of('Annots'), context.obj([widget, link]));
 
-	const background = await stripAcroForm(await doc.save({ useObjectStreams: false }));
+	const background = await strip(await doc.save({ useObjectStreams: false }));
 	expect(await annotationSubtypes(background)).toEqual(['Link']);
 	expect(latin1(background)).not.toContain('indirect_subtype');
 });
@@ -120,7 +125,7 @@ it('deletes a widget on no page whose /Subtype is a reference, though the tags n
 	);
 	tag(doc, [widget]);
 
-	const background = await stripAcroForm(await doc.save({ useObjectStreams: false }));
+	const background = await strip(await doc.save({ useObjectStreams: false }));
 	expect(latin1(background)).not.toContain('off_page_widget');
 });
 
@@ -137,7 +142,7 @@ it('deletes an annotation that no page lists and the tags still name', async () 
 	);
 	tag(doc, [attachment(doc), script]);
 
-	const background = latin1(await stripAcroForm(await doc.save({ useObjectStreams: false })));
+	const background = latin1(await strip(await doc.save({ useObjectStreams: false })));
 	for (const marker of [...ATTACHED, 'OFF-PAGE-SCRIPT']) expect(background).not.toContain(marker);
 });
 
@@ -156,7 +161,7 @@ it.each([
 		if (listed) page.node.set(PDFName.of('Annots'), doc.context.obj([annotation]));
 		tag(doc, [annotation]);
 
-		const background = await stripAcroForm(await doc.save({ useObjectStreams: false }));
+		const background = await strip(await doc.save({ useObjectStreams: false }));
 		expect(latin1(background), listed ? 'on a page' : 'off one').not.toContain('PARTIAL');
 	}
 });

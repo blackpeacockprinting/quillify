@@ -40,7 +40,7 @@ it('builds a quill the engine fills once, from a widget that names its subtype b
 				]
 			},
 			inventory,
-			await stripAcroForm(source)
+			await stripAcroForm(source, inventory.views)
 		)
 	);
 

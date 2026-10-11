@@ -8,9 +8,14 @@ import {
 	decodePDFRawStream
 } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
+import { viewsOf } from '../test/views.js';
 import { stripAcroForm } from './strip.js';
 
 const FIXTURE = readFileSync('test/fixtures/acroform-sample.pdf');
+
+/** The background of a file of one 612 by 792 page. */
+const strip = async (source: Uint8Array) =>
+	stripAcroForm(source, await viewsOf(source, [[0, 0, 612, 792]]));
 
 function annotSubtypes(doc: PDFDocument): string[] {
 	return doc.getPages().flatMap((page) => {
@@ -160,7 +165,7 @@ describe('stripAcroForm', () => {
 			'Link'
 		]);
 
-		const stripped = await stripAcroForm(FIXTURE);
+		const stripped = await strip(FIXTURE);
 		const after = await PDFDocument.load(stripped);
 		expect(after.catalog.has(PDFName.of('AcroForm'))).toBe(false);
 		expect(annotSubtypes(after)).toEqual([]);
@@ -179,7 +184,7 @@ describe('stripAcroForm', () => {
 			const source = await hybrid(shape);
 			expect(await streamText(source)).toContain(XFA_MARKERS[1]);
 
-			const text = await streamText(await stripAcroForm(source));
+			const text = await streamText(await strip(source));
 			for (const marker of XFA_MARKERS) expect(text).not.toContain(marker);
 			expect(text).not.toContain('jdoe');
 		}
@@ -201,7 +206,7 @@ describe('stripAcroForm', () => {
 		const before = await all(source);
 		for (const marker of carried) expect(before).toContain(marker);
 
-		const stripped = await stripAcroForm(source);
+		const stripped = await strip(source);
 		const after = await PDFDocument.load(stripped, { updateMetadata: false });
 		expect(after.context.trailerInfo.Info).toBeUndefined();
 		expect(
@@ -218,11 +223,14 @@ describe('stripAcroForm', () => {
 		expect(text).toContain('/Helvetica');
 	});
 
-	it('folds an offset CropBox into the MediaBox', async () => {
+	it('makes the frame it is handed the MediaBox, and keeps no CropBox', async () => {
 		const src = await PDFDocument.create();
 		const page = src.addPage([612, 792]);
 		page.setCropBox(50, 40, 512, 712);
-		const out = await PDFDocument.load(await stripAcroForm(await src.save()));
+		const source = await src.save();
+		const out = await PDFDocument.load(
+			await stripAcroForm(source, await viewsOf(source, [[50, 40, 562, 752]]))
+		);
 		const box = out.getPage(0).getMediaBox();
 		expect(box).toEqual({ x: 50, y: 40, width: 512, height: 712 });
 		expect(out.getPage(0).node.has(PDFName.of('CropBox'))).toBe(false);

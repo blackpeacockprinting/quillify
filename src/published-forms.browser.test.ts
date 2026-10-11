@@ -108,7 +108,7 @@ describe('the published forms', () => {
 			// The page the values get stamped over keeps its printed content and
 			// loses its form layer, including the Reader Extensions signature that
 			// decrypting already invalidated.
-			const background = await stripAcroForm(bytes);
+			const background = await stripAcroForm(bytes, inventory.views);
 			expect(background.byteLength).toBeGreaterThan(1000);
 			const text = new TextDecoder('latin1').decode(background);
 			expect(text).not.toContain('/AcroForm');
@@ -156,7 +156,7 @@ describe('a form that paints one value in two places', () => {
 				}))
 			},
 			inventory,
-			await stripAcroForm(bytes)
+			await stripAcroForm(bytes, inventory.views)
 		);
 		const formJson = JSON.parse(new TextDecoder().decode(quill.get('form.json')!)) as {
 			fields: { name: string; schema_field: string }[];

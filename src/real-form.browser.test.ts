@@ -63,7 +63,7 @@ describe('a form in the shape of DD Form 2977', () => {
 
 	it('strips the form layer and renders the rebuilt one', async () => {
 		const inventory = await inventoryPdf(bytes);
-		const background = await stripAcroForm(bytes);
+		const background = await stripAcroForm(bytes, inventory.views);
 		const text = new TextDecoder('latin1').decode(background);
 		expect(text).not.toContain('/AcroForm');
 		expect(text).not.toContain('/Widget');

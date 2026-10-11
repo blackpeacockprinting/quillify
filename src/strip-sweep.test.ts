@@ -1,5 +1,6 @@
 import { PDFDocument, PDFName } from 'pdf-lib';
 import { expect, it } from 'vitest';
+import { viewsOf } from '../test/views.js';
 import { stripAcroForm } from './strip.js';
 
 it("keeps what a page reaches only through a stream's own dictionary", async () => {
@@ -31,7 +32,8 @@ it("keeps what a page reaches only through a stream's own dictionary", async () 
 	);
 	page.node.set(PDFName.of('Contents'), context.register(context.stream('/Drawn Do /Masked Do')));
 
-	const background = await stripAcroForm(await doc.save({ useObjectStreams: false }));
+	const source = await doc.save({ useObjectStreams: false });
+	const background = await stripAcroForm(source, await viewsOf(source, [[0, 0, 612, 792]]));
 	const text = new TextDecoder('latin1').decode(background);
 	expect(text).toContain('/Courier');
 	expect(text).toContain('MASK');

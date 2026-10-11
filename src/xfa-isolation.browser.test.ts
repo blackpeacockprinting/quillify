@@ -51,7 +51,8 @@ it('lays DD 2875 out as on a bare page when the host restyles input, div and *',
 		input { padding: 6px; border: 3px solid }`;
 	document.head.append(hostile);
 	try {
-		expect(await inventory(saar)).toEqual(golden);
+		const { pages, widgets } = await inventory(saar);
+		expect({ pages, widgets }).toEqual(golden);
 	} finally {
 		hostile.remove();
 	}
