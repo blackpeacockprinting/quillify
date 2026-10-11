@@ -22,6 +22,7 @@ What a consumer of the package can observe, by release.
 - A dynamic form pdf.js cannot lay out is refused as `layout`, a new refusal code, with pdf.js's reason as its `detail`. Every such failure used to end `sanitize` with pdf.js's `Cannot read properties of undefined (reading 'length')`, whatever went wrong. No form of the 59 is refused this way. The pdf.js worker the package ships is changed at a sixth line for it.
 - A file with an array or a dictionary of more than about 125,000 entries on a page no longer ends `sanitize` with a `RangeError`. A file of under 2 kB could hold such an array. Writing `Quill.yaml` for a choice with as many options no longer overflows the stack either.
 - A static form's background keeps each page's content streams as the file has them, where qpdf used to join them into one, so a `form.pdf` differs in bytes from the one 0.1.0 wrote and is up to 3,187 bytes larger on the fixtures. A page whose content decodes to 1 GiB no longer runs qpdf out of memory. The file qpdf writes holds no object stream, so pdf-lib no longer reads a stale one over the file's own objects, which ended `sanitize` with an error on AF 1520.
+- A dynamic form with a page pdf.js gives no size is refused as `layout`, with `a page has no size` as its `detail`: a width or a height that is no number, zero or negative. The first ended `sanitize` with pdf-lib's `TypeError`, and the others came back as forms on a page of the wrong size.
 
 ## 0.1.0
 

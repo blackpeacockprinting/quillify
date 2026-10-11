@@ -1,4 +1,5 @@
 import css from '../assets/xfa-layer.js';
+import { Refused } from './refusal.js';
 import type { PDFPageProxy } from 'pdfjs-dist';
 
 /** One page after the browser has solved its layout. */
@@ -100,6 +101,10 @@ export class XfaStage {
 		const xfa = await page.getXfa();
 		if (!xfa) throw new Error(`XFA page ${page.pageNumber} laid out to nothing.`);
 		const viewport = pdfjs.XfaLayer.getPageViewport(xfa, { scale: 1, rotation: 0 });
+		// pdf.js lays out a page area whose medium has no size, and gives the page
+		// a side of nothing, a negative one, or no number at all.
+		if (!(viewport.width > 0 && viewport.height > 0))
+			throw new Refused({ code: 'layout', detail: 'a page has no size' });
 
 		const frameDocument = await this.ready;
 		const host = frameDocument.createElement('div');
@@ -118,8 +123,7 @@ export class XfaStage {
 		});
 		await frameDocument.fonts.ready;
 
-		// A frame the host page hid or took out gives the wrapper no box. A box of
-		// no width is the file's: a page under a point wide.
+		// A frame the host page hid or took out gives the wrapper no box.
 		if (!host.getClientRects().length)
 			throw new Error('The host page hid or removed the frame the form is laid out in.');
 		// The frame's zoom times its ancestors' is a 32-bit float, and for some

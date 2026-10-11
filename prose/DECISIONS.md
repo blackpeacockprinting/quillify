@@ -517,3 +517,15 @@ An object stream is the other thing a reader has to inflate before it has an obj
 Two carried tests change. `background.browser.test.ts` holds how many content streams the first page of each background has, eight for DD 1610 and DD 577 and one for the other three, so the engine is shown to paint a page of eight; its header and the comment on `streams` say that in place of saying qpdf joins them. In `normalize.browser.test.ts` one comment loses "and coalesced", and a new case holds that DD 1610, which is published with object streams, is written with none. No other assertion of either changes.
 
 **Unlock.** A version of the engine in the peer range that paints nothing for an array, which the background test then shows.
+
+## 11 Oct 2026: A dynamic form's page with no size is refused as layout
+
+Adds to "A dynamic form pdf.js cannot lay out is refused as layout" and to "A dynamic form is laid out in a document of its own", whose test of a page under a point wide changes.
+
+**Context.** pdf.js lays out a dynamic form whose page area has a `<medium>` of `short="0pt"` and throws nothing. It gives the page no number for either side, the conversion made a page of that size, and `sanitize` ended with pdf-lib's ``TypeError: `width` must be of type `number`, but was actually of type `NaN` `` (#153). A side written with more digits than a number holds does the same for that side. Other sides pdf.js does give a number for and no page can have: a medium of `short="-612pt"` came back as a form whose field sat at x = 1296 on a page 612 wide, and one of `short="0.4pt"`, which pdf.js rounds to a width of 0, as a form on a letter page, because pdf.js reads the empty box the conversion wrote as its default. Each is a file anyone can write, and no published form on hand has one.
+
+**Decision.** `lay` refuses a dynamic form when pdf.js gives a page a width or a height that is not above zero, as `{ code: 'layout', detail: 'a page has no size' }`. It is the code of a layout that throws, since to a caller the two are one thing: a form whose layout cannot be used. `detail` then holds the library's own phrase, where it holds pdf.js's message for an exception. The check sits where the page's size is first read, before anything of the page is put in the frame.
+
+One carried test changes with it. `xfa-isolation.browser.test.ts` held that DD 2875 with every medium 0.4 pt wide converts, to show that a page with no width is the file's and is not taken for a frame the host page hid. It now holds that the form is refused as `layout`, which shows the same thing: the answer names the file and no error blames the host page.
+
+**Unlock.** None.

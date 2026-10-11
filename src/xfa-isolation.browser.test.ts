@@ -351,10 +351,11 @@ async function withPageWidth(short: string): Promise<Uint8Array> {
 	return saar.save();
 }
 
-it('converts a form whose pages are under a point wide, which is no hidden frame', async () => {
-	const read = await sanitize(await withPageWidth('0.4pt'));
-	expect(read, JSON.stringify(read.ok || read.refusal)).toMatchObject({ ok: true });
-	expect(read.ok && read.form.fields).toHaveLength(78);
+it('refuses a form whose pages are under a point wide, which is no hidden frame', async () => {
+	expect(await sanitize(await withPageWidth('0.4pt'))).toEqual({
+		ok: false,
+		refusal: { code: 'layout', detail: 'a page has no size' }
+	});
 }, 120_000);
 
 it('ends a conversion with an error when the host page hides the frame', async () => {
