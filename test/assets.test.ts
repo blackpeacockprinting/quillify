@@ -83,6 +83,10 @@ it('ships the pdf.js worker as the installed one but for the notice, the guards 
 			'extraNode[$getSubformParent] = savedMethod; root[$extra].firstUnsplittable = savedFirst;'
 		],
 		['this[$extra].pageSetIndex = -1;', 'this[$extra].pageSetIndex = -1; this[$cleanPage]();'],
+		[
+			'warn(`XFA - an error occurred during layout: ${e}`);',
+			'warn(`XFA - an error occurred during layout: ${e}`); throw new Error(`XFA layout: ${e.message}`);'
+		],
 		['//# sourceMappingURL=pdf.worker.mjs.map', '']
 	]);
 });

@@ -7,8 +7,9 @@ assets/pdf.worker.js
   (licenses/pdf.js-LICENSE).
   Changed: a null guard added at two sites, a page's first unsplittable
   node no longer taken from an overflow leader or trailer, a page set made to
-  clear its page areas' counts when it starts another pass, and the last line,
-  which named a source map, removed. The file's first line says the same.
+  clear its page areas' counts when it starts another pass, an exception of
+  the XFA layout thrown on after it is logged, and the last line, which named
+  a source map, removed. The file's first line says the same.
 
 assets/xfa-layer.js
   Lines 1267 to 1585 of web/pdf_viewer.css of pdfjs-dist 6.3.289, unchanged,
