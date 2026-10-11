@@ -8,7 +8,7 @@ The bytes of a PDF nobody vouches for go in. A quill comes out, and other people
 
 ## A form's strings are the file's
 
-Every string in a `Form` that is not a `kind` is text the author of the PDF controls: a field's `id`, its `tooltip`, a choice's `options`, a radio's `group` and `on`. So are the `attachment` and `detail` of a `Refusal`, the `description` that `suggest` copies from a tooltip, and whatever the engine's `message` quotes in a `Problem`. A consumer shows each in a UI as text. `quillify` writes each string it puts in `Quill.yaml` and `example.md` as a JSON string literal, after a lone surrogate has become U+FFFD, and writes U+007F to U+009F, U+FFFE and U+FFFF, which JSON leaves raw and the engine's YAML reader refuses (U+0085 apart), as `\u` escapes. A tooltip it puts in `form.json` has a lone surrogate made U+FFFD as well, since the engine's JSON reader refuses the escape JSON writes for one.
+Every string in a `Form` that is not a `kind` is text the author of the PDF controls: a field's `id`, its `tooltip`, a choice's `options`, a radio's `group` and `on`. So are the `attachment` and `detail` of a `Refusal`, the `description` that `suggest` builds from a tooltip and an on-state, and whatever the engine's `message` quotes in a `Problem`. A consumer shows each in a UI as text. `quillify` writes each string it puts in `Quill.yaml` and `example.md` as a JSON string literal, after a lone surrogate has become U+FFFD, and writes U+007F to U+009F, U+FFFE and U+FFFF, which JSON leaves raw and the engine's YAML reader refuses (U+0085 apart), as `\u` escapes. A tooltip it puts in `form.json` has a lone surrogate made U+FFFD as well, since the engine's JSON reader refuses the escape JSON writes for one.
 
 ## What the background keeps
 
