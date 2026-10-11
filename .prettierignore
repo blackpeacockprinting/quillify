@@ -6,8 +6,9 @@ prose/
 # A golden holds one widget per line.
 test/goldens/
 
-# The manifest holds one form per line.
+# A manifest holds one form per line.
 corpus/manifest.json
+corpus/af-epubs.manifest.json
 
 # Below its header, a verbatim slice of pdfjs-dist/web/pdf_viewer.css. Reformatting it breaks the diff against upstream.
 src/xfa-layer.css
