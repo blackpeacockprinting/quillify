@@ -28,6 +28,10 @@ class Stream {}
 const stream = (keys: Planted): Planted => Object.assign(new Stream(), keys);
 /** Where a planted value is a reference to an object nothing should reach, which says so in the bytes. */
 const OUT = Symbol('outside');
+/** Where a planted value is a reference to the page. */
+const PAGE = Symbol('page');
+/** Where a planted value is a reference to the file's one optional content group, the same wherever a case writes it. */
+const LAYER = Symbol('layer');
 
 /** The dictionaries of each file that a case can be: the rest hang on the page. */
 const ROOTS = {
@@ -40,7 +44,7 @@ interface Case {
 	kind: string;
 	/** The dictionary of the file that is the object. */
 	on?: keyof typeof ROOTS;
-	/** What the page holds, with the object in it. */
+	/** What the page holds, or the dictionary `on` names, with the object in it. */
 	at?: (object: unknown) => Planted;
 	/** Every key of the row, or every position. A list with `Length` in it is a stream's. */
 	keeps: string;
@@ -66,6 +70,7 @@ const CMAP = stream({ CMapName: 'A', Sample: OUT });
 const SYSTEM = { Registry: PDFString.of('A'), Sample: OUT };
 const FILE = stream({ Length1: 1, Sample: OUT });
 const LINK = { Subtype: 'Link', Rect: [0, 0, 1, 1] };
+const STATE = { Subtype: 'A', Sample: OUT };
 const ADDRESS = PDFString.of('https://example.com/');
 
 const inAnnots = (object: unknown) => ({ Annots: [object] });
@@ -73,12 +78,15 @@ const inAction = (object: unknown) => ({ Annots: [{ ...LINK, A: object }] });
 const inResources = (map: string) => (object: unknown) => ({ Resources: { [map]: { X: object } } });
 const inFont = (key: string) => (object: unknown) =>
 	inResources('Font')({ Subtype: 'Type1', [key]: object });
+const inLayers = (config: Planted) => ({ OCProperties: { OCGs: [LAYER], D: config } });
 const inFunction = (object: unknown) =>
 	inResources('Shading')({ ShadingType: 2, Function: object });
 
 const CODED = 'Length Filter DecodeParms';
 const LINKED = 'Type Subtype Rect Border BS C H QuadPoints F OC Contents StructParent';
 const SHADED = 'ShadingType ColorSpace Background BBox AntiAlias';
+
+const listed = (keeps: string) => keeps.split(' ').filter(Boolean);
 
 const CASES: Case[] = [
 	{ kind: 'catalog', on: 'catalog', keeps: 'Type Pages OCProperties StructTreeRoot MarkInfo Lang' },
@@ -113,6 +121,17 @@ const CASES: Case[] = [
 		at: inAnnots,
 		keeps: `${LINKED} Dest`,
 		has: { ...LINK, Type: 'Annot', Dest: ['Fit'] }
+	},
+	{
+		kind: 'border',
+		at: (object) => inAnnots({ ...LINK, Dest: ['Fit'], BS: object }),
+		keeps: 'Type W S D'
+	},
+	{
+		kind: 'dest',
+		at: (object) => inAnnots({ ...LINK, Dest: object }),
+		keeps: '0 1 2 3 4 5',
+		has: { 0: PAGE }
 	},
 	{ kind: 'uri', at: inAction, keeps: 'S URI', has: { URI: ADDRESS }, pick: ['S', 'URI'] },
 	{ kind: 'goto', at: inAction, keeps: 'S D', has: { D: ['Fit'] }, pick: ['S', 'GoTo'] },
@@ -363,14 +382,68 @@ const CASES: Case[] = [
 		kind: 'fontfile',
 		at: (object) => inFont('FontDescriptor')({ FontFile2: object }),
 		keeps: `Subtype Length1 Length2 Length3 ${CODED}`
-	}
+	},
+	{
+		kind: 'layers',
+		on: 'catalog',
+		at: (object) => ({ OCProperties: object }),
+		keeps: 'OCGs D',
+		has: { OCGs: [LAYER], D: { Sample: OUT } }
+	},
+	{
+		kind: 'config',
+		on: 'catalog',
+		at: (object) => inLayers(object as Planted),
+		keeps: 'Name BaseState ON OFF Intent AS Order ListMode RBGroups Locked',
+		has: {
+			ON: [LAYER],
+			OFF: [LAYER],
+			AS: [{ Event: 'View', Sample: OUT }],
+			Order: [LAYER],
+			RBGroups: [[LAYER]],
+			Locked: [LAYER]
+		}
+	},
+	{
+		kind: 'auto',
+		on: 'catalog',
+		at: (object) => inLayers({ AS: [object] }),
+		keeps: 'Event Category OCGs',
+		has: { OCGs: [LAYER] }
+	},
+	{
+		kind: 'ocg',
+		at: inResources('Properties'),
+		keeps: 'Type Name Intent Usage',
+		has: { Usage: { Sample: OUT } },
+		pick: ['Type', 'OCG']
+	},
+	{
+		kind: 'usage',
+		at: (object) => inResources('Properties')({ Type: 'OCG', Usage: object }),
+		keeps: 'Print View Export PageElement',
+		has: { Print: STATE, View: STATE, Export: STATE, PageElement: STATE }
+	},
+	{
+		kind: 'state',
+		at: (object) => inResources('Properties')({ Type: 'OCG', Usage: { View: object } }),
+		keeps: 'Subtype PrintState ViewState ExportState'
+	},
+	{
+		kind: 'ocmd',
+		at: inResources('Properties'),
+		keeps: 'Type OCGs P VE',
+		has: { OCGs: [LAYER], VE: ['Not', LAYER] },
+		pick: ['Type', 'OCMD']
+	},
+	{ kind: 'marked', at: inResources('Properties'), keeps: '' }
 ];
 
 /** The keys the background has of a case's object, or of an array the positions that are not null, and the background's bytes. */
 async function background({ on, at, keeps, has = {}, pick }: Case, told?: string | number) {
 	const source = await PDFDocument.create();
 	const { context } = source;
-	const page = source.addPage([612, 792]).node;
+	const { node: page, ref } = source.addPage([612, 792]);
 	// The page hangs under a page tree node of its own, which the walk picks from /Kids.
 	const tree = source.catalog.Pages();
 	const node = context.register(
@@ -385,20 +458,24 @@ async function background({ on, at, keeps, has = {}, pick }: Case, told?: string
 	page.set(PDFName.of('Parent'), node);
 
 	const holder = ROOTS[on ?? 'page'](source.catalog, page);
-	const names = keeps.split(' ').filter((key) => key !== 'Length');
+	const names = listed(keeps).filter((key) => key !== 'Length');
 	const held = { Filter: 'FlateDecode', DecodeParms: [PARMS], ...has } as Planted;
 	if (pick) held[pick[0]] = told;
 	const value = (key: string) => held[key] ?? (at ? undefined : holder.get(PDFName.of(key))) ?? 0;
 	const object = /^\d/.test(keeps)
 		? [...names.map(value), OUT]
-		: Object.assign(keeps.includes('Length') ? new Stream() : {}, {
+		: Object.assign(names.length < listed(keeps).length ? new Stream() : {}, {
 				...Object.fromEntries(names.map((key) => [key, value(key)])),
 				Sample: OUT
 			});
 
 	let path: (string | number)[] = [];
+	let layer: PDFObject | undefined;
 	const made = (planted: unknown, trail: (string | number)[]): PDFObject => {
 		if (planted === object) path = trail;
+		if (planted === PAGE) return ref;
+		if (planted === LAYER)
+			return (layer ??= context.register(context.obj({ Type: 'OCG', Sample: made(OUT, []) })));
 		if (planted === OUT) return context.register(context.obj({ Private: PDFString.of('PRIVATE') }));
 		if (Array.isArray(planted))
 			return context.obj(planted.map((part, index) => made(part, [...trail, index])));
@@ -437,7 +514,7 @@ for (const row of CASES)
 	for (const told of row.pick?.slice(1) ?? [undefined])
 		it(`${row.kind}${told === undefined ? '' : `, told by ${told}`}: the background keeps every key of the row and not /Sample`, async () => {
 			const { keys, text } = await background(row, told);
-			expect(keys).toEqual(row.keeps.split(' ').sort());
+			expect(keys).toEqual(listed(row.keeps).sort());
 			expect(text).not.toContain('/Sample');
 			expect(text).not.toContain('PRIVATE');
 		});
