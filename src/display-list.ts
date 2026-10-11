@@ -1,5 +1,6 @@
 import { Refused, type Refusal } from './refusal.js';
 import type { XfaPage } from './xfa-layer.js';
+import { square } from './xfa-widgets.js';
 
 /** RGB in the 0..1 the PDF operators take. */
 export type Colour = [number, number, number];
@@ -155,18 +156,18 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 
 		// A control's own chrome belongs to the browser, and an AcroForm widget is
 		// stamped where the control was. The printed square a checkmark goes in is
-		// the exception: nothing else draws it. It is square and top-aligned inside
-		// the field box, which is taller than the painted control.
+		// the exception: nothing else draws it. It is drawn where the browser
+		// paints the control, which is where the widget is stamped.
 		const type = el.getAttribute('type')?.toLowerCase();
 		if (tag === 'input' || tag === 'textarea' || tag === 'select') {
 			if (type === 'checkbox' || type === 'radio') {
-				const side = Math.min(rect.width, rect.height);
+				const painted = square(rect);
 				const hair: Edge = { width: 1, colour: [0, 0, 0] };
 				boxes.push({
-					x: X(rect.x),
-					y: Y(rect.y),
-					w: +side.toFixed(2),
-					h: +side.toFixed(2),
+					x: X(painted.left),
+					y: Y(painted.top),
+					w: +painted.width.toFixed(2),
+					h: +painted.height.toFixed(2),
 					fill: null,
 					edges: [hair, hair, hair, hair]
 				});
