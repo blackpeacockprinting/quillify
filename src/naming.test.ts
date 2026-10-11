@@ -298,4 +298,135 @@ describe('suggest', () => {
 			expect(check(generated, naming(...suggested))).toEqual([]);
 		}
 	});
+
+	describe('the options of a group that share a tooltip', () => {
+		const option = (
+			id: string,
+			group: string,
+			on: string | undefined,
+			tooltip?: string
+		): Field => ({
+			...plain,
+			id,
+			tooltip,
+			kind: 'radio',
+			group,
+			on
+		});
+		const named = (fields: Field[]) => suggest(fields).map(({ name }) => name);
+
+		it('are named by their on-states, and described by them', () => {
+			const pair = [
+				option('attached', 'attached', 'is', 'Job description'),
+				option('attached#2', 'attached', 'is_not', 'Job description')
+			];
+			expect(suggest(pair)).toEqual([
+				{
+					id: 'attached',
+					keep: true,
+					name: 'job_description_is',
+					description: 'Job description (is)'
+				},
+				{
+					id: 'attached#2',
+					keep: true,
+					name: 'job_description_is_not',
+					description: 'Job description (is_not)'
+				}
+			]);
+		});
+
+		it('are numbered by group when two groups share the tooltip', () => {
+			const patient = (group: string) => [
+				option(group, group, 'yes', 'The patient'),
+				option(`${group}#2`, group, 'no', 'The patient')
+			];
+			expect(named([...patient('a'), ...patient('b')])).toEqual([
+				'the_patient_yes',
+				'the_patient_no',
+				'the_patient_yes_2',
+				'the_patient_no_2'
+			]);
+		});
+
+		it('cut the words of a long tooltip and not the on-state', () => {
+			const tooltip = 'Enter the date on which the member signs this form';
+			const long = 'attached to this application';
+			const names = named([
+				option('a', 'g', 'yes', tooltip),
+				option('a#2', 'g', 'no', tooltip),
+				option('b', 'h', long, tooltip),
+				option('b#2', 'h', 'no', tooltip)
+			]);
+			expect(names).toEqual([
+				'enter_the_date_on_which_the_member_yes',
+				'enter_the_date_on_which_the_member_no',
+				'enter_the_attached_to_this_application',
+				'enter_the_date_on_which_the_member_no_2'
+			]);
+			for (const name of names) expect(name.length).toBeLessThanOrEqual(40);
+		});
+
+		it('start with field_ when the tooltip starts with a digit', () => {
+			expect(
+				named([option('a', 'g', 'yes', '3rd party'), option('a#2', 'g', 'no', '3rd party')])
+			).toEqual(['field_3rd_party_yes', 'field_3rd_party_no']);
+		});
+
+		it('are named by the on-state alone when no whole word of the tooltip fits beside it', () => {
+			const long = 'accredited foreign government official';
+			const wide = 'x'.repeat(33);
+			expect(
+				named([
+					option('a', 'g', long, 'Appearance'),
+					option('a#2', 'g', 'no', 'Appearance'),
+					option('b', 'h', wide, '3rd party'),
+					option('b#2', 'h', 'no', '3rd party')
+				])
+			).toEqual([
+				'accredited_foreign_government_official',
+				'appearance_no',
+				wide,
+				'field_3rd_party_no'
+			]);
+		});
+
+		it('are named from the tooltip alone when the on-state has no words', () => {
+			const fields = [
+				option('a', 'g', 'dog', 'Pet'),
+				option('a#2', 'g', undefined, 'Pet'),
+				option('a#3', 'g', '-', 'Pet'),
+				option('a#4', 'g', '', 'Pet')
+			];
+			expect(suggest(fields).map(({ name, description }) => [name, description])).toEqual([
+				['pet_dog', 'Pet (dog)'],
+				['pet', 'Pet'],
+				['pet_2', 'Pet (-)'],
+				['pet_3', 'Pet']
+			]);
+		});
+
+		it('are named as before when each option has a tooltip of its own, or none', () => {
+			const fields = [
+				option('a', 'g', 'yes', 'Smoker'),
+				option('a#2', 'g', 'no', 'Non-smoker'),
+				option('b', 'h', 'yes'),
+				option('b#2', 'h', 'no')
+			];
+			expect(named(fields)).toEqual(['smoker', 'non_smoker', 'h_yes', 'h_no']);
+		});
+
+		it('are named as before when the tooltip is shared with fields that are no option of the group', () => {
+			const box: Field = { ...plain, id: 'c', tooltip: 'Sex', kind: 'checkbox' };
+			const fields = [
+				option('a', 'g', 'm', 'Sex'),
+				option('b', 'h', 'f', 'Sex'),
+				box,
+				{ ...box, id: 'd' },
+				text('e', 'Sex')
+			];
+			expect(suggest(fields)[0].description).toBe('Sex');
+			expect(named(fields)).toEqual(['sex', 'sex_2', 'sex_3', 'sex_4', 'sex_5']);
+		});
+	});
 });
