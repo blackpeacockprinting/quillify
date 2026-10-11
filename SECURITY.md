@@ -32,7 +32,7 @@ A layer is kept as the file has it (`/OCProperties`, with each group's default s
 
 ## Where a file is read
 
-Each pdf.js read runs on a worker of its own, started from the file the package ships and ended with the read. qpdf runs as WebAssembly on the calling thread. pdf-lib reads what qpdf wrote, or for a dynamic form the redraw this library painted from the layout.
+Each pdf.js read runs on a worker of its own, started from the file the package ships and ended with the read. qpdf runs as WebAssembly in a worker of its own for each file, started from a second file the package ships and ended when `normalizePdf` has its answer, whatever qpdf did: no module, heap or virtual file of one file is there for the next, and a file that traps qpdf is refused as `damaged` and costs the next file nothing. The worker fetches `qpdf.wasm` from the URL the page gives it. pdf-lib reads what qpdf wrote, on the calling thread, or for a dynamic form the redraw this library painted from the layout.
 
 pdf.js lays an XFA form out in a DOM so its fields get positions. That DOM is built in an `<iframe>` with a document of its own. `sanitize` makes the frame for every file that reaches the conversion, dynamic or not, because pdf.js binds a form's fonts as it opens the file. The frame is hidden and has no size. It is in the host page's body until that stage ends.
 
@@ -46,6 +46,6 @@ The host page still reaches the frame element. A rule that hides it, or a script
 
 - #25 The background keeps whatever strip does not name. This holds for the trailer and for what a kept value holds, as above.
 - #30 The size cap bounds the compressed input only. qpdf copies a page's Flate content as stored and still inflates each object stream of the file, whatever it decodes to.
-- #46 qpdf.wasm is a prebuilt binary from one publisher.
+- #46 qpdf.wasm is a prebuilt binary from one publisher. A page whose `/Group` is arrays nested about 180 to 499 deep, a file of about 1 kB, breaks it. At some depths qpdf traps, and the file is refused as `damaged`. At others it never returns. Which it is depends on the depth and on where qpdf runs, and in chrome-headless-shell on Linux a trap ends the whole browser.
 - #68 A link to an address with no scheme, or to a mailto: address, is removed.
-- #86 sanitize has no deadline. A file that pdf.js never finishes laying out leaves it pending, with its frame in the host page's body. The one kind of template known to do that, an overflow leader before a row that cannot fit, is guarded in the worker the package ships. Until there is a deadline, nothing but the size cap bounds how long a dynamic form takes: pdf.js lays out every page in its worker to count the pages, and one page can hold any number of fields. A field tree 20,000 deep, a file of 1.9 MB, keeps sanitize 99 s.
+- #86 sanitize has no deadline. A file that pdf.js never finishes laying out leaves it pending, with its frame in the host page's body. The one kind of template known to do that, an overflow leader before a row that cannot fit, is guarded in the worker the package ships. Until there is a deadline, nothing but the size cap bounds how long a dynamic form takes: pdf.js lays out every page in its worker to count the pages, and one page can hold any number of fields. A field tree 20,000 deep, a file of 1.9 MB, keeps sanitize 99 s. qpdf has no deadline either: a file it never finishes leaves sanitize pending for that file, with its worker busy until the page goes, and other files convert meanwhile. One such file is known (#46).
