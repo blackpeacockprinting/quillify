@@ -54,7 +54,7 @@ The host page still reaches the frame element. A rule that hides it, or a script
 - #77 A tooltip of 130,000 characters ends sanitize with a RangeError.
 - #80 A field tree pdf-lib cannot walk ends sanitize with pdf-lib's error.
 - #84 A dynamic form with a field named as the subform beside it ends sanitize with an error.
-- #86 pdf.js never finishes opening DAF 1024, and sanitize never settles. Its frame stays in the host page's body.
+- #86 sanitize has no deadline. A file that pdf.js never finishes laying out leaves it pending, with its frame in the host page's body. The one kind of template known to do that, an overflow leader before a row that cannot fit, is guarded in the worker the package ships.
 - #95 A host page's zoom moves a dynamic form's fields with no error.
 - #99 A frame the host page removes before it loads leaves sanitize pending.
 - #139 Any failure of pdf.js's XFA layout ends sanitize with one TypeError.
