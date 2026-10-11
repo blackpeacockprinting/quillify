@@ -51,8 +51,10 @@ function fieldYaml(field: Named): string[] {
 		case 'enum': {
 			// The engine supplies the blank row and refuses it as a declared value. A
 			// dropdown with no other row offers nothing to choose, which is a text box.
+			// It refuses ";", ">" and "|" in a value too, so a dropdown with one is a text box.
 			const values = (field.options ?? []).filter((option) => option !== '');
-			if (values.length === 0) lines.push('      type: string');
+			if (values.length === 0 || values.some((value) => /[;>|]/.test(value)))
+				lines.push('      type: string');
 			else
 				lines.push('      type: enum', '      values:', ...values.map((v) => `        - ${q(v)}`));
 			if (!field.required) lines.push('      default: ""');
