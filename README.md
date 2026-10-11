@@ -26,7 +26,7 @@ const { Quill } = await init();
 const quill = Quill.fromTree(built.tree);
 ```
 
-`pdf` is the file's bytes as a `Uint8Array`. A test runs this block as it is printed.
+`pdf` is the file's bytes as a `Uint8Array`, which `sanitize` checks first: an `ArrayBuffer`, a `DataView` or any other typed array, an `Int8Array` too, rejects with a `TypeError`. A test runs this block as it is printed.
 
 `sanitize` is where every byte of the file is parsed. It removes the encryption, converts a dynamic form to a static one, lists the fields and strips the form layer. `suggest` names each field from the form's own tooltip, or from its field name when it has none, and keeps every field a person can fill. Its result is a starting point: the names are what a person or a model corrects before the quill is built, and `check(fields, naming)` lists the problems of a naming that it can find without the engine. `quillify` runs `check`, writes the files and shows them to the engine, whose own refusals come back from `quillify` alone. `built.tree` is a `Map` from `Quill.yaml`, `form.json` and `form.pdf` to their bytes, with `example.md` when a kept field has an example to show. `ok` means `Quill.fromTree` took the tree, and that call reads `Quill.yaml` alone. The engine first reads the background and `form.json` when the caller opens or renders a document.
 

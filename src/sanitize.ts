@@ -47,8 +47,10 @@ function field(widget: InventoryWidget): Field {
  * the file is not taken. Nothing else in the package reads the file.
  */
 export async function sanitize(pdf: Uint8Array): Promise<Sanitized> {
-	// Handing it an ArrayBuffer or a string is a mistake in the call and no fault of a file, so the call throws.
-	if (!ArrayBuffer.isView(pdf)) throw new TypeError('sanitize takes a Uint8Array.');
+	// Handing it anything but a Uint8Array is a mistake in the call and no fault of a file, so the call throws.
+	// The tag, not instanceof, so that a Uint8Array made in another window is taken.
+	if (Object.prototype.toString.call(pdf) !== '[object Uint8Array]')
+		throw new TypeError('sanitize takes a Uint8Array.');
 	try {
 		const bytes = await xfaToAcroForm(await normalizePdf(pdf));
 		const { pages, widgets } = await inventoryPdf(bytes);
