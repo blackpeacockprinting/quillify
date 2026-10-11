@@ -6,6 +6,7 @@
 import { PDFDocument } from 'pdf-lib';
 import { expect, it } from 'vitest';
 import { fromTree, render } from '../test/engine.js';
+import { viewsOf } from '../test/views.js';
 import { assembleQuill } from './assemble.js';
 import { stripAcroForm } from './strip.js';
 import type { FieldInventory, QualifiedForm } from './types.js';
@@ -50,7 +51,8 @@ const INVENTORY: FieldInventory = {
 it('a quill named null with fields named true, false and null loads, fills and renders', async () => {
 	const blank = await PDFDocument.create();
 	blank.addPage([612, 792]);
-	const background = await stripAcroForm(await blank.save());
+	const source = await blank.save();
+	const background = await stripAcroForm(source, await viewsOf(source, [[0, 0, 612, 792]]));
 	const { quill } = await fromTree(assembleQuill(FORM, INVENTORY, background));
 
 	const example = quill.exampleDocument()!;

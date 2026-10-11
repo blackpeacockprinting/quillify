@@ -6,6 +6,7 @@
  */
 
 import { expect, it } from 'vitest';
+import { inventoryPdf } from './inventory.js';
 import { normalizePdf } from './normalize.js';
 import { stripAcroForm } from './strip.js';
 import { xfaToAcroForm } from './xfa.js';
@@ -55,7 +56,8 @@ for (const [path, url] of Object.entries(fixtures)) {
 		const fetched = new Uint8Array(await (await fetch(url)).arrayBuffer());
 		const source = await xfaToAcroForm(await normalizePdf(fetched));
 		const before = await painted(source);
-		const after = await painted(await stripAcroForm(source));
+		const { views } = await inventoryPdf(source);
+		const after = await painted(await stripAcroForm(source, views));
 
 		expect(after.length, 'pages').toBe(before.length);
 		for (const [index, page] of before.entries()) {

@@ -53,10 +53,10 @@ export async function sanitize(pdf: Uint8Array): Promise<Sanitized> {
 		throw new TypeError('sanitize takes a Uint8Array.');
 	try {
 		const bytes = await xfaToAcroForm(await normalizePdf(pdf));
-		const { pages, widgets } = await inventoryPdf(bytes);
+		const { pages, widgets, views } = await inventoryPdf(bytes);
 		return {
 			ok: true,
-			form: { pdf: await stripAcroForm(bytes), pages, fields: widgets.map(field) }
+			form: { pdf: await stripAcroForm(bytes, views), pages, fields: widgets.map(field) }
 		};
 	} catch (err) {
 		if (err instanceof Refused) return { ok: false, refusal: err.refusal };

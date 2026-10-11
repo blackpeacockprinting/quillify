@@ -57,7 +57,7 @@ describe('the background a built format stamps over', () => {
 		it(`${probe.name}: both renderers paint it, from ${probe.streams} content stream(s)`, async () => {
 			const bytes = await normalizePdf(await probe.source());
 			const inventory = await inventoryPdf(bytes);
-			const background = await stripAcroForm(bytes);
+			const background = await stripAcroForm(bytes, inventory.views);
 
 			// pdf.js: the file came out of qpdf and the strip with its page intact.
 			expect(await inkFromPdf(background), `${probe.name} background`).toBeGreaterThan(0.004);

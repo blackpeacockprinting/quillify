@@ -22,7 +22,7 @@ for (const [path, golden] of Object.entries(goldens)) {
 	)!;
 	it(`${form} inventories as its golden records`, async () => {
 		const bytes = new Uint8Array(await (await fetch(fixture)).arrayBuffer());
-		const inventory = await inventoryPdf(await xfaToAcroForm(await normalizePdf(bytes)));
-		expect(inventory).toEqual(golden);
+		const { pages, widgets } = await inventoryPdf(await xfaToAcroForm(await normalizePdf(bytes)));
+		expect({ pages, widgets }).toEqual(golden);
 	}, 120_000);
 }

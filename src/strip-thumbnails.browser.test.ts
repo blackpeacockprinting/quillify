@@ -1,6 +1,7 @@
 import { PDFDocument, PDFName } from 'pdf-lib';
 import { expect, it } from 'vitest';
 import beneficiaryUrl from '../test/fixtures/SF1152_Designation_of_Beneficiary_Unpaid_Compensation.pdf?url';
+import { inventoryPdf } from './inventory.js';
 import { normalizePdf } from './normalize.js';
 import { stripAcroForm } from './strip.js';
 
@@ -15,5 +16,6 @@ it('leaves no thumbnail in the background of SF 1152, which is published with on
 		new Uint8Array(await (await fetch(beneficiaryUrl)).arrayBuffer())
 	);
 	expect(await thumbnails(source)).toEqual([4, 4]);
-	expect(await thumbnails(await stripAcroForm(source))).toEqual([4, 0]);
+	const { views } = await inventoryPdf(source);
+	expect(await thumbnails(await stripAcroForm(source, views))).toEqual([4, 0]);
 });

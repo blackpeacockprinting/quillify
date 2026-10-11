@@ -8,7 +8,9 @@ import {
 	type PDFPage
 } from 'pdf-lib';
 import { expect, it } from 'vitest';
+import { viewsOf } from '../test/views.js';
 import { stripAcroForm } from './strip.js';
+import type { View } from './types.js';
 
 const LINK = { Type: 'Annot', Subtype: 'Link', Rect: [10, 700, 110, 720] };
 const HOSTILE = ['JavaScript', 'Launch', 'calc.exe', 'javascript:', 'PRIVATE'];
@@ -17,6 +19,9 @@ const HTTPS = { S: 'URI', URI: PDFString.of('https://example.com/') };
 const KEPT_LINK =
 	'<< /Type /Annot /Subtype /Link /Rect [ 10 700 110 720 ] /A << /S /URI /URI (https://example.com/) >> >>';
 const KEPT_PAGE = ['Contents', 'MediaBox', 'Parent', 'Resources', 'Type'];
+const SHEET: View['box'] = [0, 0, 612, 792];
+const CROPPED: View['box'] = [50, 40, 562, 752];
+const SMALL: View['box'] = [0, 0, 300, 400];
 
 /** A page that paints a line and holds one field, so it has a /Contents to keep and a widget to lose. */
 function sheet(doc: PDFDocument, field: string): PDFPage {
@@ -26,10 +31,12 @@ function sheet(doc: PDFDocument, field: string): PDFPage {
 	return page;
 }
 
-async function background(plant: (page: PDFPage) => void) {
+/** The background of what `plant` makes of one sheet, each page framed by its box of `boxes`: one sheet as it is made, unless a case says otherwise. */
+async function background(plant: (page: PDFPage) => void, boxes: View['box'][] = [SHEET]) {
 	const source = await PDFDocument.create();
 	plant(sheet(source, 'plain'));
-	const bytes = await stripAcroForm(await source.save({ useObjectStreams: false }));
+	const saved = await source.save({ useObjectStreams: false });
+	const bytes = await stripAcroForm(saved, await viewsOf(saved, boxes));
 	const doc = await PDFDocument.load(bytes);
 	return { doc, page: doc.getPage(0), text: new TextDecoder('latin1').decode(bytes) };
 }
@@ -106,15 +113,18 @@ it('keeps of the catalog its pages, and nothing a reader acts on or resolves a n
 });
 
 it('keeps of a page tree node its place and what its pages inherit, and gives the page the box it showed', async () => {
-	const { doc, page, text } = await background(({ doc: { catalog, context } }) => {
-		const carried = context.obj({
-			CropBox: [0, 0, 300, 400],
-			Resources: { Font: {} },
-			Rotate: 0,
-			AA: { O: SCRIPT }
-		});
-		for (const [key, value] of carried.entries()) catalog.Pages().set(key, value);
-	});
+	const { doc, page, text } = await background(
+		({ doc: { catalog, context } }) => {
+			const carried = context.obj({
+				CropBox: [0, 0, 300, 400],
+				Resources: { Font: {} },
+				Rotate: 0,
+				AA: { O: SCRIPT }
+			});
+			for (const [key, value] of carried.entries()) catalog.Pages().set(key, value);
+		},
+		[SMALL]
+	);
 	expect(keys(doc.catalog.Pages())).toEqual(['Count', 'Kids', 'Resources', 'Rotate', 'Type']);
 	expect(page.getMediaBox()).toEqual({ x: 0, y: 0, width: 300, height: 400 });
 	expect(page.getCropBox()).toEqual(page.getMediaBox());
@@ -122,31 +132,37 @@ it('keeps of a page tree node its place and what its pages inherit, and gives th
 });
 
 it("keeps a page's own box when its tree declares another", async () => {
-	const { page } = await background((sheet) => {
-		sheet.setCropBox(50, 40, 512, 712);
-		sheet.doc.catalog.Pages().set(PDFName.of('CropBox'), sheet.doc.context.obj([0, 0, 100, 100]));
-	});
+	const { page } = await background(
+		(sheet) => {
+			sheet.setCropBox(50, 40, 512, 712);
+			sheet.doc.catalog.Pages().set(PDFName.of('CropBox'), sheet.doc.context.obj([0, 0, 100, 100]));
+		},
+		[CROPPED]
+	);
 	expect(page.getMediaBox()).toEqual({ x: 50, y: 40, width: 512, height: 712 });
 	expect(page.getCropBox()).toEqual(page.getMediaBox());
 });
 
 it('cuts a page tree node below the root as it cuts the root', async () => {
-	const { doc, text } = await background((first) => {
-		const { context, catalog } = first.doc;
-		const second = sheet(first.doc, 'second');
-		const inner = context.register(
-			context.obj({
-				Type: 'Pages',
-				Parent: catalog.get(PDFName.of('Pages')),
-				Kids: [second.ref],
-				Count: 1,
-				CropBox: [0, 0, 300, 400],
-				AA: { O: SCRIPT }
-			})
-		);
-		second.node.set(PDFName.of('Parent'), inner);
-		catalog.Pages().Kids().set(1, inner);
-	});
+	const { doc, text } = await background(
+		(first) => {
+			const { context, catalog } = first.doc;
+			const second = sheet(first.doc, 'second');
+			const inner = context.register(
+				context.obj({
+					Type: 'Pages',
+					Parent: catalog.get(PDFName.of('Pages')),
+					Kids: [second.ref],
+					Count: 1,
+					CropBox: [0, 0, 300, 400],
+					AA: { O: SCRIPT }
+				})
+			);
+			second.node.set(PDFName.of('Parent'), inner);
+			catalog.Pages().Kids().set(1, inner);
+		},
+		[SHEET, SMALL]
+	);
 	const [, inner] = doc.catalog.Pages().Kids().asArray();
 	expect(keys(doc.context.lookup(inner) as PDFDict)).toEqual(['Count', 'Kids', 'Parent', 'Type']);
 	expect(doc.getPage(1).getMediaBox()).toEqual({ x: 0, y: 0, width: 300, height: 400 });
@@ -382,17 +398,20 @@ it('does not take a page for a link, though the page lists itself as one', async
 });
 
 it('treats a second page as it treats the first', async () => {
-	const { doc, text } = await background((first) => {
-		const second = sheet(first.doc, 'second');
-		second.setCropBox(50, 40, 512, 712);
-		second.node.set(PDFName.of('AA'), first.doc.context.obj({ O: SCRIPT }));
-		linked({
-			T: PDFString.of('PRIVATE-AUTHOR'),
-			AA: { U: SCRIPT },
-			A: { ...HTTPS, IsMap: true, Next: null, JS: PDFString.of('PRIVATE-SCRIPT') }
-		})(second);
-		linked({ A: SCRIPT })(second);
-	});
+	const { doc, text } = await background(
+		(first) => {
+			const second = sheet(first.doc, 'second');
+			second.setCropBox(50, 40, 512, 712);
+			second.node.set(PDFName.of('AA'), first.doc.context.obj({ O: SCRIPT }));
+			linked({
+				T: PDFString.of('PRIVATE-AUTHOR'),
+				AA: { U: SCRIPT },
+				A: { ...HTTPS, IsMap: true, Next: null, JS: PDFString.of('PRIVATE-SCRIPT') }
+			})(second);
+			linked({ A: SCRIPT })(second);
+		},
+		[SHEET, CROPPED]
+	);
 	expect(doc.getPageCount()).toBe(2);
 	const second = doc.getPage(1);
 	expect(keys(second.node)).toEqual(['Annots', ...KEPT_PAGE]);

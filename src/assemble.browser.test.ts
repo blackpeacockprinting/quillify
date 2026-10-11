@@ -8,6 +8,7 @@
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 import { fromTree, open } from '../test/engine.js';
+import { viewsOf } from '../test/views.js';
 import { assembleQuill } from './assemble.js';
 import { stripAcroForm } from './strip.js';
 import type { FieldInventory, QualifiedForm } from './types.js';
@@ -115,7 +116,8 @@ function inkFraction(
 
 describe('assembled acroform quill', () => {
 	it('loads, seeds with $quill, and paints the example inside its widget rect', async () => {
-		const background = await stripAcroForm(await sourcePdf());
+		const source = await sourcePdf();
+		const background = await stripAcroForm(source, await viewsOf(source, [[0, 0, 612, PAGE_H]]));
 		const tree = assembleQuill(FORM, INVENTORY, background);
 		const { ref, quill } = await fromTree(tree);
 		expect(ref).toBe('probe_form@0.1.0');
@@ -161,10 +163,11 @@ describe('assembled acroform quill', () => {
 			quill: { ...FORM.quill, name: 'blank_row_form' },
 			fields: [field('Grade', 'grade', ['', 'O-1', 'O-2']), field('Unit', 'unit', [''])]
 		};
+		const source = await sourcePdf();
 		const tree = assembleQuill(
 			form,
 			{ ...INVENTORY, widgets: [choice('Grade', ['', 'O-1', 'O-2']), choice('Unit', [''])] },
-			await stripAcroForm(await sourcePdf())
+			await stripAcroForm(source, await viewsOf(source, [[0, 0, 612, PAGE_H]]))
 		);
 
 		const { quill } = await fromTree(tree);

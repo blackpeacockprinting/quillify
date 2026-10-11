@@ -9,6 +9,7 @@
 import { PDFDocument, StandardFonts, degrees } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 import { fromTree, render } from '../test/engine.js';
+import { viewsOf } from '../test/views.js';
 import { assembleQuill } from './assemble.js';
 import { toTopLeftRect } from './coords.js';
 import { stripAcroForm } from './strip.js';
@@ -77,7 +78,8 @@ const FORM: QualifiedForm = {
 
 describe('a rotated page', () => {
 	it('is refused by the renderer, which is what the importer refuses early', async () => {
-		const background = await stripAcroForm(await rotatedSource());
+		const source = await rotatedSource();
+		const background = await stripAcroForm(source, await viewsOf(source, [VIEW]));
 		const tree = assembleQuill(FORM, INVENTORY, background);
 		const { quill } = await fromTree(tree);
 		const seed = quill.seedDocument();

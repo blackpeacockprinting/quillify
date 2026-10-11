@@ -16,11 +16,11 @@ Every string in a `Form` that is not a `kind` is text the author of the PDF cont
 
 - of the catalog: `Type Pages OCProperties StructTreeRoot MarkInfo Lang`. With the rest go the form (`/AcroForm` and its XFA packet, `/NeedsRendering`), the XMP metadata, scripts, attachments, a portfolio, bookmarks, named destinations and the usage-rights signature. The trailer's `/Info` and `/ID` go too.
 - of a page tree node: `Type Parent Kids Count Resources Rotate`.
-- of a page: `Type Parent Resources MediaBox Contents Rotate Group UserUnit StructParents Tabs`. The crop box becomes the MediaBox.
+- of a page: `Type Parent Resources MediaBox Contents Rotate Group UserUnit StructParents Tabs`. The MediaBox is written from pdf.js's view of the page, the frame its fields were measured in, and no box of the file is carried over.
 - of a link: `Type Subtype Rect Border BS C H QuadPoints F OC Contents StructParent A Dest`.
 - of a link's action: `S URI`, or `S D`.
 
-Of a page's annotations only a link stays, and only one that leads one way: by an `/A` or by a `/Dest`, never both, with nothing chained by `/Next`. That way is a `/URI` that begins `http://` or `https://` in either case, a `/GoTo` to an explicit destination, or an explicit `/Dest`. The action it keeps is a copy. Every other object that says `/Type /Annot`, has a `/Rect` or is a widget is deleted, as is a page object the page tree does not hold, and then every object the catalog no longer reaches.
+Of a page's annotations only a link stays, and only one that leads one way: by an `/A` or by a `/Dest`, never both, with nothing chained by `/Next`. That way is a `/URI` that begins `http://` or `https://` in either case, a `/GoTo` to an explicit destination, or an explicit `/Dest`. The action it keeps is a copy. Every other object that says `/Type /Annot`, has a `/Rect` or is a widget is deleted, as is a page object the page tree does not hold, and then every object the catalog no longer reaches. A file whose pages pdf-lib reads as other objects than pdf.js did, or as more or fewer, is refused as `damaged`, so the page under a field is the page pdf.js found the field on.
 
 What a kept value holds is not read: a `/Resources` dictionary, a `/Border` array or a destination array can reference anything.
 
@@ -45,11 +45,9 @@ The host page still reaches the frame element. A rule that hides it, or a script
 ## Not handled
 
 - #25 The background keeps whatever strip does not name. This holds for the trailer and for what a kept value holds, as above.
-- #28 A CropBox larger than the MediaBox moves every field off its box.
 - #30 The size cap bounds the compressed input only.
 - #46 qpdf.wasm is a prebuilt binary from one publisher.
 - #68 A link to an address with no scheme, or to a mailto: address, is removed.
-- #69 A page that names its /Type by reference is cut from the background without a refusal.
 - #77 A tooltip of 130,000 characters ends sanitize with a RangeError.
 - #80 A field tree pdf-lib cannot walk ends sanitize with pdf-lib's error.
 - #86 sanitize has no deadline. A file that pdf.js never finishes laying out leaves it pending, with its frame in the host page's body. The one kind of template known to do that, an overflow leader before a row that cannot fit, is guarded in the worker the package ships. Until there is a deadline, nothing but the size cap bounds how long a dynamic form takes: pdf.js lays out every page in its worker to count the pages, and one page can hold any number of fields.
