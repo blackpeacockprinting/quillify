@@ -60,7 +60,7 @@ Every parser of the bytes a caller hands in runs inside `sanitize`. The engine r
 - There is no `Worker` or no `document`, as in Node (`ReferenceError`, #34).
 - `assets/pdf.worker.js` or `assets/qpdf.wasm` did not load. The error names the file, and the next call tries again.
 - The frame's stylesheet did not apply, the host page hid or removed the frame, or a page laid out to nothing.
-- pdf.js or pdf-lib threw something no rule maps to a refusal. The known cases are open issues: #77, #80, #84, #85.
+- pdf.js or pdf-lib threw something no rule maps to a refusal. The known cases are open issues: #77, #80, #84. Any failure of pdf.js's XFA layout is one more (#139): pdf.js catches it, and what arrives is its `UnknownErrorException` saying `Cannot read properties of undefined (reading 'length')`.
 
 It can also not settle: `sanitize` has no deadline (#86), and a frame the host page removes before it has loaded leaves it pending (#99).
 
@@ -101,11 +101,11 @@ Every `Rect` is `{ x, y, w, h }` from the top left of its page, in the page's ow
 
 ## Assets and the build
 
-The package carries three files that are not its own code: the pdf.js worker, `qpdf.wasm` and a slice of pdf.js's viewer stylesheet. `npm run assets` writes the worker and `qpdf.wasm` to `assets/` from `node_modules`, and the stylesheet from `src/xfa-layer.css` as a module, with a declaration file beside it. It stops unless the installed worker has exactly two unguarded sites and ends in its source map line, and `qpdf.wasm` has the recorded hash.
+The package carries three files that are not its own code: the pdf.js worker, `qpdf.wasm` and a slice of pdf.js's viewer stylesheet. `npm run assets` writes the worker and `qpdf.wasm` to `assets/` from `node_modules`, and the stylesheet from `src/xfa-layer.css` as a module, with a declaration file beside it. It stops unless the installed worker has each line it guards at the count of sites the guard is written for, two for the null guard and one for the page set, and ends in its source map line, and `qpdf.wasm` has the recorded hash.
 
 | File | What it is | How the source loads it |
 | --- | --- | --- |
-| `pdf.worker.js` | The pdf.js worker with a null guard at two sites | `new URL('../assets/pdf.worker.js', import.meta.url)` in `pdfjs.ts`, handed to `new Worker` |
+| `pdf.worker.js` | The pdf.js worker with a null guard at two sites and a page set that clears its page areas' counts when it starts another pass | `new URL('../assets/pdf.worker.js', import.meta.url)` in `pdfjs.ts`, handed to `new Worker` |
 | `qpdf.wasm` | qpdf, compiled to WebAssembly by `@neslinesli93/qpdf-wasm` | `new URL('../assets/qpdf.wasm', import.meta.url)` in `normalize.ts`, handed to qpdf's loader |
 | `xfa-layer.js` | The XFA rules of pdf.js's viewer stylesheet, as a module's text | A static import in `xfa-layer.ts` |
 
