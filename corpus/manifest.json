@@ -57,5 +57,5 @@
 	{"form": "VA 21-526EZ", "bytes": 1927445, "sha256": "48d87f2b679f61e4857b2cd1ad3354f46e68ed347897ff0a8fb7c23c5068a0e4", "kind": "hybrid", "encryption": "none", "outcome": "too_many_fields"},
 	{"form": "VA 21-4138", "bytes": 881905, "sha256": "f534b7c43aa774ed8a9005d7e564cbf18d4ce54d04e0e0559282d95ba2c6c6be", "kind": "hybrid", "encryption": "none", "outcome": "converted", "pages": 2, "fields": 33, "places": 30},
 	{"form": "VA 26-1880", "bytes": 939735, "sha256": "772d3619377c908082706fdb1786269737fb2528aa904fdedaab82e0e45f882b", "kind": "hybrid", "encryption": "none", "outcome": "converted", "pages": 4, "fields": 81, "places": 80},
-	{"form": "WH-380-E", "bytes": 181019, "sha256": "fbeab59d7b9a0928eb50c661f0e607d368d421ff661dde01f14ca1fff4e333da", "kind": "plain", "encryption": "none", "outcome": "converted", "pages": 4, "fields": 60, "places": 77}
+	{"form": "WH-380-E", "bytes": 181019, "sha256": "fbeab59d7b9a0928eb50c661f0e607d368d421ff661dde01f14ca1fff4e333da", "kind": "plain", "encryption": "none", "outcome": "converted", "pages": 4, "fields": 75, "places": 77}
 ]
