@@ -28,8 +28,12 @@ export async function templateForm(template: string): Promise<Uint8Array> {
 	return doc.save();
 }
 
+/** A dynamic form whose root subform flows `content` down as many pages as it takes. */
+export const dynamicFlow = (content: string): Promise<Uint8Array> =>
+	templateForm(
+		`<template xmlns="http://www.xfa.org/schema/xfa-template/3.3/"><subform name="form1" layout="tb"><pageSet><pageArea name="Page1"><contentArea w="612pt" h="792pt"/><medium short="612pt" long="792pt"/></pageArea></pageSet>${content}</subform></template>`
+	);
+
 /** A one-page dynamic form whose page holds `body`, placed in points from its top left. */
 export const dynamicForm = (body: string): Promise<Uint8Array> =>
-	templateForm(
-		`<template xmlns="http://www.xfa.org/schema/xfa-template/3.3/"><subform name="form1" layout="tb"><pageSet><pageArea name="Page1"><contentArea w="612pt" h="792pt"/><medium short="612pt" long="792pt"/></pageArea></pageSet><subform layout="position" w="612pt" h="792pt">${body}</subform></subform></template>`
-	);
+	dynamicFlow(`<subform layout="position" w="612pt" h="792pt">${body}</subform>`);

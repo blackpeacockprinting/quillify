@@ -409,3 +409,19 @@ Adds to "The code is carried from the fork".
 One thing is not done. Two widgets can still come out with one name: the harvest numbers a repeated path `a#2`, and a field can be named `a#2` itself. Those two were an error from pdf-lib, and are now one field at two places, of the first one's kind: a check box named `a#2` after two text fields `a` is read as a place of the second text field.
 
 **Unlock.** A published form that has two widgets of one name.
+
+**Unlock.** For the cost, a published form that converts slowly for it, or the field cap raised (#40). The fields are then made from pdf-lib's own field classes with no search, which took 45 ms for 2,000. For the shared name, a published form that has one.
+
+## 11 Oct 2026: A dynamic form over the page cap is refused before it is laid out
+
+Adds to "The code is carried from the fork".
+
+**Context.** The carried conversion lays out every page of a dynamic form in the host page, reads it, paints it and stamps it, and saves the result. The page cap and the field cap are read afterwards, when the inventory opens that file (#29). A dynamic form's page count comes out of layout, so a template that runs to thousands of pages was laid out in the caller's tab, every page of it, before anything refused it. A built form of 21 pages was refused as `too_many_pages` after the frame had been given all 21.
+
+**Decision.** `xfaToAcroForm` refuses a dynamic form over the page cap as soon as pdf.js has opened it and before the stage lays out its first page, with the refusal the inventory gives: `{ code: 'too_many_pages', pages, limit }`. pdf.js counts a dynamic form's pages as it opens the file, in its worker, so `pages` is the number the inventory read. The inventory keeps its own read of the cap, which is the one a static form meets. The cap is read before the paint, so a form over it that also holds an image or a dashed border is refused for its pages, where it was refused as `unpaintable`.
+
+The field cap stays in the inventory, read from a complete count. #29 also asks that a dynamic form over the field cap be refused at the page where the count passes it, and that is not done. A refusal's `fields` is the form's own count for all three kinds of form, and stopped at the page where the count passes, a dynamic form's would be a running partial. With the pages capped, the layout that comes before the count is 20 pages at most. What one page holds is bounded by the file's size alone.
+
+The open is not bounded by this. The worker lays the form out to count its pages, and a built form of 1,000 pages, one field on each, is refused after 5.9 s where it took 7.5 s. `sanitize` has no deadline (#86).
+
+**Unlock.** For the field cap, a form within the page cap whose fields take the conversion long enough to matter. The count is then read in the conversion's page loop and the refusal says it is a partial. For the open, the deadline of #86.
