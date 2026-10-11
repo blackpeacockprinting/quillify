@@ -377,3 +377,13 @@ Of the ten fixtures, seven carry one: the six static forms and the sample. With 
 **Decision.** A background keeps its layers as the file has them. Content in a layer that is off on screen or in print stays in the background, and `SECURITY.md` says so. `/OCProperties` is still kept whole: rebuilding it from a list of keys is part of #25. A test builds a form with a layer off, a layer on for the screen and off for paper, and the Designer pattern, and holds the groups and their default state in the background and in the rendered file, and what pdf.js and the engine's painter paint from them.
 
 **Unlock.** A form whose layer hides content in every state, or a reader of quills that ignores optional content. The layers are then dropped or flattened, and the content a publisher keeps off paper is weighed against the content that should not be there.
+
+## 11 Oct 2026: The shipped worker is guarded at a third site
+
+Adds to "The pdf.js guard lives in the worker the package ships".
+
+**Context.** AF 715, AF 716 and DAF 357 ended `sanitize` with pdf.js's `Cannot read properties of undefined (reading 'length')` (#85). That message is what any failure of pdf.js's XFA layout becomes: the layout's exception is caught and logged, and the count of pages is then read off a list that was never made. The failure itself is a stack overflow. Each of the three has one page set with no `occur`, holding one page area whose `occur` has a `max` of 1, and two pages of content. Asked for the second page, the page area is at its limit and hands back to the page set, which starts another pass with its page areas' counts as they were, and the two call each other until the stack ends.
+
+**Decision.** `npm run assets` changes a third line of the worker: where a page set starts another pass it also clears its page areas' counts, with the method the class has for that. The worker the package ships now differs from the installed one at three sites, the two null guards that DAF 1288 needs and this one, and the script stops unless it finds each line the stated number of times. The three forms convert, to two pages each. The guard reads a page area's `max` as a count within one occurrence of its page set. That reading was not checked against the XFA specification or against Acrobat. Of the Air Force's 1,354 files, 60 have a page area with a finite `max`: the three change, and the other 57 come out as before.
+
+**Unlock.** A pdf.js release that ends this recursion. Reporting it to pdf.js is #47's. The line and its sentence in the worker's notice are deleted in the change that takes that release.

@@ -58,7 +58,7 @@ it('ships the stage stylesheet as the default export of a module', async () => {
 	expect(stylesheet.default, STALE).toBe(readFileSync('src/xfa-layer.css', 'utf8'));
 });
 
-it('ships the pdf.js worker as the installed one but for the notice, the guard and the map', () => {
+it('ships the pdf.js worker as the installed one but for the notice, the guards and the map', () => {
 	const UNGUARDED = 'children = children.isXFAObjectArray ? children.children : [children];';
 	const GUARDED =
 		'children = children == null ? [] : children.isXFAObjectArray ? children.children : [children];';
@@ -74,6 +74,7 @@ it('ships the pdf.js worker as the installed one but for the notice, the guard a
 	expect(differing, STALE).toEqual([
 		[UNGUARDED, GUARDED],
 		[UNGUARDED, GUARDED],
+		['this[$extra].pageSetIndex = -1;', 'this[$extra].pageSetIndex = -1; this[$cleanPage]();'],
 		['//# sourceMappingURL=pdf.worker.mjs.map', '']
 	]);
 });

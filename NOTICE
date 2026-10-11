@@ -5,7 +5,8 @@ assets/pdf.worker.js
   The worker of pdf.js: build/pdf.worker.mjs of pdfjs-dist 6.3.289,
   Copyright 2024 Mozilla Foundation, under the Apache License 2.0
   (licenses/pdf.js-LICENSE).
-  Changed: a null guard added at two sites, and the last line, which named a
+  Changed: a null guard added at two sites, a page set made to clear its page
+  areas' counts when it starts another pass, and the last line, which named a
   source map, removed. The file's first line says the same.
 
 assets/xfa-layer.js
