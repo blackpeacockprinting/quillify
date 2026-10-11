@@ -40,13 +40,13 @@ import { harvestWidgets, type XfaWidget } from './xfa-widgets.js';
  * It is a normalization: bytes in, bytes out, and every later stage reads the
  * result as it reads a static form.
  */
-export async function xfaToAcroForm(bytes: Uint8Array): Promise<Uint8Array> {
+export async function xfaToAcroForm(bytes: Uint8Array, signal?: AbortSignal): Promise<Uint8Array> {
 	const stage = new XfaStage();
 	let opened: Awaited<ReturnType<typeof openPdf>> | undefined;
 	try {
 		// pdf.js adds the faces a form embeds to this document's font set.
-		opened = await openPdf(bytes, { enableXfa: true, ownerDocument: await stage.ready });
-		const { pdf } = opened;
+		opened = await openPdf(bytes, { enableXfa: true, ownerDocument: await stage.ready }, signal);
+		const { pdf, within } = opened;
 		if (!pdf.isPureXfa) return bytes;
 		// pdf.js counts a dynamic form's pages as it opens the file.
 		if (pdf.numPages > MAX_PAGES)
@@ -56,7 +56,7 @@ export async function xfaToAcroForm(bytes: Uint8Array): Promise<Uint8Array> {
 		const widgets: XfaWidget[] = [];
 
 		for (let number = 1; number <= pdf.numPages; number++) {
-			const laid = await stage.lay(await pdf.getPage(number));
+			const laid = await within(pdf.getPage(number).then((page) => stage.lay(page)));
 			const list = displayList(laid, number);
 			for (const widget of harvestWidgets(laid, number)) widgets.push(widget);
 			await paint(out.addPage([list.width, list.height]), number, list, async (name) => {

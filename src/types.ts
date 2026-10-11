@@ -96,3 +96,8 @@ export const MAX_BYTES = 8 * 1024 * 1024;
 export const MAX_INFLATED_BYTES = 64 * 1024 * 1024;
 export const MAX_PAGES = 20;
 export const MAX_WIDGETS = 200;
+/**
+ * How long `sanitize` works on a file before it refuses it. Of 59 published
+ * forms the slowest takes 2.7 s (SF 2809).
+ */
+export const MAX_SECONDS = 60;

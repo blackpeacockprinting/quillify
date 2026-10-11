@@ -130,9 +130,10 @@ async function inflated(pdf: Uint8Array): Promise<number> {
  * well, with or without warnings, since an error leaves the file cut short. A
  * file it answers nothing for is refused: every later step reads these bytes
  * as decrypted. So is a file that comes to more than `MAX_INFLATED_BYTES`, in
- * qpdf or in what qpdf wrote.
+ * qpdf or in what qpdf wrote. The worker is ended when it answers, or when
+ * `signal` fires before it has.
  */
-export async function normalizePdf(bytes: Uint8Array): Promise<Uint8Array> {
+export async function normalizePdf(bytes: Uint8Array, signal?: AbortSignal): Promise<Uint8Array> {
 	// Before a worker starts, because qpdf is the step that allocates.
 	if (bytes.byteLength > MAX_BYTES)
 		throw new Refused({ code: 'too_large', bytes: bytes.byteLength, limit: MAX_BYTES });
@@ -140,13 +141,18 @@ export async function normalizePdf(bytes: Uint8Array): Promise<Uint8Array> {
 	const worker = new Worker(WORKER);
 	// A copy, moved to the worker. A view posted as it is takes its whole buffer along.
 	const copy = bytes.slice();
-	const answer = await new Promise<Answer>((resolve, reject) => {
-		worker.onmessage = ({ data }) => resolve(data);
-		worker.onerror = () => reject(new Error(`qpdf.worker.js did not load from ${WORKER}`));
-		worker.postMessage({ bytes: copy, flags: FLAGS, wasm: WASM.href, limit: MAX_INFLATED_BYTES }, [
-			copy.buffer
-		]);
-	}).finally(() => worker.terminate());
+	const { promise, resolve, reject } = Promise.withResolvers<Answer>();
+	const late = () => reject(signal?.reason);
+	signal?.addEventListener('abort', late);
+	worker.onmessage = ({ data }) => resolve(data);
+	worker.onerror = () => reject(new Error(`qpdf.worker.js did not load from ${WORKER}`));
+	worker.postMessage({ bytes: copy, flags: FLAGS, wasm: WASM.href, limit: MAX_INFLATED_BYTES }, [
+		copy.buffer
+	]);
+	const answer = await promise.finally(() => {
+		signal?.removeEventListener('abort', late);
+		worker.terminate();
+	});
 	if (!answer.loaded) throw new Error(`qpdf.wasm did not load from ${WASM}`);
 	const { out, size } = answer;
 	// A file that came to more than the bound in qpdf is past it, whatever qpdf then wrote.
@@ -157,6 +163,6 @@ export async function normalizePdf(bytes: Uint8Array): Promise<Uint8Array> {
 
 	// qpdf gives its reason on stderr alone. A file pdf.js cannot open is refused
 	// there, under its own code. One it opens is a file only qpdf rejects.
-	await (await openPdf(bytes)).close();
+	await (await openPdf(bytes, {}, signal)).close();
 	throw new Refused({ code: 'damaged' });
 }
