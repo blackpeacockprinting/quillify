@@ -77,7 +77,7 @@ A file the library does not take is refused with a value, and nothing is thrown 
 | `text_on_non_text`  | `id`                                                     | `text` is set on a field that is not a text field        |
 | `engine`            | `message`, and `diagnostic` when the engine gives a code | The engine refused the files. Only `quillify` returns it |
 
-Outside `code`, `kind`, `construct` and `diagnostic`, a string in a `Form`, a refusal, a suggested naming or a problem is text from the file or from the naming handed in: a field's `id`, a tooltip, an option, whatever the engine's `message` quotes. Show it as text and trust none of it.
+Outside `code`, `kind`, `construct` and `diagnostic`, a string in a `Form`, a refusal, a suggested naming or a problem is text from the file or from the naming handed in: a field's `id`, a tooltip, an option, whatever the engine's `message` quotes. Show it as text and trust none of it. [`SECURITY.md`](SECURITY.md) has the boundary, what the background keeps and what is not handled.
 
 ## What it does to a PDF
 
