@@ -58,7 +58,7 @@ export async function xfaToAcroForm(bytes: Uint8Array): Promise<Uint8Array> {
 		for (let number = 1; number <= pdf.numPages; number++) {
 			const laid = await stage.lay(await pdf.getPage(number));
 			const list = displayList(laid, number);
-			widgets.push(...harvestWidgets(laid, number));
+			for (const widget of harvestWidgets(laid, number)) widgets.push(widget);
 			await paint(out.addPage([list.width, list.height]), number, list, async (name) => {
 				let font = fonts.get(name);
 				if (!font) fonts.set(name, (font = await out.embedFont(name)));

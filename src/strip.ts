@@ -146,9 +146,10 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 			if (reached.has(value)) continue;
 			reached.add(value);
 			pending.push(context.lookup(value));
-		} else if (value instanceof PDFArray) pending.push(...value.asArray());
-		else if (value instanceof PDFDict) pending.push(...value.values());
-		else if (value instanceof PDFStream) pending.push(...value.dict.values());
+		} else if (value instanceof PDFArray) for (const entry of value.asArray()) pending.push(entry);
+		else if (value instanceof PDFDict) for (const entry of value.values()) pending.push(entry);
+		else if (value instanceof PDFStream)
+			for (const entry of value.dict.values()) pending.push(entry);
 	}
 	// The trailer's /Size is the largest object number plus one, and deleting does
 	// not lower it.

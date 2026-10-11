@@ -55,8 +55,10 @@ function fieldYaml(field: Named): string[] {
 			const values = (field.options ?? []).filter((option) => option !== '');
 			if (values.length === 0 || values.some((value) => /[;>|]/.test(value)))
 				lines.push('      type: string');
-			else
-				lines.push('      type: enum', '      values:', ...values.map((v) => `        - ${q(v)}`));
+			else {
+				lines.push('      type: enum', '      values:');
+				for (const value of values) lines.push(`        - ${q(value)}`);
+			}
 			if (!field.required) lines.push('      default: ""');
 			break;
 		}
@@ -87,7 +89,7 @@ export function quillYaml(form: Qualified, fields: Named[]): string {
 	if (groups.length > 0) lines.push('  ui:', `    groups: [${groups.map(q).join(', ')}]`);
 	if (fields.length > 0) {
 		lines.push('  fields:');
-		for (const field of fields) lines.push(...fieldYaml(field));
+		for (const field of fields) for (const line of fieldYaml(field)) lines.push(line);
 	}
 	return lines.join('\n') + '\n';
 }
