@@ -29,7 +29,7 @@ export interface Line {
 	colour: Colour;
 }
 
-/** One visual line of text, with the box the browser gave it. */
+/** One visual line of text, or the part of one between tabs, with the box the browser gave it. */
 export interface Run {
 	text: string;
 	x: number;
@@ -227,7 +227,8 @@ function svgOnly(tag: string): boolean {
 /**
  * One run per visual line, with the box the browser measured it into. Splitting
  * where the rect top changes is what keeps a wrapped paragraph's second line at
- * its own baseline.
+ * its own baseline. A tab ends a run too and is in none: the text after it
+ * starts a run at the box the layout moved it to.
  */
 function collectText(
 	layer: HTMLElement,
@@ -276,6 +277,13 @@ function collectText(
 			});
 		};
 		for (let i = 0; i < text.length; i++) {
+			if (text[i] === '\t') {
+				flush(i);
+				start = i + 1;
+				top = null;
+				box = null;
+				continue;
+			}
 			range.setStart(node, i);
 			range.setEnd(node, i + 1);
 			const glyph = range.getClientRects()[0];
