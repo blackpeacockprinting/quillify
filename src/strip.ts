@@ -27,38 +27,133 @@ import type { View } from './types.js';
  *     Key:*       a value no row reads yet, kept whole
  *
  * A value of the first sort also stays where a kind is expected: a mask can be
- * an array of numbers. A kind `PICK` names is one of several, told apart by a
- * key of the dictionary. A kind `STREAMS` names is a stream, which keeps the
- * keys of `STREAM` beside its own, and no other kind is a stream.
+ * an array of numbers and a color space a name. A kind `STREAMS` names is a
+ * stream, which keeps the keys of `STREAM` beside its own, and no other kind is
+ * a stream. A kind whose keys are numbers is an array read by position, as a
+ * color space is: it loses every part past the last its row lists, and a part
+ * before that which is not what its position leads to becomes null. A kind
+ * `PICK` names is one of several, told apart by a key of the dictionary or a
+ * position of the array, which holds a name where `PICK` writes one and a
+ * number where it writes a number.
  */
 const KINDS: Record<string, string> = {
 	catalog: 'Type Pages:tree OCProperties:* StructTreeRoot:* MarkInfo:* Lang',
 	tree: 'Type Parent:^tree Kids:[node] Count Resources:resources Rotate',
 	page:
-		'Type Parent:^tree Resources:resources MediaBox Contents:[content] Rotate Group:* UserUnit ' +
-		'StructParents Tabs Annots:[link]',
+		'Type Parent:^tree Resources:resources MediaBox Contents:[content] Rotate Group:group ' +
+		'UserUnit StructParents Tabs Annots:[link]',
 	link: 'Type Subtype Rect Border:* BS:* C H QuadPoints F OC:* Contents StructParent A:action Dest:*',
 	uri: 'S URI',
 	goto: 'S D:*',
 	resources:
-		'Font:{*} XObject:{xobject} ExtGState:{*} ColorSpace:{*} Pattern:{*} Shading:{*} ' +
-		'Properties:{*} ProcSet',
+		'Font:{font} XObject:{xobject} ExtGState:{gstate} ColorSpace:{space} Pattern:{pattern} ' +
+		'Shading:{shading} Properties:{*} ProcSet',
 	content: '',
 	image:
-		'Type Subtype Width Height BitsPerComponent ColorSpace:* Decode ImageMask Mask:image ' +
+		'Type Subtype Width Height BitsPerComponent ColorSpace:space Decode ImageMask Mask:image ' +
 		'SMask:image SMaskInData Matte Interpolate Intent OC:* StructParent',
-	form: 'Type Subtype FormType BBox Matrix Resources:resources Group:* OC:* StructParent StructParents',
+	form: 'Type Subtype FormType BBox Matrix Resources:resources Group:group OC:* StructParent StructParents',
 	parms:
 		'Predictor Colors BitsPerComponent Columns EarlyChange K EndOfLine EncodedByteAlign Rows ' +
 		'EndOfBlock BlackIs1 DamagedRowsBeforeError ColorTransform JBIG2Globals:data',
-	data: ''
+	data: '',
+	group: 'Type S CS:space I K',
+	gstate:
+		'Type LW LC LJ ML D RI OP op OPM Font:fontsize BG:function BG2:function UCR:function ' +
+		'UCR2:function TR:[function] TR2:[function] HT HTO FL SM SA BM SMask:mask CA ca AIS TK ' +
+		'UseBlackPtComp',
+	fontsize: '0:font 1',
+	mask: 'Type S G:form BC TR:function',
+	ICCBased: '0 1:icc',
+	Indexed: '0 1:space 2 3:data',
+	Separation: '0 1 2:space 3:function',
+	DeviceN: '0 1 2:space 3:function',
+	CalRGB: '0 1:cie',
+	CalGray: '0 1:cie',
+	Lab: '0 1:cie',
+	Pattern: '0 1:space',
+	icc: 'N Alternate:space Range',
+	cie: 'WhitePoint BlackPoint Gamma Matrix Range',
+	function0: 'FunctionType Domain Range Size BitsPerSample Order Encode Decode',
+	function2: 'FunctionType Domain Range C0 C1 N',
+	function3: 'FunctionType Domain Range Functions:[function] Bounds Encode',
+	function4: 'FunctionType Domain Range',
+	shaded:
+		'ShadingType ColorSpace:space Background BBox AntiAlias Domain Matrix Coords Extend ' +
+		'Function:[function]',
+	mesh:
+		'ShadingType ColorSpace:space Background BBox AntiAlias BitsPerCoordinate BitsPerComponent ' +
+		'BitsPerFlag Decode VerticesPerRow Function:[function]',
+	tiling: 'Type PatternType PaintType TilingType BBox XStep YStep Resources:resources Matrix',
+	shadingpattern: 'Type PatternType Shading:shading Matrix ExtGState:gstate',
+	simple:
+		'Type Subtype Name BaseFont FirstChar LastChar Widths FontDescriptor:descriptor ' +
+		'Encoding:encoding ToUnicode:cmap',
+	type3:
+		'Type Subtype Name FontBBox FontMatrix CharProcs:{content} Encoding:encoding FirstChar ' +
+		'LastChar Widths FontDescriptor:descriptor Resources:resources ToUnicode:cmap',
+	type0: 'Type Subtype BaseFont Encoding:cmap DescendantFonts:[font] ToUnicode:cmap',
+	cidfont:
+		'Type Subtype BaseFont CIDSystemInfo:cidsystem FontDescriptor:descriptor DW W DW2 W2 ' +
+		'CIDToGIDMap:data',
+	cidsystem: 'Registry Ordering Supplement',
+	encoding: 'Type BaseEncoding Differences',
+	cmap: 'Type CMapName CIDSystemInfo:cidsystem WMode UseCMap:cmap',
+	descriptor:
+		'Type FontName FontFamily FontStretch FontWeight Flags FontBBox ItalicAngle Ascent Descent ' +
+		'Leading CapHeight XHeight StemV StemH AvgWidth MaxWidth MissingWidth CharSet Lang ' +
+		'FontFile:fontfile FontFile2:fontfile FontFile3:fontfile CIDSet:data',
+	fontfile: 'Subtype Length1 Length2 Length3'
 };
-const STREAMS = ['content', 'image', 'form', 'data'];
+const STREAMS = [
+	'content',
+	'image',
+	'form',
+	'data',
+	'icc',
+	'function0',
+	'function4',
+	'mesh',
+	'tiling',
+	'cmap',
+	'fontfile'
+];
 const STREAM = 'Length Filter DecodeParms:[parms]';
 const PICK: Record<string, [key: string, kinds: Record<string, string>]> = {
 	node: ['Type', { Pages: 'tree', Page: 'page' }],
 	action: ['S', { URI: 'uri', GoTo: 'goto' }],
-	xobject: ['Subtype', { Image: 'image', Form: 'form' }]
+	xobject: ['Subtype', { Image: 'image', Form: 'form' }],
+	font: [
+		'Subtype',
+		{
+			Type1: 'simple',
+			MMType1: 'simple',
+			TrueType: 'simple',
+			Type3: 'type3',
+			Type0: 'type0',
+			CIDFontType0: 'cidfont',
+			CIDFontType2: 'cidfont'
+		}
+	],
+	space: [
+		'0',
+		{
+			ICCBased: 'ICCBased',
+			Indexed: 'Indexed',
+			Separation: 'Separation',
+			DeviceN: 'DeviceN',
+			CalRGB: 'CalRGB',
+			CalGray: 'CalGray',
+			Lab: 'Lab',
+			Pattern: 'Pattern'
+		}
+	],
+	function: ['FunctionType', { 0: 'function0', 2: 'function2', 3: 'function3', 4: 'function4' }],
+	shading: [
+		'ShadingType',
+		{ 1: 'shaded', 2: 'shaded', 3: 'shaded', 4: 'mesh', 5: 'mesh', 6: 'mesh', 7: 'mesh' }
+	],
+	pattern: ['PatternType', { 1: 'tiling', 2: 'shadingpattern' }]
 };
 
 /**
@@ -84,22 +179,37 @@ function slot(text: string): Slot {
 }
 const WHOLE = slot('*');
 
-/** Each kind's keys with the slot of each, and whether the kind is a stream. */
+/** A key of a row: a name in a dictionary, or a position in an array. */
+const keyed = (text: string) => (/^\d+$/.test(text) ? Number(text) : PDFName.of(text));
+/** What a dictionary holds at a name or an array at a position, read through a reference. */
+const under = (held: PDFDict | PDFArray, key: PDFName | number) => {
+	if (held instanceof PDFArray) return typeof key === 'number' ? held.lookup(key) : undefined;
+	return typeof key === 'number' ? undefined : held.lookup(key);
+};
+
+/** Each kind's keys with the slot of each, and what the kind is: a dictionary, a stream or an array. */
 const ROWS = new Map(
 	Object.entries(KINDS).map(([kind, keys]) => {
 		const stream = STREAMS.includes(kind);
 		const entries = (stream ? `${keys} ${STREAM}` : keys).split(' ').filter(Boolean);
-		const row = entries.map((entry) => {
-			const [key, leads = ''] = entry.split(':');
-			return [PDFName.of(key), slot(leads)] as const;
-		});
-		return [kind, { stream, keys: new Map(row) }];
+		const row = new Map(
+			entries.map((entry) => {
+				const [key, leads = ''] = entry.split(':');
+				return [keyed(key), slot(leads)] as const;
+			})
+		);
+		return [kind, { body: stream ? 'stream' : row.has(0) ? 'array' : 'dict', keys: row }];
 	})
 );
 const PICKS = new Map(
 	Object.entries(PICK).map(([kind, [key, kinds]]) => [
 		kind,
-		{ key: PDFName.of(key), kinds: new Map(Object.entries(kinds)) }
+		{
+			key: keyed(key),
+			kinds: new Map<unknown, string>(
+				Object.entries(kinds).map(([told, kind]) => [keyed(told), kind])
+			)
+		}
 	])
 );
 
@@ -201,24 +311,24 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 	const whole: (PDFObject | undefined)[] = [];
 	const backs: [holder: PDFDict, key: PDFName, value: PDFObject, to: Slot][] = [];
 
-	/** Whether what a reference names leads nowhere: `false` while it is being read, so an array that holds itself leads somewhere. */
-	const plains = new Map<PDFRef, boolean>();
-	/** Whether a value leads nowhere. A reference is read once, whatever reaches it, and a `[reference]` among the parts marks where its own parts end. */
+	/** Whether what a reference names or an array holds leads nowhere: `false` while it is being read, so an array that holds itself leads somewhere. */
+	const plains = new Map<PDFRef | PDFArray, boolean>();
+	/** Whether a value leads nowhere. A reference and an array are each read once, whatever reaches them, and a `[reference]` or an `[array]` among the parts marks where its own parts end. */
 	const plain = (value: PDFObject) => {
-		const parts: (PDFObject | [read: PDFRef] | undefined)[] = [value];
+		const parts: (PDFObject | [read: PDFRef | PDFArray] | undefined)[] = [value];
 		while (parts.length > 0) {
 			let part = parts.pop();
 			if (Array.isArray(part)) {
 				plains.set(part[0], true);
 				continue;
 			}
-			if (part instanceof PDFRef) {
+			if (part instanceof PDFRef || part instanceof PDFArray) {
 				const known = plains.get(part);
 				if (known) continue;
 				if (known === false) return false;
 				plains.set(part, false);
 				parts.push([part]);
-				part = context.lookup(part);
+				if (part instanceof PDFRef) part = context.lookup(part);
 			}
 			if (part instanceof PDFArray) for (let i = 0; i < part.size(); i++) parts.push(part.get(i));
 			else if (!(
@@ -255,11 +365,16 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 		const value = raw instanceof PDFRef ? context.lookup(raw) : raw;
 		if (to.shape === 'map') return value instanceof PDFDict && claim(raw, value, to);
 		if (to.shape === 'list' && value instanceof PDFArray) return claim(raw, value, to);
-		if (!(value instanceof PDFDict || value instanceof PDFStream)) return false;
+		if (!(value instanceof PDFDict || value instanceof PDFStream || value instanceof PDFArray))
+			return false;
 		const pick = PICKS.get(to.kind);
-		const told = pick && (value instanceof PDFStream ? value.dict : value).lookup(pick.key);
-		const kind = pick ? told instanceof PDFName && pick.kinds.get(told.decodeText()) : to.kind;
-		if (!kind || ROWS.get(kind)!.stream !== value instanceof PDFStream) return false;
+		const told = pick && under(value instanceof PDFStream ? value.dict : value, pick.key);
+		const kind = pick
+			? pick.kinds.get(told instanceof PDFNumber ? told.asNumber() : told)
+			: to.kind;
+		const body =
+			value instanceof PDFStream ? 'stream' : value instanceof PDFArray ? 'array' : 'dict';
+		if (!kind || ROWS.get(kind)!.body !== body) return false;
 		// A page is one the loop above framed. pdf-lib reads none in a dictionary
 		// written inside /Kids that names its /Type by reference.
 		if (kind === 'page' && !kept.has(raw)) return false;
@@ -269,7 +384,7 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 	claim(context.trailerInfo.Root, doc.catalog, slot('catalog'));
 	for (let next = 0; next < pending.length; next++) {
 		const [value, as] = pending[next];
-		if (value instanceof PDFArray) {
+		if (as.shape === 'list' && value instanceof PDFArray) {
 			let stay = 0;
 			for (let i = 0; i < value.size(); i++) {
 				const part = value.get(i);
@@ -278,6 +393,11 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 			while (value.size() > stay) value.remove(value.size() - 1);
 		} else if (as.shape === 'map' && value instanceof PDFDict) {
 			for (const [key, part] of value.entries()) if (!reach(part, slot(as.kind))) value.delete(key);
+		} else if (value instanceof PDFArray) {
+			const { keys } = ROWS.get(as.kind)!;
+			while (value.size() > keys.size) value.remove(value.size() - 1);
+			for (let i = 0; i < value.size(); i++)
+				if (!reach(value.get(i), keys.get(i)!)) value.set(i, PDFNull);
 		} else {
 			const dict = value instanceof PDFStream ? value.dict : value;
 			const { keys } = ROWS.get(as.kind)!;
