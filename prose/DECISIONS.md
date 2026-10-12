@@ -1018,3 +1018,30 @@ Replaces "No license while the package stays in the organization" and "No regist
 `test/package.test.ts` and `test/readme.browser.test.ts` change with it: the tarball gains `LICENSE`, the package answers to its new name, and one new test holds the name, the license and the notice's first lines.
 
 **Unlock.** None for the name and the license: a published version keeps both. For the workflows, a release that needs a step they lack.
+
+## 11 Oct 2026: The package carries the license texts of what qpdf.wasm links
+
+**Context.** `assets/qpdf.wasm` and `assets/qpdf.worker.js` are `@neslinesli93/qpdf-wasm` 0.3.0 as published, and that package ships no license text and no notice. `NOTICE` said which texts the tarball lacked for them: zlib's, libjpeg-turbo's, the runtime's, and the notices qpdf carries for the code it embeds (#46). The package is to be published under the Apache License 2.0, and each of those projects asks that its text or its notice go with a copy.
+
+What the binary says of itself: `12.2.0` beside qpdf's two copyright lines and its Apache notice, `libjpeg-turbo version 2.1.1 (build 20250627)` with `Copyright (C) 1991-2021 The libjpeg-turbo Project and many others`, `native` as the one crypto provider, zlib's messages with no version and no copyright line, musl's error messages, and the type names of libc++ (`NSt3__2`) and libc++abi (`N10__cxxabiv1`). It has no `producers` section, so it names no compiler. The wrapper's `Dockerfile` at its tag `0.3.0`, a commit of 27 June 2025, names the rest: the image `emscripten/emsdk:3.1.74`, zlib at the commit its tag `v1.2.12` names, `ImageMagick/jpeg-turbo` at `7aa2a898`, whose `CMakeLists.txt` says 2.1.1, and qpdf at the commit its tag `v12.2.0` names. `build.sh` passes no `MALLOC`, and Emscripten's default is dlmalloc.
+
+**Decision.** `licenses/` gains ten files, each byte for byte as its project has it at that version, read from the project's repository and held to the blob hash the repository gives:
+
+| File | From |
+| --- | --- |
+| `qpdf-LICENSE`, `qpdf-NOTICE` | `LICENSE.txt` and `NOTICE.md` of `qpdf/qpdf` at `v12.2.0` |
+| `zlib-README` | `README` of `madler/zlib` at `v1.2.12` |
+| `libjpeg-turbo-LICENSE`, `libjpeg-turbo-README.ijg` | `LICENSE.md` and `README.ijg` of `ImageMagick/jpeg-turbo` at `7aa2a898c564041a24b09d0a6e780aaa632d08d3` |
+| `emscripten-LICENSE` | `LICENSE` of `emscripten-core/emscripten` at `3.1.74` |
+| `musl-COPYRIGHT` | `system/lib/libc/musl/COPYRIGHT` there |
+| `libcxx-LICENSE`, `libcxxabi-LICENSE`, `compiler-rt-LICENSE` | `LICENSE.TXT` of `system/lib/libcxx`, `system/lib/libcxxabi` and `system/lib/compiler-rt` there |
+
+zlib 1.2.12 has no license file: its terms are the "Copyright notice" of its `README`, so the `README` is the file. libjpeg-turbo's `LICENSE.md` gives the IJG license by naming `README.ijg`, so both go, and both are the same blobs as in `libjpeg-turbo/libjpeg-turbo` at `2.1.1`. qpdf's `LICENSE.txt` is the Apache License 2.0 with its appendix, 1,184 bytes longer than `licenses/pdf.js-LICENSE`, and is kept as qpdf has it. `qpdf-NOTICE` carries the MIT notice of sphlib 3.0 and says the Rijndael code is in the public domain: with `native` the one provider, that SHA-2 and that AES are the ones the binary runs. dlmalloc is in the public domain by its own header and has no text to carry.
+
+`NOTICE` says what each of the two files holds and where each text is, and no longer says a text is missing. It still says what is not known: the binary names neither its zlib nor its compiler, the wrapper names no holder for the ISC license it declares and ships no text of it, and which of Emscripten's system libraries were linked beside musl, libc++ and libc++abi was not read from the binary. compiler-rt's text is carried because musl's `printf`, whose strings are in the binary, does its `long double` arithmetic there.
+
+One carried test changes. `test/package.test.ts` held the tarball to two files under `licenses/` and now holds it to twelve.
+
+What this does not do. It reads no license for the reader: whether these texts are all that each project asks is a lawyer's reading, and none was made. The binary is still the wrapper's, built by a recipe this repository did not run, so "what is linked" rests on the binary's strings where they speak and on the wrapper's `Dockerfile` where they do not.
+
+**Unlock.** A binary built here (#46): the build then carries each project's license file from the source it compiled, and this list is that build's. A new release of the wrapper: the versions are read again, from its binary and its `Dockerfile`.

@@ -38,22 +38,48 @@ assets/qpdf.worker.js
   dist/qpdf.js of @neslinesli93/qpdf-wasm 0.3.0, unchanged, under a first
   line that says so and above a message handler that is quillify's own. It is
   the script that loads assets/qpdf.wasm and runs it. That package declares
-  the ISC license and ships no license text. The script names no author and
-  no license. It is the JavaScript that Emscripten writes beside a binary it
-  compiles, and Emscripten's own code is under the MIT license and the
-  University of Illinois/NCSA Open Source License, whose texts are not in
-  that package, and so not in licenses/.
+  the ISC license, names no holder and ships no license text. The script
+  names no author and no license. It is the JavaScript that Emscripten writes
+  beside a binary it compiles, and Emscripten's own code is under the MIT
+  license and the University of Illinois/NCSA Open Source License
+  (licenses/emscripten-LICENSE). The script does not say which Emscripten
+  wrote it. That package's Dockerfile, at its tag 0.3.0, names the image
+  emscripten/emsdk:3.1.74, and the text is that version's.
 
 assets/qpdf.wasm
   dist/qpdf.wasm of @neslinesli93/qpdf-wasm 0.3.0, unchanged. Its SHA-256 is
   abd933f4ccace4f732999381b21aec8b7e3726f18a5b167fafd57f88dd440876.
-  That package declares the ISC license and ships no license text. The binary
-  is a build of qpdf 12.2.0, Copyright (c) 2005-2021 Jay Berkenbilt and
-  Copyright (c) 2022-2025 Jay Berkenbilt and Manfred Holger, under the Apache
-  License 2.0, whose text is the one in licenses/pdf.js-LICENSE. zlib and
-  libjpeg-turbo 2.1.1 are linked into it, and so is a C++ runtime.
+  That package declares the ISC license, names no holder and ships no license
+  text. What is linked into the binary follows, by the binary's own strings
+  where it says and by that package's Dockerfile, at its tag 0.3.0, where it
+  does not.
 
-  Not in that package, and so not in licenses/: the license texts of zlib, of
-  libjpeg-turbo and of that runtime, and the notices qpdf carries in its
-  NOTICE.md for code it embeds. In qpdf 12.4.0 those are for sphlib 3.0 and
-  for a Rijndael implementation; the NOTICE.md of 12.2.0 was not read.
+  qpdf 12.2.0, Copyright (c) 2005-2021 Jay Berkenbilt and Copyright (c)
+  2022-2025 Jay Berkenbilt and Manfred Holger, under the Apache License 2.0
+  (licenses/qpdf-LICENSE). Its notice is licenses/qpdf-NOTICE. The binary
+  has qpdf's native crypto provider and no other, so it runs the two
+  implementations that notice names: the SHA-2 of sphlib 3.0, Copyright (c)
+  2007-2011 Projet RNRT SAPHIR, under the MIT license, whose text is in the
+  notice, and Philip J. Erdelsky's Rijndael, which is in the public domain.
+
+  libjpeg-turbo 2.1.1, Copyright (C) 1991-2021 The libjpeg-turbo Project and
+  many others, from ImageMagick's copy of its source, under the licenses of
+  licenses/libjpeg-turbo-LICENSE and of licenses/libjpeg-turbo-README.ijg,
+  which the first names. This software is based in part on the work of the
+  Independent JPEG Group.
+
+  zlib, (C) 1995-2022 Jean-loup Gailly and Mark Adler, under the zlib
+  license, which is the copyright notice in licenses/zlib-README. The binary
+  carries zlib's messages and no version of it. The Dockerfile names the
+  commit that is zlib 1.2.12, and the file is that version's.
+
+  The runtime Emscripten links: its own code (licenses/emscripten-LICENSE),
+  musl, under the MIT license (licenses/musl-COPYRIGHT), and LLVM's libc++,
+  libc++abi and compiler-rt, under the Apache License 2.0 with LLVM
+  Exceptions (licenses/libcxx-LICENSE, licenses/libcxxabi-LICENSE,
+  licenses/compiler-rt-LICENSE). The binary names no compiler. The Dockerfile
+  names the image emscripten/emsdk:3.1.74, and the five texts are that
+  version's. musl's messages and the type names of libc++ and libc++abi are
+  in the binary. That compiler-rt is in it too, and dlmalloc, Emscripten's
+  default allocator, which is in the public domain, follows from how
+  Emscripten builds and was not read from the binary.
