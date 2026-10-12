@@ -20,7 +20,7 @@ import {
 	rgb
 } from 'pdf-lib';
 import type { PDFAcroField, PDFRef } from 'pdf-lib';
-import { displayList, type DisplayList, type Run } from './display-list.js';
+import { displayList, type DisplayList, type Edge, type Run } from './display-list.js';
 import { openPdf } from './pdfjs.js';
 import { Refused } from './refusal.js';
 import { MAX_PAGES, MAX_PICTURE_PIXELS } from './types.js';
@@ -98,7 +98,7 @@ async function paint(
 	font: (name: StandardFonts) => Promise<PDFFont>
 ): Promise<void> {
 	const H = list.height;
-	for (const box of list.boxes) {
+	for (let box of list.boxes) {
 		if (box.radius) {
 			// An SVG rect's outline runs along the middle of its stroke, and each
 			// radius stops at half the side it lies along.
@@ -121,6 +121,12 @@ async function paint(
 			);
 			continue;
 		}
+		// The browser paints a box from a whole pixel to a whole pixel, and fits
+		// the gap of a dashed edge to the length that leaves it.
+		if (box.edges.some((edge) => edge?.dashed)) {
+			const [x, y] = [Math.round(box.x), Math.round(box.y)];
+			box = { ...box, x, y, w: Math.round(box.x + box.w) - x, h: Math.round(box.y + box.h) - y };
+		}
 		if (box.fill)
 			page.drawRectangle({
 				x: box.x,
@@ -131,12 +137,13 @@ async function paint(
 				borderWidth: 0
 			});
 		const [top, right, bottom, left] = box.edges;
-		const seg = (x1: number, y1: number, x2: number, y2: number, edge: NonNullable<typeof top>) =>
+		const seg = (x1: number, y1: number, x2: number, y2: number, edge: Edge) =>
 			page.drawLine({
 				start: { x: x1, y: H - y1 },
 				end: { x: x2, y: H - y2 },
 				thickness: edge.width,
-				color: rgb(...edge.colour)
+				color: rgb(...edge.colour),
+				dashArray: edge.dashed ? dashes(edge.width, x2 - x1 + y2 - y1) : undefined
 			});
 		if (top) seg(box.x, box.y + top.width / 2, box.x + box.w, box.y + top.width / 2, top);
 		if (bottom)
@@ -178,6 +185,26 @@ async function paint(
 			color: rgb(...line.colour)
 		});
 	return drawRuns(page, pageNumber, list.runs, H, font);
+}
+
+/**
+ * The dash and the gap the browser paints along a dashed edge, or nothing for
+ * an edge it paints whole. A dash is three widths and a gap two for an edge
+ * under 3 px wide, and two and one from there. An edge too short for two
+ * dashes is whole, and one too short for two dashes and a whole gap has both
+ * shortened alike. On any other the gap is fitted so that the edge starts and
+ * ends on a whole dash: of the two counts of dashes its length lies between,
+ * it has the one whose gap is nearer.
+ */
+function dashes(width: number, length: number): [number, number] | undefined {
+	const [dash, gap] = width < 3 ? [3 * width, 2 * width] : [2 * width, width];
+	if (length <= 2 * dash) return undefined;
+	const short = length / (2 * dash + gap);
+	if (short <= 1) return [dash * short, gap * short];
+	const count = Math.floor((length + gap) / (dash + gap));
+	const fit = (dashes: number) => (length - dashes * dash) / (dashes - 1);
+	const [wide, narrow] = [fit(count), fit(count + 1)];
+	return [dash, narrow <= 0 || Math.abs(wide - gap) < Math.abs(narrow - gap) ? wide : narrow];
 }
 
 async function drawRuns(

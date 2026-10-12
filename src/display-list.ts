@@ -8,6 +8,7 @@ export type Colour = [number, number, number];
 export interface Edge {
 	width: number;
 	colour: Colour;
+	dashed?: true;
 }
 
 export interface Box {
@@ -239,6 +240,7 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 			const kind = style.getPropertyValue(`border-${side.toLowerCase()}-style`);
 			const colour = style.getPropertyValue(`border-${side.toLowerCase()}-color`);
 			if (width <= 0 || kind === 'none' || kind === 'hidden' || !opaque(colour)) return null;
+			if (kind === 'dashed') return { width, colour: rgb(colour), dashed: true };
 			if (!PAINTED_BORDER.has(kind)) refuse('border', kind);
 			return { width, colour: rgb(colour) };
 		}) as Box['edges'];
