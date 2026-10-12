@@ -22,9 +22,20 @@ function page(shape: string): XfaPage {
 afterEach(() => host?.remove());
 
 describe('an inline SVG shape', () => {
-	it('draws a rect as a box', () => {
+	it('draws a rect as a box whose border is centered on the edge of the rect', () => {
 		const list = displayList(
-			page('<rect x="0" y="0" width="100" height="50" fill="none" stroke="#000" />'),
+			page(
+				'<rect x="0" y="0" width="100" height="50" fill="none" stroke="#000" stroke-width="6" />'
+			),
+			1
+		);
+		expect(list.boxes).toHaveLength(1);
+		expect(list.boxes[0]).toMatchObject({ x: 17, y: 27, w: 106, h: 56 });
+	});
+
+	it('draws a rect with no stroke as a box of its own size', () => {
+		const list = displayList(
+			page('<rect x="0" y="0" width="100" height="50" fill="#ccc" stroke="none" />'),
 			1
 		);
 		expect(list.boxes).toHaveLength(1);
