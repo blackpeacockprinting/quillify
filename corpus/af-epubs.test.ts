@@ -74,48 +74,41 @@ it('holds the kinds and the encryption the record tabulates', () => {
 
 it('holds the outcomes the record tabulates', () => {
 	expect(count('outcome')).toEqual({
-		converted: 798,
-		too_many_fields: 230,
-		no_fields: 157,
-		unpaintable: 132,
-		problems: 16,
-		thrown: 16,
-		portfolio: 4,
-		timeout: 1
+		converted: 1143,
+		no_fields: 160,
+		too_many_fields: 17,
+		unpaintable: 16,
+		problems: 14,
+		portfolio: 4
 	});
 	expect(count('outcome', departmental)).toEqual({
-		converted: 559,
-		too_many_fields: 143,
-		no_fields: 145,
-		unpaintable: 101,
-		problems: 1,
-		thrown: 12,
-		portfolio: 4,
-		timeout: 1
+		converted: 792,
+		no_fields: 148,
+		unpaintable: 12,
+		too_many_fields: 10,
+		portfolio: 4
 	});
-	expect(count('kind', converted)).toEqual({ dynamic: 590, hybrid: 194, plain: 14 });
+	expect(count('kind', converted)).toEqual({ dynamic: 885, hybrid: 241, plain: 17 });
 	expect({
 		pages: converted.reduce((total, file) => total + file.pages!, 0),
 		fields: converted.reduce((total, file) => total + file.fields!, 0),
 		longest: Math.max(...converted.map((file) => file.pages!))
-	}).toEqual({ pages: 1229, fields: 54492, longest: 11 });
+	}).toEqual({ pages: 1916, fields: 159870, longest: 19 });
 });
 
 it('holds what the record says stands in the way, where a line gives the reason', () => {
-	expect(count('construct')).toEqual({ image: 65, glyph: 57, transform: 7, border: 2, svg: 1 });
-	expect(count('problem')).toEqual({ nothing_kept: 14, 'quill::format_literal_reserved_char': 2 });
+	expect(count('construct')).toEqual({ glyph: 11, transform: 4, svg: 1 });
+	expect(count('problem')).toEqual({ nothing_kept: 14 });
 
 	const over = files
 		.filter((file) => file.outcome === 'too_many_fields')
 		.map((file) => file.fields!)
 		.sort((a, b) => a - b);
-	expect({
-		fewest: over[0],
-		most: over.at(-1),
-		median: (over[114] + over[115]) / 2,
-		within500: over.filter((fields) => fields <= 500).length,
-		within1000: over.filter((fields) => fields <= 1000).length
-	}).toEqual({ fewest: 201, most: 2039, median: 346.5, within500: 170, within1000: 219 });
+	expect({ fewest: over[0], most: over.at(-1), median: over[8] }).toEqual({
+		fewest: 1009,
+		most: 2039,
+		median: 1122
+	});
 });
 
 it('holds the files with no field to what the record says they are', () => {
@@ -125,5 +118,5 @@ it('holds the files with no field to what the record says they are', () => {
 		dynamic: unfielded.filter((file) => file.kind === 'dynamic').length,
 		notices: files.filter((file) => file.notice).length,
 		noticesAmongThem: unfielded.filter((file) => file.notice).length
-	}).toEqual({ xfaNothingLaidOut: 87, dynamic: 33, notices: 14, noticesAmongThem: 14 });
+	}).toEqual({ xfaNothingLaidOut: 87, dynamic: 36, notices: 14, noticesAmongThem: 14 });
 });

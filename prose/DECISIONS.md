@@ -991,3 +991,13 @@ A `dotted` edge stays refused. No form laid out has one, and nothing here measur
 What this does not hold. The rules are Chromium's as the gate's Chromium paints them at one device pixel to the CSS pixel, where the layout's picture is made. On a screen of two device pixels to the CSS pixel the browser may snap an edge to half a pixel, and the redraw then has one dash more or fewer than that screen shows. A border width that is no whole number of pixels computes to one that is, and the picture, which is drawn at two pixels to the point, shows the width the template gives: a dashed edge of 0.5 or 2.5 pt differs from its picture, as a solid one of 0.5 pt does within the tolerance.
 
 **Unlock.** A published form with a dotted edge. A browser other than Chromium in the gate: its dashes are measured the same way.
+
+## 11 Oct 2026: The Air Force list records the second run
+
+**Context.** `corpus/af-epubs.manifest.json` held the outcomes of one run, on 10 October at `465a328`, and `corpus/af-epubs.test.ts` holds the list's totals in the gate. Since that run the caps were raised and a tab, a picture, a quarter turn and a dashed border stopped refusing a dynamic form (#40, #87, #42), so the list said 798 files convert where 1,143 do. The tracking issue of v0.3.0 asks for the run again (#152).
+
+**Decision.** The list records the second run, made on 11 October at `53e01c8`, the commit before this one. What a line says of the file is kept as it was: the form, its list, where and when it was fetched, its size and hash, its kind and encryption. `outcome` and what goes with it are this run's. The test's totals change with the list in the same commit, which this entry allows. The first run's lines are in the history, at v0.2.0, and its tables stay in `prose/research/AF_EPUBS_FORMS.md`, which is not revised. `prose/research/AF_EPUBS_SECOND_RUN.md` is the second run's record.
+
+The list is still the record of a run and no check: `npm run corpus` does not read it, and the files are not in the repository.
+
+**Unlock.** A later run. The list and its test move again, under an entry of that day.
