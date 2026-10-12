@@ -98,6 +98,9 @@ export function harvestWidgets(page: XfaPage, pageNumber: number): XfaWidget[] {
 		const y = +(rect.top - origin.top).toFixed(2);
 		const w = +rect.width.toFixed(2);
 		const h = +rect.height.toFixed(2);
+		// pdf.js gives a control the place its layout comes to, on the page or not.
+		if (x >= page.width || y >= page.height || x + w <= 0 || y + h <= 0)
+			throw new Refused({ code: 'layout', detail: 'a field is off its page' });
 		const tooltip = tooltipOf(el);
 		const options =
 			tag === 'select'
