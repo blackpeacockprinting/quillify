@@ -4,20 +4,32 @@ What a consumer can observe, in the latest release and since. Earlier releases a
 
 ## Unreleased
 
-- A JPEG or JPEG 2000 image counts toward the 64 MiB bound for what its own header says where that is more than its dictionary declares. An image whose size is no finite number, or a file with an object pdf-lib cannot read, is `damaged`.
-- A dynamic form no longer needs `img-src data:` from a host's content security policy. Without it the browser logged an error for each field, and the form converted all the same.
-- In a dynamic form's text a soft hyphen (U+00AD) inside a line is no longer drawn as a hyphen, and a non-breaking hyphen (U+2011) is drawn as one. A form with U+2011 was `unpaintable` with `construct: 'glyph'`.
-- A file qpdf cannot rewrite is refused without pdf.js opening it, which held 1.5 GiB for one file of 0.5 MB. A PDF cut off mid-file is now `damaged`, not `not_pdf`, and a malformed encryption dictionary is refused where `sanitize` threw.
-- A CCITT image counts toward the 64 MiB bound for the `/Columns` and `/Rows` of its `/DecodeParms` where they are more than its own width and height. A JPEG 2000 image that leaves out its color space or its bits is not `damaged`: it counts at four components or eight bits.
-- A page whose `/UserUnit` is a positive number other than 1 is refused as `damaged`. It passed the 14,400 pt bound, and its background was not the size `form.pages` says. No background keeps the key.
-- A dynamic form with an ellipse is redrawn with it. It was `unpaintable` with `construct: 'svg'`. A stroked rectangle of no width or no height is no longer redrawn as a bar.
-- A character of Symbol or ZapfDingbats in a dynamic form's text (the triangles, mu, the arrows) is drawn, and U+2010 as a hyphen. The form was `unpaintable` with `construct: 'glyph'`, as one with a character no standard font holds still is.
-- A dynamic form with a field wholly off its page is refused as `layout`, with `detail: 'a field is off its page'`. It converted with that field out of reach.
-- A dynamic form's page is redrawn in the order the browser paints it: a border shows whole over its own fill, and a fill hides what lies under it. No field moves.
-- An image counts toward the 64 MiB bound for the bytes its dictionary declares, so a file whose images declare more is `too_large`. An image whose dictionary does not say is `damaged`.
-- A page over 14,400 pt on a side, or with a box that far from the origin, is refused as `damaged`. No published form measured has one.
-- `limits` is exported: `{ bytes, pages, fields }`, the largest file, the most pages and the most fields `sanitize` takes.
-- A file whose catalog or page tree cannot be read as one, or whose background would keep an object that says it is an annotation or a page outside the page tree, is refused as `damaged`. The background step threw, or returned a background without that object, the catalog included.
+Harder bounds on a hostile file, and more of a dynamic form's page redrawn.
+
+### Converts now
+
+- A dynamic form with an ellipse, or with a character of Symbol or ZapfDingbats in its text (the triangles, mu, the arrows). U+2010 and U+2011 are drawn as a hyphen. Each was `unpaintable`.
+- A JPEG 2000 image that leaves out its color space or its bits. It was `damaged`.
+
+### Refused now
+
+- `damaged`: a page over 14,400 pt on a side, that far from the origin, or with a positive `/UserUnit` other than 1.
+- `damaged`: a catalog or page tree that cannot be read as one, a background that would keep an annotation or a page outside the page tree, and an object pdf-lib cannot read.
+- `damaged`: an image whose dictionary does not say its size, or says one that is no finite number.
+- `too_large`: images count toward the 64 MiB bound, each for the most its dictionary, its JPEG or JPEG 2000 header, or a CCITT image's `/DecodeParms` says.
+- `layout` with `detail: 'a field is off its page'`: a dynamic form with a field wholly off its page.
+
+### Changed
+
+- `limits` is exported: `{ bytes, pages, fields }`, the most of each `sanitize` takes.
+- A file qpdf cannot rewrite is refused without pdf.js opening it. A PDF cut off mid-file is `damaged`, not `not_pdf`, and a malformed encryption dictionary is refused where `sanitize` threw.
+- A dynamic form's page is redrawn in the order the browser paints it. No field moves.
+- A soft hyphen inside a line is not drawn, and a stroked rectangle of no width or no height is not redrawn as a bar.
+- No background keeps `/UserUnit`.
+
+### Needs from the host page
+
+- A dynamic form no longer needs `img-src data:` in a content security policy.
 
 ## v0.3.0 - 2026-10-12
 
