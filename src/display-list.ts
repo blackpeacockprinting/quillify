@@ -19,7 +19,10 @@ export interface Box {
 	fill: Colour | null;
 	/** Top, right, bottom, left. A null edge is not drawn. */
 	edges: [Edge | null, Edge | null, Edge | null, Edge | null];
-	/** The radius of an SVG rect's corners, along the middle of its border. */
+	/**
+	 * The radius of an SVG rect's corners, along the middle of its border. An
+	 * ellipse has one that reaches the middle of its longer side.
+	 */
 	radius?: number;
 }
 
@@ -93,13 +96,14 @@ function stroked(style: CSSStyleDeclaration): Edge | null {
  * the layout, and the rects here are read off it.
  *
  * What it can express is text, CSS backgrounds and borders, pictures, and
- * inline SVG `line` and `rect`. A picture that did not load, a background
- * image, a `rect` filled with a gradient or a pattern, another SVG shape, a
- * border style it cannot draw and a transform it cannot carry are refused with
- * the construct named: a background that is silently incomplete is worse than
- * not taking the form. An element hidden by its own style, an SVG `line` with
- * no stroke, a `rect` with neither stroke nor fill and an HTML element under
- * 0.3 pt on a side are passed over.
+ * inline SVG `line`, `rect`, `ellipse` and `circle`. A picture that did not
+ * load, a background image, a shape filled with a gradient or a pattern,
+ * another SVG shape, a border style it cannot draw and a transform it cannot
+ * carry are refused with the construct named: a background that is silently
+ * incomplete is worse than not taking the form. An element hidden by its own
+ * style, an SVG `line` with no stroke, a shape with neither stroke nor fill
+ * or of no width or height, and an HTML element under 0.3 pt on a side are
+ * passed over.
  */
 export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 	const { layer, origin } = page;
@@ -130,7 +134,7 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 				const el = node as Element;
 				if (view.getComputedStyle(el).position !== 'static') positioned.push(el);
 				else {
-					(/^(img|line|rect|input)$/i.test(el.tagName) ? front : order).push(el);
+					(/^(img|line|rect|ellipse|circle|input)$/i.test(el.tagName) ? front : order).push(el);
 					flow(el);
 				}
 			}
@@ -181,7 +185,7 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 			continue;
 		}
 
-		if (tag === 'line' || tag === 'rect') {
+		if (tag === 'line' || tag === 'rect' || tag === 'ellipse' || tag === 'circle') {
 			const svg = (el as unknown as SVGElement).ownerSVGElement;
 			if (!svg) continue;
 			const edge = stroked(style);
@@ -205,19 +209,22 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 					colour: edge.colour
 				});
 			} else {
-				// pdf.js writes every rectangle a fill, and the browser drops one that is
-				// no color: a gradient or a pattern. What is left computes to black.
+				// pdf.js writes every shape a fill, and the browser drops one that is no
+				// color: a gradient or a pattern. What is left computes to black.
 				if (!el.style.fill && !el.hasAttribute('fill')) refuse('background_image');
-				// A rectangle whose edge is hidden has a stroke of no width.
+				// A shape whose edge is hidden has a stroke of no width.
 				const fill = style.fill !== 'none' && opaque(style.fill) ? rgb(style.fill) : null;
 				if (!edge && !fill) continue;
-				// SVG centers a stroke on the rectangle's edge, and a box's border is
+				// SVG centers a stroke on the shape's edge, and a box's border is
 				// drawn inside it, so the box is half a stroke larger all round. What
 				// that adds to the fill lies under the stroke.
 				const half = (edge?.width ?? 0) / 2;
 				const r = el.getBoundingClientRect();
-				// The browser draws a rect square when its rx is below zero.
-				const radius = parseFloat(style.rx);
+				// The browser paints no shape of no width or height, whatever its stroke.
+				if (!r.width || !r.height) continue;
+				// The browser draws a rect square when its rx is below zero. An ellipse
+				// is a rect whose corners meet.
+				const radius = tag === 'rect' ? parseFloat(style.rx) : Math.max(r.width, r.height) / 2;
 				drawn.push({
 					x: X(r.x - half),
 					y: Y(r.y - half),
@@ -323,7 +330,7 @@ export function unrepresentable(transform: string): boolean {
 
 /** SVG shapes pdf.js can emit that the primitives above have no form for. */
 function svgOnly(tag: string): boolean {
-	return ['path', 'polygon', 'polyline', 'circle', 'ellipse', 'image', 'use', 'text'].includes(tag);
+	return ['path', 'polygon', 'polyline', 'image', 'use', 'text'].includes(tag);
 }
 
 /**

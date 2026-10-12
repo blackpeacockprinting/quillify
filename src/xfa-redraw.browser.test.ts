@@ -56,6 +56,8 @@ const turned = (rotate: number, x: number, y: number) =>
 /** A box with the border `edges` make: one edge for every side, or four from the top round. */
 const bordered = (x: number, y: number, w: number, h: number, edges: string) =>
 	`<draw x="${x}pt" y="${y}pt" w="${w}pt" h="${h}pt"><border>${edges}</border></draw>`;
+const arc = (x: number, y: number, w: number, h: number, inner: string, turn = '') =>
+	`<draw x="${x}pt" y="${y}pt" w="${w}pt" h="${h}pt"${turn}><value><arc>${inner}</arc></value></draw>`;
 const dash = (thickness: number) => `<edge stroke="dashed" thickness="${thickness}pt"/>`;
 const NO_EDGE = '<edge presence="hidden"/>';
 const SOLID = '<edge thickness="2pt"/>';
@@ -119,7 +121,30 @@ const built = {
 		`<draw x="20pt" y="200pt" w="200pt" h="0pt"><value><line><edge thickness="4pt"/></line></value></draw>` +
 		`<draw x="80pt" y="190pt" w="50pt" h="20pt"><value><rectangle>${FILLED}</rectangle></value></draw>` +
 		picture(260, 60, 'none', png(200, 120)) +
-		`<draw x="80pt" y="270pt" w="50pt" h="20pt"><value><rectangle>${FILLED}</rectangle></value></draw>`
+		`<draw x="80pt" y="270pt" w="50pt" h="20pt"><value><rectangle>${FILLED}</rectangle></value></draw>`,
+	// An arc of a whole turn, which pdf.js writes as an SVG ellipse: one with a
+	// stroke and a fill, one with a fill alone, one with a stroke alone and as
+	// tall as it is wide, and one turned a quarter.
+	ellipses:
+		arc(
+			20,
+			20,
+			200,
+			80,
+			'<edge thickness="6pt"><color value="255,0,0"/></edge><fill><color value="0,0,128"/></fill>'
+		) +
+		arc(20, 140, 200, 80, FILLED) +
+		arc(300, 20, 90, 90, '<edge thickness="1pt"/>') +
+		arc(400, 300, 120, 40, `<edge thickness="3pt"/>${GRAY}`, ' rotate="90"'),
+	// An arc and a rectangle of no width, and one of each of no height, which
+	// the browser does not paint, whatever its stroke. The fill is the page's
+	// ink.
+	'shapes of no width or height':
+		rectangle(300, FILLED) +
+		arc(20, 20, 0, 80, '<edge thickness="4pt"/>') +
+		arc(60, 20, 200, 0, '<edge thickness="4pt"/>') +
+		`<draw x="20pt" y="140pt" w="0pt" h="80pt"><value><rectangle><edge thickness="4pt"/></rectangle></value></draw>` +
+		`<draw x="60pt" y="140pt" w="200pt" h="0pt"><value><rectangle><edge thickness="4pt"/></rectangle></value></draw>`
 };
 
 /**

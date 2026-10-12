@@ -42,12 +42,32 @@ describe('an inline SVG shape', () => {
 		expect(list.drawn[0]).toMatchObject({ x: 20, y: 30, w: 100, h: 50 });
 	});
 
-	it('refuses an ellipse by name, since a box has four corners', () => {
-		const laid = page('<ellipse cx="50" cy="25" rx="50" ry="25" fill="none" stroke="#000" />');
+	it('draws an ellipse as a box whose corners meet, its border centered on its edge', () => {
+		const list = displayList(
+			page(
+				'<ellipse cx="50" cy="25" rx="50" ry="25" fill="#ccc" stroke="#000" stroke-width="6" />'
+			),
+			1
+		);
+		expect(list.drawn).toHaveLength(1);
+		expect(list.drawn[0]).toMatchObject({ x: 17, y: 27, w: 106, h: 56, radius: 50 });
+	});
+
+	it('draws a circle with no stroke as a box of its own size', () => {
+		const list = displayList(
+			page('<circle cx="50" cy="25" r="20" fill="#ccc" stroke="none" />'),
+			1
+		);
+		expect(list.drawn).toHaveLength(1);
+		expect(list.drawn[0]).toMatchObject({ x: 50, y: 35, w: 40, h: 40, radius: 20 });
+	});
+
+	it('refuses a path by name, since no box has its outline', () => {
+		const laid = page('<path d="M 0 25 A 50 25 0 0 0 100 25" fill="none" stroke="#000" />');
 		expect(() => displayList(laid, 3)).toThrow(Refused);
 		expect(() => displayList(laid, 3)).toThrow(
 			expect.objectContaining({
-				refusal: { code: 'unpaintable', page: 2, construct: 'svg', detail: 'ellipse' }
+				refusal: { code: 'unpaintable', page: 2, construct: 'svg', detail: 'path' }
 			})
 		);
 	});
