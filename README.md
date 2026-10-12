@@ -45,6 +45,7 @@ The file is treated as hostile. The background comes back without its form layer
 
 ## Documentation
 
+- [Example](examples/): a page that takes a PDF, lists its fields under the names `suggest` gives and renders a filled copy. In a clone: `npm ci`, `npm run build`, `npx vite examples`.
 - [API](docs/api.md): what goes in, what comes back, every refusal and problem.
 - [Guide](docs/guide.md): bundlers, content security policy, the engine, from a quill to a filled PDF.
 - [Limits](docs/limits.md): what converts, what is refused, how a redrawn form can differ.

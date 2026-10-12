@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>quillify example</title>
+		<link rel="stylesheet" href="style.css" />
+		<script type="module" src="main.js"></script>
+	</head>
+	<body>
+		<h1>quillify</h1>
+		<p>
+			Choose a PDF form. Its fields are listed under the names <code>suggest</code> gives, and the
+			engine renders a copy with what you type.
+		</p>
+		<input type="file" accept="application/pdf" aria-label="PDF form" />
+		<output></output>
+		<form hidden>
+			<ol></ol>
+			<p>
+				<button>Render</button>
+				<a hidden>Download the filled copy</a>
+			</p>
+		</form>
+		<template>
+			<li>
+				<label><code></code><small></small></label>
+			</li>
+		</template>
+	</body>
+</html>
