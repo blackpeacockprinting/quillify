@@ -83,6 +83,28 @@ function paint(
 ): Promise<void> {
 	const H = list.height;
 	for (const box of list.boxes) {
+		if (box.radius) {
+			// An SVG rect's outline runs along the middle of its stroke, and each
+			// radius stops at half the side it lies along.
+			const [edge] = box.edges;
+			const inset = (edge?.width ?? 0) / 2;
+			const w = box.w - 2 * inset;
+			const h = box.h - 2 * inset;
+			const rx = Math.min(box.radius, w / 2);
+			const ry = Math.min(box.radius, h / 2);
+			const turn = `a ${rx},${ry} 0 0 1`;
+			page.drawSvgPath(
+				`M ${rx},0 h ${w - 2 * rx} ${turn} ${rx},${ry} v ${h - 2 * ry} ${turn} ${-rx},${ry} h ${2 * rx - w} ${turn} ${-rx},${-ry} v ${2 * ry - h} ${turn} ${rx},${-ry} z`,
+				{
+					x: box.x + inset,
+					y: H - box.y - inset,
+					color: box.fill ? rgb(...box.fill) : undefined,
+					borderColor: edge ? rgb(...edge.colour) : undefined,
+					borderWidth: edge?.width
+				}
+			);
+			continue;
+		}
 		if (box.fill)
 			page.drawRectangle({
 				x: box.x,

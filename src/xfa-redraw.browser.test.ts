@@ -32,7 +32,20 @@ const built = {
 		rectangle(
 			100,
 			'<edge thickness="6pt"><color value="255,0,0"/></edge><fill><color value="0,0,128"/></fill>'
-		)
+		),
+	// The third has a radius past half its height, which SVG stops there. The
+	// last has one below zero, which the browser draws square.
+	'rounded corners':
+		rectangle(20, '<edge thickness="1pt"/><corner radius="14.4pt" join="round"/>') +
+		rectangle(
+			100,
+			'<edge thickness="6pt"><color value="255,0,0"/></edge><corner radius="10pt" join="round"/><fill><color value="0,0,128"/></fill>'
+		) +
+		rectangle(
+			180,
+			'<edge presence="hidden"/><corner radius="30pt" join="round"/><fill><color value="200,200,200"/></fill>'
+		) +
+		rectangle(260, '<edge thickness="2pt"/><corner radius="-5pt" join="round"/>')
 };
 
 /**
