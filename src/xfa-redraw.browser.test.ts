@@ -49,6 +49,9 @@ function png(width: number, height: number): string {
 }
 const picture = (y: number, h: number, aspect: string, base64: string) =>
 	`<draw x="20pt" y="${y}pt" w="200pt" h="${h}pt"><value><image contentType="image/png" aspect="${aspect}">${base64}</image></value></draw>`;
+/** A bordered caption of 120 by 30 pt, turned about its top left corner at (x, y). */
+const turned = (rotate: number, x: number, y: number) =>
+	`<draw x="${x}pt" y="${y}pt" w="120pt" h="30pt" rotate="${rotate}"><border><edge thickness="4pt"><color value="255,0,0"/></edge><edge presence="hidden"/><edge presence="hidden"/><edge thickness="2pt"/></border><value><text>Sample</text></value></draw>`;
 /** Forms built here, each for something no dynamic fixture holds. */
 const built = {
 	'a fill with no border and a thick stroke':
@@ -77,7 +80,15 @@ const built = {
 		picture(20, 60, 'none', png(200, 120)) +
 		picture(100, 60, 'fit', png(120, 120)) +
 		rectangle(180, FILLED) +
-		picture(180, 40, 'none', png(400, 80))
+		picture(180, 40, 'none', png(400, 80)),
+	// Each caption has a red edge at its own top and a black one at its own
+	// left, so a turn the wrong way has them on other sides. The last is a
+	// rectangle, which pdf.js writes as an SVG rect.
+	'quarter turns':
+		turned(90, 100, 200) +
+		turned(180, 400, 100) +
+		turned(270, 300, 250) +
+		`<draw x="450pt" y="400pt" w="120pt" h="30pt" rotate="90"><value><rectangle>${FILLED}</rectangle></value></draw>`
 };
 
 /**
