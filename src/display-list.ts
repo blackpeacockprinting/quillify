@@ -54,6 +54,8 @@ export interface Run {
 	letterSpacing: number;
 	/** What the browser measured, which `drawRuns` scales the run to. */
 	width: number;
+	/** Quarter turns counter-clockwise about the start of the baseline, when the run is turned. */
+	turn?: number;
 }
 
 export interface DisplayList {
@@ -105,6 +107,8 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 	const pictures: Picture[] = [];
 	const lines: Line[] = [];
 	const runs: Run[] = [];
+	// The quarter turns each element is laid out under, its own and its ancestors'.
+	const turns = new Map<Element, number>([[layer, 0]]);
 	const X = (v: number) => +(v - origin.left).toFixed(2);
 	const Y = (v: number) => +(v - origin.top).toFixed(2);
 	const refuse = (
@@ -116,16 +120,18 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 
 	for (const el of layer.querySelectorAll<HTMLElement>('*')) {
 		const tag = el.tagName.toLowerCase();
-		if (tag === 'svg' || tag === 'option' || tag === 'g' || tag === 'defs') continue;
-
 		const style = view.getComputedStyle(el);
+		const own = quarterTurns(style.transform);
+		const turn = (turns.get(el.parentElement!)! + own) % 4;
+		turns.set(el, turn);
+		if (tag === 'svg' || tag === 'option' || tag === 'g' || tag === 'defs') continue;
 		if (style.visibility === 'hidden' || style.display === 'none') continue;
 
 		if (tag === 'img' || el.classList.contains('xfaImage')) {
 			const image = el as HTMLImageElement;
 			// A picture that did not load has no size.
 			if (!image.naturalWidth || !image.naturalHeight) refuse('image');
-			if (unrepresentable(style.transform)) refuse('transform');
+			if (turn || unrepresentable(style.transform)) refuse('transform');
 			const rect = image.getBoundingClientRect();
 			if (rect.width < 0.3 || rect.height < 0.3) continue;
 			// pdf.js stretches a picture to its box where the template says so. Any
@@ -150,6 +156,7 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 			const edge = stroked(style);
 			if (tag === 'line') {
 				if (!edge) continue;
+				if (turn) refuse('transform');
 				const svgRect = svg.getBoundingClientRect();
 				// pdf.js writes these as percentages of the svg box ("100%", "50%").
 				const at = (key: string, span: number): number => {
@@ -203,6 +210,8 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 		// paints the control, which is where the widget is stamped.
 		const type = el.getAttribute('type')?.toLowerCase();
 		if (tag === 'input' || tag === 'textarea' || tag === 'select') {
+			// A field is stamped upright, so a turned one would fill the wrong way.
+			if (turn) refuse('transform');
 			if (type === 'checkbox' || type === 'radio') {
 				const painted = square(rect);
 				const hair: Edge = { width: 1, colour: [0, 0, 0] };
@@ -219,7 +228,10 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 		}
 
 		if (style.backgroundImage !== 'none') refuse('background_image');
-		if (unrepresentable(style.transform)) refuse('transform');
+		// pdf.js turns an element about its top left corner, which is where a
+		// template turns one it places. One a row or a column flows is left where
+		// it flowed, turned out of its cell.
+		if (own ? style.position !== 'absolute' : unrepresentable(style.transform)) refuse('transform');
 
 		const sides = ['Top', 'Right', 'Bottom', 'Left'] as const;
 		const edges = sides.map((side) => {
@@ -230,6 +242,8 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 			if (!PAINTED_BORDER.has(kind)) refuse('border', kind);
 			return { width, colour: rgb(colour) };
 		}) as Box['edges'];
+		// A quarter turn counter-clockwise has the element's right edge at the top.
+		for (let quarter = turn; quarter > 0; quarter--) edges.push(edges.shift()!);
 		const fill = opaque(style.backgroundColor) ? rgb(style.backgroundColor) : null;
 		if (fill || edges.some(Boolean))
 			boxes.push({
@@ -242,17 +256,32 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 			});
 	}
 
-	collectText(layer, X, Y, runs);
+	collectText(layer, X, Y, runs, turns);
 	return { boxes, pictures, lines, runs, width: page.width, height: page.height };
 }
 
 /**
- * True for a transform the primitives cannot carry. XFA offsets caption
+ * How many quarter turns counter-clockwise a transform is, and 0 for any
+ * other. pdf.js writes a template's `rotate="90"` as `rotate(-90deg)`.
+ */
+function quarterTurns(transform: string): number {
+	return (
+		[
+			'matrix(0, -1, 1, 0, 0, 0)',
+			'matrix(-1, 0, 0, -1, 0, 0)',
+			'matrix(0, 1, -1, 0, 0, 0)'
+		].indexOf(transform) + 1
+	);
+}
+
+/**
+ * True for a transform a run's box cannot carry. XFA offsets caption
  * wrappers with a translation, which the rects already hold. A positive
  * horizontal scale is carried too: `getClientRects` reports the scaled width and
  * `drawRuns` puts it back as `Tz`, which is how LiveCycle's
  * `xfa-font-horizontal-scale` reaches the page. A rotation, a skew, a mirror or
- * a vertical scale changes glyph shape or height, and a run carries neither.
+ * a vertical scale changes glyph shape or height, and a run carries neither. A
+ * quarter turn is read apart, by `quarterTurns`.
  */
 export function unrepresentable(transform: string): boolean {
 	if (transform === 'none') return false;
@@ -277,7 +306,8 @@ function collectText(
 	layer: HTMLElement,
 	X: (v: number) => number,
 	Y: (v: number) => number,
-	runs: Run[]
+	runs: Run[],
+	turns: Map<Element, number>
 ): void {
 	const owner = layer.ownerDocument;
 	const view = owner.defaultView!;
@@ -305,17 +335,39 @@ function collectText(
 			letterSpacing: parseFloat(style.letterSpacing) || 0
 		};
 
+		// Under a turn each rect is read in the frame the text is upright in, and
+		// the start of each line's baseline is turned back to the page.
+		const turn = turns.get(parent)!;
+		const [cos, sin] = [
+			[1, 0],
+			[0, -1],
+			[-1, 0],
+			[0, 1]
+		][turn];
+		const upright = ({ left, right, top, bottom }: DOMRect) => {
+			const [x1, x2] = [cos * left + sin * top, cos * right + sin * bottom];
+			const [y1, y2] = [cos * top - sin * left, cos * bottom - sin * right];
+			return {
+				x: Math.min(x1, x2),
+				right: Math.max(x1, x2),
+				top: Math.min(y1, y2),
+				bottom: Math.max(y1, y2)
+			};
+		};
+
 		let start = 0;
 		let top: number | null = null;
 		let box: { x: number; bottom: number; right: number } | null = null;
 		const flush = (end: number): void => {
 			const slice = text.slice(start, end);
 			if (end <= start || !box || !slice.trim()) return;
+			const base = box.bottom - descent;
 			runs.push({
 				text: slice,
-				x: X(box.x),
-				baseline: Y(box.bottom - descent),
+				x: X(cos * box.x - sin * base),
+				baseline: Y(sin * box.x + cos * base),
 				width: +(box.right - box.x).toFixed(2),
+				turn: turn || undefined,
 				...common
 			});
 		};
@@ -329,8 +381,9 @@ function collectText(
 			}
 			range.setStart(node, i);
 			range.setEnd(node, i + 1);
-			const glyph = range.getClientRects()[0];
-			if (!glyph) continue;
+			const rect = range.getClientRects()[0];
+			if (!rect) continue;
+			const glyph = upright(rect);
 			if (top === null || Math.abs(glyph.top - top) < 0.6) {
 				top ??= glyph.top;
 				box = box
