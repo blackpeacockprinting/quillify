@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import leaveUrl from '../test/fixtures/DAF988_Leave_Request_Authorization.pdf?url';
 import readyReserveUrl from '../test/fixtures/DAF1288_Application_for_Ready_Reserve_Assignment.pdf?url';
 import saarUrl from '../test/fixtures/DD2875_System_Authorization_Access_Request.pdf?url';
+import { templateForm } from '../test/dynamic-form.js';
 import { inventoryPdf } from './inventory.js';
 import { normalizePdf } from './normalize.js';
 import { openPdf } from './pdfjs.js';
@@ -78,6 +79,42 @@ describe('a dynamic form, laid out and written back as an AcroForm', () => {
 		expect(captions.length).toBeGreaterThan(0);
 		expect(new Set(captions).size).toBe(captions.length);
 	}, 300_000);
+
+	it('DAF 1288 lists the twenty grades of its template in both grade boxes', async () => {
+		// Each box lists the grades and also binds its list to a `Grade` node of the
+		// form's data (`bindItems`), which the published file does not hold.
+		const inventory = await inventoryPdf(await convert(readyReserveUrl));
+		const boxes = inventory.widgets.filter((w) => w.id.endsWith('.MbrGrd'));
+		expect(boxes.map((w) => [w.id, w.combo])).toEqual([
+			['p1.Page1.form1.MbrGrd', true],
+			['p2.Page1.form1.MbrGrd', true]
+		]);
+		for (const box of boxes)
+			expect(box.options, box.id).toEqual(
+				'E-1 E-2 E-3 E-4 E-5 E-6 E-7 E-8 E-9 O-1 O-2 O-3 O-4 O-5 O-6 WO1 CW2 CW3 CW4 CW5'.split(' ')
+			);
+	}, 300_000);
+
+	it.each([
+		['the items of its template where the data has no such node', '', ['T-1', 'T-2']],
+		[
+			'the items of the data where it has them',
+			'<Grade><item>D-1</item><item>D-2</item><item>D-3</item></Grade>',
+			['D-1', 'D-2', 'D-3']
+		]
+	])(
+		'a list bound to a node of the data lists %s',
+		async (_, data, options) => {
+			// pdf.js merges no data into a form whose data is empty, so the field has a node.
+			const form = await templateForm(
+				'<template xmlns="http://www.xfa.org/schema/xfa-template/3.3/"><subform name="form1" layout="tb"><pageSet><pageArea name="Page1"><contentArea w="612pt" h="792pt"/><medium short="612pt" long="792pt"/></pageArea></pageSet><subform layout="position" w="612pt" h="700pt"><field name="g" x="50pt" y="50pt" w="100pt" h="20pt"><ui><choiceList open="onEntry"/></ui><items><text>T-1</text><text>T-2</text></items><bindItems ref="$record.Grade.item[*]" labelRef="$" valueRef="$"/></field></subform></subform></template>',
+				`<form1><g/>${data}</form1>`
+			);
+			const inventory = await inventoryPdf(await xfaToAcroForm(form));
+			expect(inventory.widgets.map((w) => w.options)).toEqual([options]);
+		},
+		60_000
+	);
 
 	it('DD 2875 lands its fields where the form draws them', async () => {
 		const inventory = await inventoryPdf(await convert(saarUrl));

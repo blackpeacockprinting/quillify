@@ -1,7 +1,7 @@
 import { PDFBool, PDFDocument, PDFName, PDFString } from 'pdf-lib';
 
-/** A dynamic form whose XFA template is `template`. */
-export async function templateForm(template: string): Promise<Uint8Array> {
+/** A dynamic form whose XFA template is `template` and whose data is `data`. */
+export async function templateForm(template: string, data = '<form1/>'): Promise<Uint8Array> {
 	const doc = await PDFDocument.create();
 	doc.addPage([612, 792]);
 	const packet = (xml: string) =>
@@ -17,7 +17,7 @@ export async function templateForm(template: string): Promise<Uint8Array> {
 				packet(template),
 				PDFString.of('datasets'),
 				packet(
-					'<xfa:datasets xmlns:xfa="http://www.xfa.org/schema/xfa-data/1.0/"><xfa:data><form1/></xfa:data></xfa:datasets>'
+					`<xfa:datasets xmlns:xfa="http://www.xfa.org/schema/xfa-data/1.0/"><xfa:data>${data}</xfa:data></xfa:datasets>`
 				),
 				PDFString.of('postamble'),
 				packet('</xdp:xdp>')
