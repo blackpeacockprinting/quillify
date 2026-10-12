@@ -227,15 +227,17 @@ async function drawRun(
 	get: (name: StandardFonts) => Promise<PDFFont>
 ): Promise<void> {
 	const font = await get(standard14(run));
-	// The standard-14 text fonts encode WinAnsi alone. U+2010 is drawn as its
-	// hyphen, and any other character outside it in the first of SYMBOLS that
-	// holds it. Dropping the run would lose a line of the form without anything
+	// The standard-14 text fonts encode WinAnsi alone. U+2010 and U+2011 are
+	// drawn as its hyphen, and any other character outside it in the first of
+	// SYMBOLS that holds it. A soft hyphen is left out: WinAnsi has it as a
+	// hyphen, and the browser lays it out at no width and shows nothing.
+	// Dropping the run would lose a line of the form without anything
 	// reporting it.
 	// pdf-lib kerns the width it measures and writes no kerning, so the width
 	// it draws a run at is the sum of the widths of its characters.
 	const parts: { font: PDFFont; text: string; at: number }[] = [];
 	let natural = 0;
-	for (const char of run.text.replaceAll('\u2010', '-')) {
+	for (const char of run.text.replaceAll('\u00ad', '').replace(/[\u2010\u2011]/g, '-')) {
 		const code = char.codePointAt(0)!;
 		let face = font;
 		for (const name of SYMBOLS) if (!face.getCharacterSet().includes(code)) face = await get(name);
