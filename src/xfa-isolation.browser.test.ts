@@ -115,7 +115,10 @@ it('gives the host document no rule and no font face, and leaves it as it was', 
 	vi.spyOn(XfaStage.prototype, 'lay').mockImplementation(async function (this: XfaStage, page) {
 		const laid = await lay.call(this, page);
 		taken.push(rootProperty());
-		laidOut.push({ stage: families(laid.layer.ownerDocument), host: families(document) });
+		laidOut.push({
+			stage: [...new Set(families(laid.layer.ownerDocument))].sort(),
+			host: families(document)
+		});
 		return laid;
 	});
 	try {
@@ -125,7 +128,10 @@ it('gives the host document no rule and no font face, and leaves it as it was', 
 	}
 
 	expect(new Set(taken)).toEqual(new Set(['']));
-	expect(laidOut).toEqual(Array(3).fill({ stage: ['"Calibri"'], host: [] }));
+	// Each under the name the form's rules ask for it by, with no quotes around it.
+	expect(laidOut).toEqual(
+		Array(3).fill({ stage: ['Arial-PdfJS-XFA', 'Calibri', 'Myriad Pro-PdfJS-XFA'], host: [] })
+	);
 	expect(host()).toEqual(before);
 }, 120_000);
 
@@ -146,6 +152,7 @@ it("requests nothing but the package's own files while sanitize reads a form", a
 
 	const own = [
 		/^\/assets\/(pdf\.worker\.js|qpdf\.worker\.js|qpdf\.wasm)$/,
+		/^\/assets\/LiberationSans-(Regular|Bold|Italic|BoldItalic)\.ttf$/,
 		/^\/node_modules\/\.vite\/vitest\/[0-9a-f]+\/deps\/pdfjs-dist\.js$/
 	];
 	// The test server adds its client to the module a worker starts from.
@@ -153,6 +160,7 @@ it("requests nothing but the package's own files while sanitize reads a form", a
 	const form = new URL(saarUrl, location.href).pathname;
 	const paths = requested.map((url) => url.pathname);
 	expect(paths).toContain('/assets/pdf.worker.js');
+	expect(paths).toContain('/assets/LiberationSans-Regular.ttf');
 	expect(requested.filter((url) => url.origin !== location.origin)).toEqual([]);
 	expect(
 		paths.filter((path) => !own.some((file) => file.test(path)) && !server.includes(path))
