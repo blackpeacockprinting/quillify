@@ -16,6 +16,7 @@ import {
 	PDFRadioGroup,
 	PDFTextField,
 	StandardFonts,
+	degrees,
 	rgb
 } from 'pdf-lib';
 import type { PDFAcroField, PDFRef } from 'pdf-lib';
@@ -228,7 +229,8 @@ async function drawRuns(
 			y: H - run.baseline,
 			size: run.size,
 			font,
-			color: rgb(...run.colour)
+			color: rgb(...run.colour),
+			rotate: degrees(90 * (run.turn ?? 0))
 		});
 		if (scaled)
 			page.pushOperators(PDFOperator.of(PDFOperatorNames.SetTextHorizontalScaling, ['100']));

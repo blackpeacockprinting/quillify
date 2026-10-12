@@ -112,7 +112,11 @@ describe('what the redraw of a dynamic form refuses', () => {
 			box('background-image:linear-gradient(#000,#fff)'),
 			{ construct: 'background_image' }
 		],
-		['a quarter turn', box('transform:rotate(90deg)'), { construct: 'transform' }],
+		[
+			'a quarter turn of a box in the flow',
+			box('transform:rotate(90deg)'),
+			{ construct: 'transform' }
+		],
 		['a dashed border', box('border:1px dashed #000'), { construct: 'border', detail: 'dashed' }]
 	])('refuses %s by its page and its construct', (_, html, construct) => {
 		// displayList takes pdf.js's page number, which counts from 1.
