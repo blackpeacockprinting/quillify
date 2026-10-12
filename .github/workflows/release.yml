@@ -1,7 +1,8 @@
 # Publishes the package when the pull request of a branch release/vX.Y.Z merges.
 # The branch name says what is released, and package.json is what proves it.
-# Everything that can fail runs before the tag: a tag can be deleted, and a
-# published version is permanent.
+# The gate and the pack run before the tag. The tag, the publish and the GitHub
+# release each do nothing when theirs is already there, so a job that failed
+# after the tag can be run again.
 name: Release
 
 on:
@@ -34,8 +35,24 @@ jobs:
         with:
           fetch-depth: 0
           # The merge commit this event names, not whatever main is by now:
-          # one commit is gated, tagged, packed and published.
+          # one commit is gated, packed, tagged and published.
           ref: ${{ github.event.pull_request.merge_commit_sha }}
+
+      # CHANGELOG.md merges by union: a pull request that reached main after
+      # this branch was cut can leave its line under Unreleased, or bring back
+      # the section Prepare release dropped, and no conflict says so. The first
+      # parent of the merge commit is main's tip at the merge, and the branch
+      # must contain it.
+      - name: Refuse a release whose branch did not contain main
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git fetch -q origin "$HEAD_SHA"
+          if ! git merge-base --is-ancestor HEAD^ "$HEAD_SHA"; then
+            echo "::error::$BRANCH did not contain main when it merged, so the changelog may be wrong and nothing was tagged or published. Revert this merge on main, delete $BRANCH, run Prepare release again and merge its pull request before any other."
+            exit 1
+          fi
+
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
@@ -57,7 +74,8 @@ jobs:
       - run: npx playwright install --with-deps --only-shell chromium
       - run: npm run gate
 
-      # Packed once: what is checksummed, attached and published is one file.
+      # Packed once a run: what a run checksums, attaches and publishes is one
+      # file.
       - name: Pack
         run: |
           mkdir -p "$RUNNER_TEMP/pack"
@@ -69,13 +87,24 @@ jobs:
 
       - name: Tag
         run: |
+          REFS=$(git ls-remote origin "refs/tags/v$VERSION" "refs/tags/v$VERSION^{}")
+          AT=$(echo "$REFS" | tail -n 1 | cut -f1)
+          if [ "$AT" = "$(git rev-parse HEAD)" ]; then
+            echo "v$VERSION is already on this commit."
+            exit 0
+          fi
+          if [ -n "$AT" ]; then
+            echo "::error::v$VERSION is on $AT, and this release is $(git rev-parse HEAD)"
+            exit 1
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a "v$VERSION" -m "$NAME $VERSION"
           git push origin "v$VERSION"
 
-      # Trusted publishing needs npm 11.5.1 or later.
-      - run: npm install -g npm@latest
+      # Trusted publishing needs npm 11.5.1 or later. The version is exact, so
+      # the npm that publishes is the one this file names.
+      - run: npm install -g npm@11.21.0
 
       # A version the registry already has is skipped, so the job can be run
       # again, and so the first version of all, which is published by hand
@@ -97,5 +126,9 @@ jobs:
             'index($0, v) == 1 {f=1; next} /^## / && f {exit} f {print}' \
             CHANGELOG.md > notes.md
           grep -q '[^[:space:]]' notes.md || echo "$NAME $VERSION" > notes.md
+          if gh release view "v$VERSION" > /dev/null 2>&1; then
+            echo "The release v$VERSION already exists."
+            exit 0
+          fi
           gh release create "v$VERSION" --title "v$VERSION" --notes-file notes.md \
             "$TGZ" "${TGZ%.tgz}.sbom.json" "$RUNNER_TEMP/pack/SHA256SUMS"

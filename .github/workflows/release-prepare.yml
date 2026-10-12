@@ -72,7 +72,7 @@ jobs:
             echo
             echo "**After**"
             echo
-            echo "The package is version $VERSION. Merging this tags \`v$VERSION\` on the merge commit, publishes the package and makes the GitHub release, whose notes are the \`## v$VERSION\` section of \`CHANGELOG.md\` as it is on this branch. Read that section before merging."
+            echo "The package is version $VERSION. Merging this tags \`v$VERSION\` on the merge commit, publishes the package and makes the GitHub release, whose notes are the \`## v$VERSION\` section of \`CHANGELOG.md\` as it is on this branch. Read that section before merging. The release refuses to run unless this branch contains main when it merges: merge this before any other pull request."
           } > body.md
           gh pr create --base main --head "release/v$VERSION" \
             --title "The package is version $VERSION" --body-file body.md
