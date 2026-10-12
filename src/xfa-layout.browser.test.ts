@@ -132,7 +132,7 @@ it('refuses the layout where the file is opened with XFA on, and opens it with X
 it('still converts DD 2875 as published', async () => {
 	const read = await sanitize(await published(saarUrl));
 	expect(read, JSON.stringify(read.ok || read.refusal)).toMatchObject({ ok: true });
-	expect(read.ok && [read.form.pages.length, read.form.fields.length]).toEqual([3, 78]);
+	expect(read.ok && [read.form.pages.length, read.form.fields.length]).toEqual([3, 85]);
 }, 120_000);
 
 it('hands a static form on as it came', async () => {

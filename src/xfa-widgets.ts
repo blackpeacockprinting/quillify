@@ -1,6 +1,6 @@
 import type { XfaPage } from './xfa-layer.js';
 
-export type XfaKind = 'text' | 'multiline' | 'checkbox' | 'radio' | 'choice';
+export type XfaKind = 'text' | 'multiline' | 'checkbox' | 'radio' | 'choice' | 'signature';
 
 export interface XfaWidget {
 	/**
@@ -51,7 +51,12 @@ export function harvestWidgets(page: XfaPage, pageNumber: number): XfaWidget[] {
 	const widgets: XfaWidget[] = [];
 	const seen = new Map<string, number>();
 
-	for (const el of layer.querySelectorAll<HTMLElement>('input, select, textarea')) {
+	// A signature field is read after every control, so a control that shares its
+	// SOM path keeps the occurrence count it has without it.
+	for (const el of [
+		...layer.querySelectorAll<HTMLElement>('input, select, textarea'),
+		...layer.querySelectorAll<HTMLElement>('.xfaSignature')
+	]) {
 		const style = view.getComputedStyle(el);
 		if (style.visibility === 'hidden' || style.display === 'none') continue;
 		const box = el.getBoundingClientRect();
@@ -60,15 +65,17 @@ export function harvestWidgets(page: XfaPage, pageNumber: number): XfaWidget[] {
 		const type = el.getAttribute('type')?.toLowerCase();
 		const tag = el.tagName.toLowerCase();
 		const kind: XfaKind =
-			tag === 'select'
-				? 'choice'
-				: tag === 'textarea'
-					? 'multiline'
-					: type === 'checkbox'
-						? 'checkbox'
-						: type === 'radio'
-							? 'radio'
-							: 'text';
+			tag === 'div'
+				? 'signature'
+				: tag === 'select'
+					? 'choice'
+					: tag === 'textarea'
+						? 'multiline'
+						: type === 'checkbox'
+							? 'checkbox'
+							: type === 'radio'
+								? 'radio'
+								: 'text';
 
 		const rect = kind === 'checkbox' || kind === 'radio' ? square(box) : box;
 

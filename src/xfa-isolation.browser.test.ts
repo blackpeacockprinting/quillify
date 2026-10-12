@@ -119,7 +119,7 @@ it('gives the host document no rule and no font face, and leaves it as it was', 
 		return laid;
 	});
 	try {
-		expect((await inventory(pdf)).widgets).toHaveLength(78);
+		expect((await inventory(pdf)).widgets).toHaveLength(85);
 	} finally {
 		observer.disconnect();
 	}

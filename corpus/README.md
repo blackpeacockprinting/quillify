@@ -16,7 +16,7 @@ The run needs the files, so it is no part of the gate and never runs in CI. The 
 
 ## What it measures
 
-57 convert, every form that has a field: 14 plain, 26 hybrid and 17 dynamic, 6,605 fields on 197 pages. A read-only field is not placed, and a field the form shows in more than one box is placed in each, so `form.json` gives 6,508 places. The engine stamps a field at every one, within a hundredth of a point of its rect. Two are refused:
+57 convert, every form that has a field: 14 plain, 26 hybrid and 17 dynamic, 6,678 fields on 197 pages. A read-only field is not placed, and a field the form shows in more than one box is placed in each, so `form.json` gives 6,581 places. The engine stamps a field at every one, within a hundredth of a point of its rect. Two are refused:
 
 - SF 85 has no field.
 - AF 3070A is a portfolio: a cover page around an attachment named `MicrosoftIRMServices Protected PDF.pdf`.

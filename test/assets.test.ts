@@ -94,6 +94,10 @@ it('ships the pdf.js worker as the installed one but for the notice, the guards 
 			'extraNode[$getSubformParent] = savedMethod;',
 			'extraNode[$getSubformParent] = savedMethod; root[$extra].firstUnsplittable = savedFirst;'
 		],
+		[
+			'const ui = this.ui[$toHTML]().html;',
+			'const ui = this.ui[$toHTML]().html ?? (this.ui.signature ? { name: "label", attributes: { class: ["xfaLabel"] }, children: [{ name: "div", attributes: { class: ["xfaSignature"], style: { width: "100%" } }, children: [] }] } : null);'
+		],
 		['this[$extra].pageSetIndex = -1;', 'this[$extra].pageSetIndex = -1; this[$cleanPage]();'],
 		[
 			'warn(`XFA - an error occurred during layout: ${e}`);',

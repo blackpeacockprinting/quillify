@@ -15,17 +15,17 @@ import { openPdf } from './pdfjs.js';
 import { xfaToAcroForm } from './xfa.js';
 
 const FORMS = [
-	{ name: 'DD 2875 SAAR', url: saarUrl, pages: 3, widgets: 78, radios: 0, tooltips: 78 },
+	{ name: 'DD 2875 SAAR', url: saarUrl, pages: 3, widgets: 85, radios: 0, tooltips: 85 },
 	{
 		name: 'DAF 1288 ready reserve',
 		url: readyReserveUrl,
 		pages: 2,
-		widgets: 116,
+		widgets: 122,
 		radios: 26,
-		tooltips: 39
+		tooltips: 43
 	},
 	// Its template sets `xfa-font-horizontal-scale` six times, which pdf.js emits as `scaleX()`.
-	{ name: 'DAF 988 leave request', url: leaveUrl, pages: 3, widgets: 159, radios: 0, tooltips: 156 }
+	{ name: 'DAF 988 leave request', url: leaveUrl, pages: 3, widgets: 166, radios: 0, tooltips: 156 }
 ] as const;
 
 async function convert(url: string): Promise<Uint8Array> {
@@ -110,7 +110,7 @@ describe('a dynamic form, laid out and written back as an AcroForm', () => {
 				}[];
 				widgets.push(...annotations.filter((a) => a.subtype === 'Widget'));
 			}
-			expect(widgets).toHaveLength(78);
+			expect(widgets).toHaveLength(85);
 			expect(widgets.filter((a) => a.backgroundColor)).toHaveLength(0);
 			expect(widgets.filter((a) => a.borderColor)).toHaveLength(0);
 		} finally {
