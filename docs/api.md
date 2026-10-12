@@ -32,7 +32,7 @@ A `Form` is `{ pdf, pages, fields }`: the background PDF, each page's size in po
 | `too_slow`        | `limit`                       | has a worker busy after 60 s                                                                     | try again              |
 | `not_pdf`         |                               | is not a PDF                                                                                     | choose the right file  |
 | `password`        |                               | needs a password                                                                                 | save a copy without it |
-| `encryption`      |                               | is encrypted to a certificate                                                                    | nothing                |
+| `encryption`      |                               | is encrypted in a way qpdf does not read                                                         | nothing                |
 | `damaged`         |                               | cannot be rewritten, reads two ways, or has a page past 14,400 pt or in a user unit other than 1 | download it again      |
 | `portfolio`       | `attachment`                  | is a portfolio                                                                                   | save the attachment    |
 | `too_many_pages`  | `pages`, `limit`              | has over 25 pages                                                                                | nothing                |

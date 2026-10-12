@@ -39,7 +39,6 @@ import {
 	PDFRawStream,
 	PDFStream
 } from 'pdf-lib';
-import { openPdf } from './pdfjs.js';
 import { Refused } from './refusal.js';
 import { MAX_BYTES, MAX_INFLATED_BYTES } from './types.js';
 
@@ -53,9 +52,11 @@ const FLAGS = ['--decrypt', '--flatten-rotation', '--object-streams=disable', '-
 /**
  * What `assets/qpdf.worker.js` answers. `out` is the file of a run qpdf ended
  * well. `size` is what the file came to in qpdf: the bytes it wrote or the
- * size its memory grew to, whichever is more.
+ * size its memory grew to, whichever is more. `said` is the end of what qpdf
+ * wrote to its error stream in a run it ended by itself, and is empty after
+ * any other.
  */
-type Answer = { loaded: false } | { loaded: true; out?: Uint8Array; size: number };
+type Answer = { loaded: false } | { loaded: true; out?: Uint8Array; size: number; said: string };
 
 /**
  * The two types of stream pdf-lib inflates whole as it parses a file, in every
@@ -243,15 +244,19 @@ export async function normalizePdf(bytes: Uint8Array, signal?: AbortSignal): Pro
 		worker.terminate();
 	});
 	if (!answer.loaded) throw new Error(`qpdf.wasm did not load from ${WASM}`);
-	const { out, size } = answer;
+	const { out, size, said } = answer;
 	// A file that came to more than the bound in qpdf is past it, whatever qpdf then wrote.
 	const total = size > MAX_INFLATED_BYTES ? size : out?.byteLength ? await inflated(out) : 0;
 	if (total > MAX_INFLATED_BYTES)
 		throw new Refused({ code: 'too_large', bytes: total, limit: MAX_INFLATED_BYTES });
 	if (out?.byteLength) return out;
 
-	// qpdf gives its reason on stderr alone. A file pdf.js cannot open is refused
-	// there, under its own code. One it opens is a file only qpdf rejects.
-	await (await openPdf(bytes, {}, signal)).close();
-	throw new Refused({ code: 'damaged' });
+	// A qpdf that ends by itself ends at its first error, and its last line says
+	// when that is the password or the encryption. No other reader opens the
+	// file, which the bound does not hold: a PDF has its header in its first
+	// 1,024 bytes.
+	if (/invalid password\n$/.test(said)) throw new Refused({ code: 'password' });
+	if (/encryption.*\n$/.test(said)) throw new Refused({ code: 'encryption' });
+	const head = new TextDecoder('latin1').decode(bytes.subarray(0, 1024));
+	throw new Refused({ code: head.includes('%PDF-') ? 'damaged' : 'not_pdf' });
 }
