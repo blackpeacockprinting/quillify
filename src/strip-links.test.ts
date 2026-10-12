@@ -23,12 +23,19 @@ import { stripAcroForm } from './strip.js';
 const BOX: [number, number, number, number] = [0, 0, 612, 792];
 const LINK = { Type: 'Annot', Subtype: 'Link', Rect: [0, 0, 1, 1] };
 
-/** The background of one 612 by 792 page, with what `plant` hangs on it and on the catalog. */
-async function background(plant: (page: PDFDict, context: PDFContext, catalog: PDFDict) => void) {
+type Plant = (page: PDFDict, context: PDFContext, catalog: PDFDict) => void;
+
+/** What the strip makes of one 612 by 792 page, with what `plant` hangs on it and on the catalog. */
+async function stripped(plant: Plant) {
 	const source = await PDFDocument.create();
 	plant(source.addPage([612, 792]).node, source.context, source.catalog);
 	const saved = await source.save({ useObjectStreams: false });
-	const bytes = await stripAcroForm(saved, await viewsOf(saved, [BOX]));
+	return stripAcroForm(saved, await viewsOf(saved, [BOX]));
+}
+
+/** The background of that page. */
+async function background(plant: Plant) {
+	const bytes = await stripped(plant);
 	const doc = await PDFDocument.load(bytes);
 	/** What the catalog or the page holds along a path of names and positions, read through references. */
 	const under = (from: 'catalog' | 'page', ...path: (string | number)[]) =>
@@ -224,6 +231,31 @@ it('keeps an array of groups under each key that names it by a reference', async
 	expect(named('ON', ...layers, 'D')).toBe(named('OCGs', ...membership));
 	expect(keys(...layers, 'D', 'ON', 0)).toEqual(['Name', 'Type']);
 	expect(text).not.toContain('PRIVATE');
+});
+
+it("refuses as damaged a file whose /OFF and a graphics state's /TR name one array", async () => {
+	const file = stripped((page, context, catalog) => {
+		const off = group(context);
+		const both = context.register(context.obj([off]));
+		catalog.set(PDFName.of('OCProperties'), context.obj({ OCGs: [off], D: { OFF: both } }));
+		const resources = { Properties: { MC0: off }, ExtGState: { GS0: { TR: both } } };
+		page.set(PDFName.of('Resources'), context.obj(resources));
+	});
+	await expect(file).rejects.toMatchObject({ refusal: { code: 'damaged' } });
+});
+
+it('refuses as damaged a file whose /OFF and a /TR name one array, of a group the walk reaches after the /TR', async () => {
+	const file = stripped((page, context, catalog) => {
+		const off = group(context);
+		const both = context.register(context.obj([off]));
+		catalog.set(PDFName.of('OCProperties'), context.obj({ OCGs: [], D: { OFF: both } }));
+		const resources = {
+			ExtGState: { GS0: { TR: both } },
+			Properties: { MC0: { Type: 'OCMD', OCGs: [off] } }
+		};
+		page.set(PDFName.of('Resources'), context.obj(resources));
+	});
+	await expect(file).rejects.toMatchObject({ refusal: { code: 'damaged' } });
 });
 
 it('keeps in the default configuration no reference to a group that no other key reaches, and no array that holds itself', async () => {

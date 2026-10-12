@@ -21,13 +21,20 @@ import { stripAcroForm } from './strip.js';
 
 type Planted = Record<string, unknown>;
 
-/** The background of one 612 by 792 page, with what `plant` gives it as /Resources. */
-async function background(plant: (context: PDFContext, page: PDFDict) => Planted) {
+type Plant = (context: PDFContext, page: PDFDict) => Planted;
+
+/** What the strip makes of one 612 by 792 page, with what `plant` gives it as /Resources. */
+async function stripped(plant: Plant) {
 	const source = await PDFDocument.create();
 	const node = source.addPage([612, 792]).node;
 	node.set(PDFName.of('Resources'), source.context.obj(plant(source.context, node) as never));
 	const saved = await source.save({ useObjectStreams: false });
-	const bytes = await stripAcroForm(saved, await viewsOf(saved, [[0, 0, 612, 792]]));
+	return stripAcroForm(saved, await viewsOf(saved, [[0, 0, 612, 792]]));
+}
+
+/** The background of that page. */
+async function background(plant: Plant) {
+	const bytes = await stripped(plant);
 	const doc = await PDFDocument.load(bytes);
 	const page = doc.getPage(0).node;
 	/** What the page's resources hold along a path of names and positions, read through references. */
@@ -501,55 +508,52 @@ it('keeps of a shading and of a pattern the keys of its type, which is a number'
 	expect(text).not.toContain('PRIVATE');
 });
 
-it('gives an object one kind: a font that the graphics states also name is no graphics state', async () => {
-	const { keys } = await background((context) => {
+it('refuses as damaged a file whose font the graphics states name too', async () => {
+	const file = stripped((context) => {
 		const both = context.register(
 			context.obj({ Type: 'Font', Subtype: 'Type1', BaseFont: 'Courier', CA: 1 })
 		);
 		return { Font: { F1: both }, ExtGState: { G1: both } };
 	});
-	expect(keys('Font', 'F1')).toEqual(['BaseFont', 'Subtype', 'Type']);
-	expect(keys('ExtGState')).toEqual([]);
+	await expect(file).rejects.toMatchObject({ refusal: { code: 'damaged' } });
 });
 
-it('gives an object one kind among a font file, a color profile, a function, a shading and a pattern', async () => {
-	const { keys, under } = await background((context) => {
-		const map = context.register(context.stream('x', { Length1: 1 }));
-		const profile = context.register(
-			context.stream('x', { N: 1, FunctionType: 4, Domain: [0, 1], Range: [0, 1] })
-		);
-		const axial = context.register(
-			context.obj({
-				ShadingType: 2,
-				PatternType: 2,
-				ColorSpace: 'DeviceGray',
-				Coords: [0, 0, 1, 1]
-			})
-		);
-		return {
-			Font: {
-				F1: {
-					Type: 'Font',
-					Subtype: 'TrueType',
-					BaseFont: 'Sample',
-					ToUnicode: map,
-					FontDescriptor: { ...DESCRIPTOR, FontFile2: map }
-				}
-			},
-			ColorSpace: {
-				Icc: ['ICCBased', profile],
-				Spot: ['Separation', 'Sample', 'DeviceGray', profile]
-			},
-			Shading: { Sh1: axial },
-			Pattern: { P1: axial }
-		};
-	});
-	expect(keys('Font', 'F1', 'ToUnicode')).toEqual(['Length']);
-	expect(keys('Font', 'F1', 'FontDescriptor')).toEqual(['Flags', 'FontName', 'Type']);
-	expect(keys('ColorSpace', 'Icc', 1)).toEqual(['Length', 'N', 'Range']);
-	expect(under('ColorSpace', 'Spot', 3)).toBe(PDFNull);
-	expect(keys('Shading', 'Sh1')).toEqual(['ColorSpace', 'Coords', 'ShadingType']);
-	expect(keys('Pattern')).toEqual([]);
+it.each<[name: string, plant: Plant]>([
+	[
+		'a CMap that is a font file too',
+		(context) => {
+			const both = context.register(context.stream('x', { Length1: 1 }));
+			const font = { Type: 'Font', Subtype: 'TrueType', BaseFont: 'Sample' };
+			const FontDescriptor = { ...DESCRIPTOR, FontFile2: both };
+			return { Font: { F1: { ...font, ToUnicode: both, FontDescriptor } } };
+		}
+	],
+	[
+		'a color profile that is a function too',
+		(context) => {
+			const both = context.register(
+				context.stream('x', { N: 1, FunctionType: 4, Domain: [0, 1], Range: [0, 1] })
+			);
+			const Spot = ['Separation', 'Sample', 'DeviceGray', both];
+			return { ColorSpace: { Icc: ['ICCBased', both], Spot } };
+		}
+	],
+	[
+		'a shading that is a pattern too',
+		(context) => {
+			const both = context.register(
+				context.obj({
+					ShadingType: 2,
+					PatternType: 2,
+					ColorSpace: 'DeviceGray',
+					Coords: [0, 0, 1, 1]
+				})
+			);
+			return { Shading: { Sh1: both }, Pattern: { P1: both } };
+		}
+	]
+])('refuses as damaged a file with %s', async (_, plant) => {
+	await expect(stripped(plant)).rejects.toMatchObject({ refusal: { code: 'damaged' } });
 });
 
 it('refuses as damaged a file whose first page names its second page as its /Group', async () => {

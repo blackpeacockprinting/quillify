@@ -255,19 +255,20 @@ const PICKS = new Map(
  * file whose pages are not the objects `views` names, in that order, is one
  * pdf.js and pdf-lib read differently, and is refused as `damaged`.
  *
- * A walk from the catalog, level by level, then gives each object the first
- * kind that reaches it. A dictionary loses every key its kind does not list and
- * every value that is not what its key leads to, and an object the walk does
- * not reach is deleted: a saved file carries every object the context holds,
- * reachable or not. A reference back to an object the walk did not reach as its
- * kind is deleted, or made null in an array: a destination's page that the page
- * tree does not hold, and a layer the default configuration names that no
- * other key reaches. The structure tree is kept whole and can still name an
- * annotation no page lists or a page outside the page tree. So an object that
- * reads as either and is not kept is deleted outright before the walk, and the
- * files, fields and appearance streams that hung off it are then out of its
- * reach: a background that still carries a form layer is one the renderer would
- * stamp a second one over.
+ * A walk from the catalog, level by level, then gives each object one kind, by
+ * the key that reaches it. A dictionary loses every key its kind does not list
+ * and every value that is not what its key leads to, and an object the walk
+ * does not reach is deleted: a saved file carries every object the context
+ * holds, reachable or not. A file in which a key reaches an object as another
+ * kind than it has is refused as `damaged`. A reference back to an object the
+ * walk did not reach as its kind is deleted, or made null in an array: a
+ * destination's page that the page tree does not hold, and a layer the default
+ * configuration names that no other key reaches. The structure tree is kept
+ * whole and can still name an annotation no page lists or a page outside the
+ * page tree. So an object that reads as either and is not kept is deleted
+ * outright before the walk, and the files, fields and appearance streams that
+ * hung off it are then out of its reach: a background that still carries a form
+ * layer is one the renderer would stamp a second one over.
  */
 export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<Uint8Array> {
 	const doc = await PDFDocument.load(bytes, { updateMetadata: false });
@@ -368,13 +369,17 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 		return true;
 	};
 
-	/** Gives an object its kind, the first that reaches it, and queues it. Whether this reach of it stays. */
-	const claim = (raw: PDFObject | undefined, value: PDFArray | PDFDict | PDFStream, as: Slot) => {
-		if (raw instanceof PDFRef) {
-			const had = claimed.get(raw);
-			if (had) return had === as;
-			claimed.set(raw, as);
-		}
+	/**
+	 * Gives an object its kind and queues it, where this reach of it is as a kind.
+	 * An object that has one is reached as that kind and no other, or the file is
+	 * refused as `damaged`: the walk cuts it to the keys of the first, and a second
+	 * would read what is left. Whether this reach of it stays.
+	 */
+	const claim = (raw: PDFObject | undefined, value: PDFArray | PDFDict | PDFStream, as?: Slot) => {
+		const had = claimed.get(raw as PDFRef);
+		if (had && had !== as) throw new Refused({ code: 'damaged' });
+		if (had || !as) return as !== undefined;
+		if (raw instanceof PDFRef) claimed.set(raw, as);
 		pending.push([value, as]);
 		return true;
 	};
@@ -387,10 +392,10 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 		}
 		if (!to.kind) return false;
 		const value = raw instanceof PDFRef ? context.lookup(raw) : raw;
-		if (to.shape === 'map') return value instanceof PDFDict && claim(raw, value, to);
-		if (to.shape === 'list' && value instanceof PDFArray) return claim(raw, value, to);
 		if (!(value instanceof PDFDict || value instanceof PDFStream || value instanceof PDFArray))
 			return false;
+		if (to.shape === 'map') return claim(raw, value, value instanceof PDFDict ? to : undefined);
+		if (to.shape === 'list' && value instanceof PDFArray) return claim(raw, value, to);
 		const pick = PICKS.get(to.kind);
 		const told = pick && under(value instanceof PDFStream ? value.dict : value, pick.key);
 		const kind = pick
@@ -398,11 +403,10 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 			: to.kind;
 		const body =
 			value instanceof PDFStream ? 'stream' : value instanceof PDFArray ? 'array' : 'dict';
-		if (!kind || ROWS.get(kind)!.body !== body) return false;
 		// A page is one the loop above framed. pdf-lib reads none in a dictionary
 		// written inside /Kids that names its /Type by reference.
-		if (kind === 'page' && !kept.has(raw)) return false;
-		return claim(raw, value, slot(kind));
+		const fits = kind && ROWS.get(kind)!.body === body && (kind !== 'page' || kept.has(raw));
+		return claim(raw, value, fits ? slot(kind) : undefined);
 	};
 
 	claim(context.trailerInfo.Root, doc.catalog, slot('catalog'));
@@ -435,8 +439,8 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 			}
 		}
 	}
-	// A page that another key reaches first has that key's kind, and so has a
-	// node or a /Kids above it: the page tree holds the page no more.
+	// A page tree node that reads as an annotation is deleted above, and the page
+	// tree holds the pages under it no more.
 	if (pages.some(({ ref }) => claimed.get(ref) !== slot('page')))
 		throw new Refused({ code: 'damaged' });
 	// A back reference stays when the walk reached what it names as its kind.
@@ -445,6 +449,7 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 	// once. One the walk cut to a list of the kind stays wherever it is named.
 	// One that two such keys name by a reference stays under both, and inside an
 	// array a second reference to it does not, so no array is left holding itself.
+	// One that has any other kind gets the file refused.
 	// An array written in place is read here and never by `plain`, which would
 	// hold a note of each.
 	for (const [holder, key, to] of backs) {
@@ -455,13 +460,15 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 			const had = claimed.get(part as PDFRef);
 			if (had === one) return true;
 			if (!to.many) return false;
-			if (had) return had === list || (had === to && within instanceof PDFDict);
+			if (had === list) return true;
+			if (had === to) return within instanceof PDFDict;
 			if (!(part instanceof PDFArray) && plain(part)) {
 				whole.push(part);
 				return true;
 			}
 			const value = part instanceof PDFRef ? context.lookup(part) : part;
 			if (!(value instanceof PDFArray)) return false;
+			if (had) throw new Refused({ code: 'damaged' });
 			if (part instanceof PDFRef) claimed.set(part, to);
 			arrays.push(value);
 			return true;

@@ -55,7 +55,7 @@ A file the library does not take is refused with a value, and nothing is thrown 
 | `not_pdf`         |                                                     | is not a PDF                                                                                                        |
 | `password`        |                                                     | needs a password to open                                                                                            |
 | `encryption`      |                                                     | is encrypted in a way pdf.js does not read, such as to a certificate                                                |
-| `damaged`         |                                                     | opens, and qpdf cannot rewrite it, its pages can be read in two ways, or it holds a stream the library cannot count |
+| `damaged`         |                                                     | opens, and qpdf cannot rewrite it, a page or an object can be read in two ways, or a stream of it cannot be counted |
 | `portfolio`       | `attachment`, when it has a name                    | is a portfolio, whose form is an attachment                                                                         |
 | `too_many_pages`  | `pages`, `limit`                                    | has more than 20 pages                                                                                              |
 | `too_many_fields` | `fields`, `limit`                                   | has more than 200 fields                                                                                            |
