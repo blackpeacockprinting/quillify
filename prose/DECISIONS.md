@@ -1001,3 +1001,20 @@ What this does not hold. The rules are Chromium's as the gate's Chromium paints 
 The list is still the record of a run and no check: `npm run corpus` does not read it, and the files are not in the repository.
 
 **Unlock.** A later run. The list and its test move again, under an entry of that day.
+
+## 11 Oct 2026: The package is @quillmark/quillify, public and under the Apache License 2.0
+
+Replaces "No license while the package stays in the organization" and "No registry, and the name is quillify", and adds two workflows to "One CI job".
+
+**Context.** Both of those decisions named their unlock: an install outside the organization, or a public registry. The maintainer has asked for both: the package on npm beside the engine's own packages, and the repository public.
+
+**Decision.**
+
+- The name is `@quillmark/quillify`. The scope is the engine's, as `@quillmark/wasm` and `@quillmark/quiver` have it, and a consumer imports from that name.
+- The license is the Apache License 2.0, as those packages carry it. `LICENSE` is its text, `NOTICE` opens with the copyright line, and a contribution comes in under the same license.
+- A release is a pull request from a branch `release/vX.Y.Z`. Its merge runs `release.yml`: the gate, `npm pack`, the tag on the merge commit, `npm publish` of that tarball by trusted publishing with provenance, and the GitHub release with the changelog's section, the tarball, an SBOM and `SHA256SUMS`. `release-prepare.yml` opens that pull request. The first version is published by hand from its release branch, since npm has no trusted publisher for a package with no version, and the workflow passes over a version the registry already has.
+- The diff of the app the importer came from leaves `prose/research/`. That app is not public.
+
+`test/package.test.ts` and `test/readme.browser.test.ts` change with it: the tarball gains `LICENSE`, the package answers to its new name, and one new test holds the name, the license and the notice's first lines.
+
+**Unlock.** None for the name and the license: a published version keeps both. For the workflows, a release that needs a step they lack.

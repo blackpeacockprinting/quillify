@@ -26,6 +26,7 @@ it('packs the build, the assets and their notices, and nothing else', () => {
 		[
 			'package.json',
 			'README.md',
+			'LICENSE',
 			'NOTICE',
 			'licenses/pdf.js-LICENSE',
 			'licenses/LiberationSans-LICENSE',
@@ -40,6 +41,20 @@ it('packs the build, the assets and their notices, and nothing else', () => {
 			...modules.flatMap((name) => [`dist/${name}.js`, `dist/${name}.d.ts`])
 		].sort()
 	);
+});
+
+it('is published as @quillmark/quillify, to anyone, under the Apache License 2.0', () => {
+	const { name, license, private: unpublished, publishConfig } = JSON.parse(read('package.json'));
+	expect({ name, license, unpublished, publishConfig }).toEqual({
+		name: '@quillmark/quillify',
+		license: 'Apache-2.0',
+		unpublished: undefined,
+		publishConfig: { access: 'public' }
+	});
+	expect(read('LICENSE')).toContain(
+		'Apache License\n                           Version 2.0, January 2004'
+	);
+	expect(read('NOTICE').startsWith('quillify\nCopyright 2026 Nibs\n')).toBe(true);
 });
 
 it('declares the packages the build imports as its dependencies, and no other', () => {
@@ -61,7 +76,7 @@ it('gives plain Node, where there is no DOM, its four functions under its own na
 		[
 			'--input-type=module',
 			'--eval',
-			"console.log(Object.keys(await import('quillify')).sort().join(' '))"
+			"console.log(Object.keys(await import('@quillmark/quillify')).sort().join(' '))"
 		],
 		{ encoding: 'utf8' }
 	);

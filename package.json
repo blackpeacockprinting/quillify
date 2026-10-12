@@ -1,9 +1,25 @@
 {
-	"name": "quillify",
+	"name": "@quillmark/quillify",
 	"version": "0.2.0",
-	"private": true,
-	"license": "UNLICENSED",
+	"description": "Turn a published PDF form (AcroForm or XFA) into a Quillmark quill, in the browser.",
 	"type": "module",
+	"license": "Apache-2.0",
+	"author": "Quillmark Contributors",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/tonguetoquill/quillify.git"
+	},
+	"bugs": {
+		"url": "https://github.com/tonguetoquill/quillify/issues"
+	},
+	"homepage": "https://github.com/tonguetoquill/quillify#readme",
+	"keywords": [
+		"quillmark",
+		"pdf",
+		"acroform",
+		"xfa",
+		"forms"
+	],
 	"sideEffects": false,
 	"exports": {
 		".": {
@@ -47,5 +63,8 @@
 	},
 	"peerDependencies": {
 		"@quillmark/wasm": ">=0.124.0"
+	},
+	"publishConfig": {
+		"access": "public"
 	}
 }

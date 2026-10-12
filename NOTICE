@@ -1,3 +1,6 @@
+quillify
+Copyright 2026 Nibs
+
 quillify redistributes eight files that are other projects' work. Everything
 else it depends on is installed by its consumer and is not in the package.
 
