@@ -137,12 +137,16 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 				// A rectangle whose edge is hidden has a stroke of no width.
 				const fill = style.fill !== 'none' && opaque(style.fill) ? rgb(style.fill) : null;
 				if (!edge && !fill) continue;
+				// SVG centers a stroke on the rectangle's edge, and a box's border is
+				// drawn inside it, so the box is half a stroke larger all round. What
+				// that adds to the fill lies under the stroke.
+				const half = (edge?.width ?? 0) / 2;
 				const r = el.getBoundingClientRect();
 				boxes.push({
-					x: X(r.x),
-					y: Y(r.y),
-					w: +r.width.toFixed(2),
-					h: +r.height.toFixed(2),
+					x: X(r.x - half),
+					y: Y(r.y - half),
+					w: +(r.width + 2 * half).toFixed(2),
+					h: +(r.height + 2 * half).toFixed(2),
 					fill,
 					edges: [edge, edge, edge, edge]
 				});
