@@ -88,7 +88,10 @@ export async function inventoryPdf(
 			const view = page.view as View['box'];
 			views.push({ ref: page.ref, box: view });
 			const size = { width: view[2] - view[0], height: view[3] - view[1] };
-			if (Math.max(size.width, size.height, ...view.map(Math.abs)) > MAX_SIDE)
+			if (
+				page.userUnit !== 1 ||
+				Math.max(size.width, size.height, ...view.map(Math.abs)) > MAX_SIDE
+			)
 				throw new Refused({ code: 'damaged' });
 			dims.push(size);
 
