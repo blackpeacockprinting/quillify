@@ -6,6 +6,8 @@ Dated records. Each was accurate when written and is not revised.
 
 `AF_EPUBS_FORMS.md` was written here: the Air Force forms pulled from e-Publishing on 10 October 2026, and what the library did with them.
 
+`AF_EPUBS_SECOND_RUN.md` was written here on 11 October 2026: the same 1,354 files through the library at `53e01c8`, what moved since the first run, and each file still refused.
+
 `ACCEPTANCE.md` was written here on 11 October 2026: the package in place of the importer in the app it came from, and a filled form as two readers take it and as renders show it. `exit-test.diff` is the change that test made to a scratch clone of `tonguetoquill/web-app-afa-demo`.
 
 `VIEWERS.md` was written here on 11 October 2026: what PDFKit and Chrome's viewer make of ten filled forms, each driven by a script with no window. The scripts and the images are outside the repository.
