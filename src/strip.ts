@@ -27,6 +27,10 @@ import type { View } from './types.js';
  *     Key:[^kind] such a reference, or an array of them and of arrays of them
  *     Key:*       a value no row reads yet, kept whole
  *
+ * A reference back can be to one of two kinds, `Key:^kind|kind`. A dictionary
+ * by name can hold one of a kind or an array of them, `Key:{[kind]}`, or values
+ * of the first sort and nothing else, `Key:{}`.
+ *
  * A value of the first sort also stays where a kind is expected: a mask can be
  * an array of numbers and a color space a name. A kind `STREAMS` names is a
  * stream, which keeps the keys of `STREAM` beside its own, and no other kind is
@@ -39,7 +43,7 @@ import type { View } from './types.js';
  * told as none of the others is of that kind.
  */
 const KINDS: Record<string, string> = {
-	catalog: 'Type Pages:tree OCProperties:layers StructTreeRoot:* MarkInfo:* Lang',
+	catalog: 'Type Pages:tree OCProperties:layers StructTreeRoot:tags MarkInfo:marks Lang',
 	tree: 'Type Parent:^tree Kids:[node] Count Resources:resources Rotate',
 	page:
 		'Type Parent:^tree Resources:resources MediaBox Contents:[content] Rotate Group:group ' +
@@ -119,7 +123,20 @@ const KINDS: Record<string, string> = {
 	usage: 'Print:state View:state Export:state PageElement:state',
 	state: 'Subtype PrintState ViewState ExportState',
 	ocmd: 'Type OCGs:[ocg] P VE:[^ocg]',
-	marked: ''
+	marked: '',
+	marks: 'Marked Suspects',
+	tags: 'Type K:[kid] IDTree:ids ParentTree:parents ParentTreeNextKey RoleMap:{} ClassMap:{[attributes]}',
+	elem: 'Type S P:^elem|tags ID Pg:^page K:[kid] A:[attributes] C T Lang Alt E ActualText',
+	mcr: 'Type Pg:^page MCID',
+	objr: 'Type Pg:^page Obj:^link',
+	attributes:
+		'O Headers Scope ColSpan RowSpan Summary BBox Width Height Placement BackgroundColor ' +
+		'BorderColor BorderStyle BorderThickness SpaceBefore SpaceAfter StartIndent EndIndent ' +
+		'TextIndent TextAlign BlockAlign InlineAlign BaselineShift LineHeight TextDecorationColor ' +
+		'TextDecorationThickness TextDecorationType ColumnCount ColumnGap ColumnWidths ' +
+		'ListNumbering Role checked ADBE_MinWidth',
+	parents: 'Kids:[parents] Nums:[^elem] Limits',
+	ids: 'Kids:[ids] Names:[^elem] Limits'
 };
 const STREAMS = [
 	'content',
@@ -170,7 +187,8 @@ const PICK: Record<string, [key: string, kinds: Record<string, string>, other?: 
 		{ 1: 'shaded', 2: 'shaded', 3: 'shaded', 4: 'mesh', 5: 'mesh', 6: 'mesh', 7: 'mesh' }
 	],
 	pattern: ['PatternType', { 1: 'tiling', 2: 'shadingpattern' }],
-	oc: ['Type', { OCG: 'ocg', OCMD: 'ocmd' }, 'marked']
+	oc: ['Type', { OCG: 'ocg', OCMD: 'ocmd' }, 'marked'],
+	kid: ['Type', { MCR: 'mcr', OBJR: 'objr' }, 'elem']
 };
 
 /**
@@ -192,7 +210,8 @@ function slot(text: string): Slot {
 	if (!read) {
 		const many = text.startsWith('[^');
 		const shape = many ? 'back' : (SHAPES[text.charAt(0)] ?? 'one');
-		read = { shape, kind: shape === 'one' ? text : text.replace(/[[\]{}^]/g, ''), many };
+		const inner = many ? text.slice(2, -1) : shape === 'back' ? text.slice(1) : text.slice(1, -1);
+		read = { shape, kind: shape === 'one' ? text : inner, many };
 		SLOTS.set(text, read);
 	}
 	return read;
@@ -263,11 +282,19 @@ const PICKS = new Map(
  * kind than it has is refused as `damaged`. A reference back to an object the
  * walk did not reach as its kind is deleted, or made null in an array: a
  * destination's page that the page tree does not hold, and a layer the default
- * configuration names that no other key reaches. The structure tree is kept
- * whole and can still name an annotation no page lists or a page outside the
- * page tree. So an object that reads as either and is not kept is deleted
- * outright before the walk, and the files, fields and appearance streams that
- * hung off it are then out of its reach: a background that still carries a form
+ * configuration names that no other key reaches.
+ *
+ * The structure tree has rows as the rest has. Of what lies outside it, it
+ * names a page of the page tree and a link that stays, each by a reference
+ * back, and nothing else: an element's `/Pg` to any other object is deleted,
+ * and an object reference whose `/Obj` is not such a link is taken out of its
+ * element's `/K`.
+ *
+ * An object that reads as an annotation or as a page, and is neither a page of
+ * `views` nor a link that stays, is deleted outright before the walk. No widget
+ * and no page outside the page tree is then in the file, whatever names one, a
+ * dictionary by name included, and the fields and appearance streams that hung
+ * off it are out of the walk's reach: a background that still carries a form
  * layer is one the renderer would stamp a second one over.
  */
 export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<Uint8Array> {
@@ -307,6 +334,7 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 	});
 	if (differs || pages.length !== views.length) throw new Refused({ code: 'damaged' });
 	const kept = new Set<unknown>(pages.map((page) => page.ref));
+	const linked = new Set<unknown>();
 	for (const [index, page] of pages.entries()) {
 		const listed = at(page.node, 'Annots');
 		const links = (listed instanceof PDFArray ? listed.asArray() : []).filter((entry) => {
@@ -318,7 +346,7 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 			const action = leads(link);
 			if (action === false) return false;
 			if (action) link.set(PDFName.of('A'), action);
-			kept.add(entry);
+			linked.add(entry);
 			return true;
 		});
 		page.node.set(PDFName.of('MediaBox'), context.obj(views[index].box));
@@ -329,7 +357,8 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 	context.trailerInfo.ID = undefined;
 
 	for (const [ref, object] of context.enumerateIndirectObjects())
-		if (!kept.has(ref) && (is(object, 'Type', 'Page') || annotation(object))) context.delete(ref);
+		if (!kept.has(ref) && !linked.has(ref) && (is(object, 'Type', 'Page') || annotation(object)))
+			context.delete(ref);
 
 	const claimed = new Map<PDFRef, Slot>();
 	const pending: [value: PDFArray | PDFDict | PDFStream, as: Slot][] = [];
@@ -390,7 +419,7 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 			whole.push(raw);
 			return true;
 		}
-		if (!to.kind) return false;
+		if (!to.kind && to.shape === 'one') return false;
 		const value = raw instanceof PDFRef ? context.lookup(raw) : raw;
 		if (!(value instanceof PDFDict || value instanceof PDFStream || value instanceof PDFArray))
 			return false;
@@ -404,8 +433,13 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 		const body =
 			value instanceof PDFStream ? 'stream' : value instanceof PDFArray ? 'array' : 'dict';
 		// A page is one the loop above framed. pdf-lib reads none in a dictionary
-		// written inside /Kids that names its /Type by reference.
-		const fits = kind && ROWS.get(kind)!.body === body && (kind !== 'page' || kept.has(raw));
+		// written inside /Kids that names its /Type by reference. An object reference
+		// is one to a link that loop kept.
+		const fits =
+			kind &&
+			ROWS.get(kind)!.body === body &&
+			(kind !== 'page' || kept.has(raw)) &&
+			(kind !== 'objr' || linked.has((value as PDFDict).get(PDFName.of('Obj'))));
 		return claim(raw, value, fits ? slot(kind) : undefined);
 	};
 
@@ -453,12 +487,12 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 	// An array written in place is read here and never by `plain`, which would
 	// hold a note of each.
 	for (const [holder, key, to] of backs) {
-		const one = slot(to.kind);
+		const ones = to.kind.split('|').map(slot);
 		const list = slot(`[${to.kind}]`);
 		const arrays: PDFArray[] = [];
 		const stays = (within: PDFDict | PDFArray, part: PDFObject) => {
 			const had = claimed.get(part as PDFRef);
-			if (had === one) return true;
+			if (had && ones.includes(had)) return true;
 			if (!to.many) return false;
 			if (had === list) return true;
 			if (had === to) return within instanceof PDFDict;
