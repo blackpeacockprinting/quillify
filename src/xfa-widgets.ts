@@ -51,6 +51,7 @@ export function harvestWidgets(page: XfaPage, pageNumber: number): XfaWidget[] {
 	const view = layer.ownerDocument.defaultView!;
 	const widgets: XfaWidget[] = [];
 	const seen = new Map<string, number>();
+	const places = new Set<string>();
 
 	// No field of a quill prints a barcode of what was entered, or hides it.
 	for (const [selector, construct] of [
@@ -93,6 +94,22 @@ export function harvestWidgets(page: XfaPage, pageNumber: number): XfaWidget[] {
 		// every field on its second page starts `Page1.`. The page and an occurrence
 		// count make the AcroForm name unique without losing what the form called it.
 		const base = `p${pageNumber}.${path}`;
+		const x = +(rect.left - origin.left).toFixed(2);
+		const y = +(rect.top - origin.top).toFixed(2);
+		const w = +rect.width.toFixed(2);
+		const h = +rect.height.toFixed(2);
+		const tooltip = tooltipOf(el);
+		const options =
+			tag === 'select'
+				? [...(el as HTMLSelectElement).options]
+						.map((o) => o.textContent?.trim() ?? '')
+						.filter(Boolean)
+				: [];
+		// A template can hold a field twice at one place, the second drawn over the
+		// first. Controls that read the same in everything but their order are one field.
+		const place = JSON.stringify([base, kind, x, y, w, h, tooltip, options]);
+		if (places.has(place)) continue;
+		places.add(place);
 		const count = (seen.get(base) ?? 0) + 1;
 		seen.set(base, count);
 
@@ -101,22 +118,17 @@ export function harvestWidgets(page: XfaPage, pageNumber: number): XfaWidget[] {
 			name: count === 1 ? base : `${base}#${count}`,
 			kind,
 			page: pageNumber - 1,
-			x: +(rect.left - origin.left).toFixed(2),
-			y: +(rect.top - origin.top).toFixed(2),
-			w: +rect.width.toFixed(2),
-			h: +rect.height.toFixed(2),
+			x,
+			y,
+			w,
+			h,
 			group: excl ? `p${pageNumber}.${somPath(excl, layer)}` : undefined,
 			// The leaf of the SOM path is what the form calls this option. It becomes
 			// the widget's on-state, which is the only thing telling one member of an
 			// exclusion group from another.
 			on: excl ? path.slice(path.lastIndexOf('.') + 1) : undefined,
-			tooltip: tooltipOf(el),
-			options:
-				tag === 'select'
-					? [...(el as HTMLSelectElement).options]
-							.map((o) => o.textContent?.trim() ?? '')
-							.filter(Boolean)
-					: []
+			tooltip,
+			options
 		});
 	}
 	return widgets;

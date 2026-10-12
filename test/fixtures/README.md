@@ -12,7 +12,7 @@ Ten PDFs. Nine are blank published forms, kept byte for byte as they were collec
 | `SF182_Authorization_Agreement_and_Certification_of_Training.pdf` | SF 182    | plain   | no     | 9     | 84     |
 | `DD2875_System_Authorization_Access_Request.pdf`                  | DD 2875   | dynamic | no     | 3     | 85     |
 | `DAF988_Leave_Request_Authorization.pdf`                          | DAF 988   | dynamic | yes    | 3     | 166    |
-| `DAF1288_Application_for_Ready_Reserve_Assignment.pdf`            | DAF 1288  | dynamic | yes    | 2     | 122    |
+| `DAF1288_Application_for_Ready_Reserve_Assignment.pdf`            | DAF 1288  | dynamic | yes    | 2     | 121    |
 | `acroform-sample.pdf`                                             | synthetic | plain   | no     | 1     | 5      |
 
 A locked file is encrypted with AES-128 and opens with the empty user password. The fields are the entries of a form's inventory: each radio button is one, and a field painted in two places is one. For a dynamic form the pages and fields are what the conversion lays out: the file itself stores one "Please wait" page and no field. [`../goldens/`](../goldens) has the inventory of each published form, field by field.

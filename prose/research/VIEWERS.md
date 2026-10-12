@@ -110,7 +110,7 @@ Not looked at: the later pages of DD 1610, SF 144, SF 1152 and SF 182 in Chrome,
 
 ## Two fields on one box
 
-Block 12 of DAF 1288, "DUTY AFSC/SFSC", shows two example values drawn one over the other in both viewers. The filled form has two text widgets there, `p1.Page1.form1.DAFSC` and `p1.Page1.form1.DAFSC#2`, with the same rect, [39.41 451.2 131.11 467.53]. A script that reads the widgets with qpdf finds that pair and no other among the ten files: no other two widgets of one page overlap by more than half the smaller. `test/goldens/DAF1288.inventory.json` holds both fields at one rect, so it is what the conversion has always made of this form. Why the form has two was not looked at (#137).
+Block 12 of DAF 1288, "DUTY AFSC/SFSC", shows two example values drawn one over the other in both viewers. The filled form has two text widgets there, `p1.Page1.form1.DAFSC` and `p1.Page1.form1.DAFSC#2`, with the same rect, [39.41 451.2 131.11 467.53]. A script that reads the widgets with qpdf finds that pair and no other among the ten files: no other two widgets of one page overlap by more than half the smaller. `test/goldens/DAF1288.inventory.json` held both fields at one rect in the build that was looked at, so it was what the conversion had always made of this form. Why the form had two was not looked at then (#137). The conversion now reads one field there, `p1.Page1.form1.DAFSC`: the template holds the field twice, and the entry "A field a dynamic form's template holds twice at one place is one field" in `prose/DECISIONS.md` has the rule.
 
 ## The images
 
