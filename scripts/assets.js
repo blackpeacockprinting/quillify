@@ -40,6 +40,12 @@ const GUARDS = [
 	},
 	{
 		sites: 1,
+		line: 'for (const item of formNode.items.children) {',
+		guarded:
+			'if (!formNode.bindItems.children.some(({ ref, connection }) => !connection && ref && searchNode(this.root, dataNode, ref, false, false))) return; for (const item of formNode.items.children) {'
+	},
+	{
+		sites: 1,
 		line: 'warn(`XFA - an error occurred during layout: ${e}`);',
 		guarded:
 			'warn(`XFA - an error occurred during layout: ${e}`); throw new Error(`XFA layout: ${e.message}`);'
@@ -79,7 +85,7 @@ mkdirSync('assets');
 for (const [name, content] of [
 	[
 		'pdf.worker.js',
-		`/* The worker of pdfjs-dist ${version} (build/pdf.worker.mjs), changed: a null guard added at two sites, a page's first unsplittable node no longer taken from an overflow leader or trailer, a page set made to clear its page areas' counts when it starts another pass, a field with no control or a default one given a text control, a field whose control has no HTML given a box for it so that its caption is laid out, an exception of the XFA layout thrown on after it is logged, and the last line, which named a source map, removed. */\n` +
+		`/* The worker of pdfjs-dist ${version} (build/pdf.worker.mjs), changed: a null guard added at two sites, a page's first unsplittable node no longer taken from an overflow leader or trailer, a page set made to clear its page areas' counts when it starts another pass, a field with no control or a default one given a text control, a field whose control has no HTML given a box for it so that its caption is laid out, a list bound to data the file does not hold left with the items its template lists, an exception of the XFA layout thrown on after it is logged, and the last line, which named a source map, removed. */\n` +
 			worker
 	],
 	[
