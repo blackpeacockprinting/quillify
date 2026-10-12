@@ -4,6 +4,7 @@ What a consumer can observe, in the latest release and since. Earlier releases a
 
 ## Unreleased
 
+- A page whose `/UserUnit` is a positive number other than 1 is refused as `damaged`. It passed the 14,400 pt bound, and its background was not the size `form.pages` says. No background keeps the key.
 - A dynamic form with an ellipse is redrawn with it. It was `unpaintable` with `construct: 'svg'`. A stroked rectangle of no width or no height is no longer redrawn as a bar.
 - A character of Symbol or ZapfDingbats in a dynamic form's text (the triangles, mu, the arrows) is drawn, and U+2010 as a hyphen. The form was `unpaintable` with `construct: 'glyph'`, as one with a character no standard font holds still is.
 - A dynamic form with a field wholly off its page is refused as `layout`, with `detail: 'a field is off its page'`. It converted with that field out of reach.

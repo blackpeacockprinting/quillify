@@ -48,7 +48,7 @@ export const KINDS: Record<string, string> = {
 	tree: 'Type Parent:^tree Kids:[node] Count Resources:resources Rotate',
 	page:
 		'Type Parent:^tree Resources:resources MediaBox Contents:[content] Rotate Group:group ' +
-		'UserUnit StructParents Tabs Annots:[link]',
+		'StructParents Tabs Annots:[link]',
 	link:
 		'Type Subtype Rect Border BS:border C H QuadPoints F OC:oc Contents StructParent A:action ' +
 		'Dest:dest',
