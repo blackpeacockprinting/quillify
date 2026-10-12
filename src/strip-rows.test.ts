@@ -32,6 +32,10 @@ const OUT = Symbol('outside');
 const PAGE = Symbol('page');
 /** Where a planted value is a reference to the file's one optional content group, the same wherever a case writes it. */
 const LAYER = Symbol('layer');
+/** Where a planted value is a reference to the file's one structure element, the same wherever a case writes it. */
+const TAG = Symbol('tag');
+/** Where a planted value is a reference to a link, which the page then lists. */
+const A_LINK = Symbol('link');
 
 /** The dictionaries of each file that a case can be: the rest hang on the page. */
 const ROOTS = {
@@ -81,6 +85,9 @@ const inFont = (key: string) => (object: unknown) =>
 const inLayers = (config: Planted) => ({ OCProperties: { OCGs: [LAYER], D: config } });
 const inFunction = (object: unknown) =>
 	inResources('Shading')({ ShadingType: 2, Function: object });
+const inTags = (root: Planted) => ({ StructTreeRoot: { K: [TAG], ...root } });
+const inElement = (key: string) => (object: unknown) =>
+	inTags({ K: [TAG, { S: 'P', [key]: object }] });
 
 const CODED = 'Length Filter DecodeParms';
 const LINKED = 'Type Subtype Rect Border BS C H QuadPoints F OC Contents StructParent';
@@ -436,7 +443,78 @@ const CASES: Case[] = [
 		has: { OCGs: [LAYER], VE: ['Not', LAYER] },
 		pick: ['Type', 'OCMD']
 	},
-	{ kind: 'marked', at: inResources('Properties'), keeps: '' }
+	{ kind: 'marked', at: inResources('Properties'), keeps: '' },
+	{
+		kind: 'marks',
+		on: 'catalog',
+		at: (object) => ({ MarkInfo: object }),
+		keeps: 'Marked Suspects'
+	},
+	{
+		kind: 'tags',
+		on: 'catalog',
+		at: (object) => ({ StructTreeRoot: object }),
+		keeps: 'Type K IDTree ParentTree ParentTreeNextKey RoleMap ClassMap',
+		has: {
+			K: [TAG],
+			IDTree: { Sample: OUT },
+			ParentTree: { Sample: OUT },
+			RoleMap: { A: 'P' },
+			ClassMap: { A: [{ O: 'Layout', Sample: OUT }] }
+		}
+	},
+	{
+		kind: 'elem',
+		on: 'catalog',
+		at: (object) => inTags({ K: [TAG, object] }),
+		keeps: 'Type S P ID Pg K A C T Lang Alt E ActualText',
+		has: { P: TAG, Pg: PAGE, K: [{ S: 'P', Sample: OUT }], A: [{ O: 'Layout', Sample: OUT }] },
+		pick: ['Type', 'StructElem', 'Sect']
+	},
+	{
+		kind: 'mcr',
+		on: 'catalog',
+		at: inElement('K'),
+		keeps: 'Type Pg MCID',
+		has: { Pg: PAGE },
+		pick: ['Type', 'MCR']
+	},
+	{
+		kind: 'objr',
+		on: 'catalog',
+		at: inElement('K'),
+		keeps: 'Type Pg Obj',
+		has: { Pg: PAGE, Obj: A_LINK },
+		pick: ['Type', 'OBJR']
+	},
+	{
+		kind: 'attributes',
+		on: 'catalog',
+		at: inElement('A'),
+		keeps:
+			'O Headers Scope ColSpan RowSpan Summary BBox Width Height Placement BackgroundColor ' +
+			'BorderColor BorderStyle BorderThickness SpaceBefore SpaceAfter StartIndent EndIndent ' +
+			'TextIndent TextAlign BlockAlign InlineAlign BaselineShift LineHeight TextDecorationColor ' +
+			'TextDecorationThickness TextDecorationType ColumnCount ColumnGap ColumnWidths ' +
+			'ListNumbering Role checked ADBE_MinWidth'
+	},
+	{
+		kind: 'parents',
+		on: 'catalog',
+		at: (object) => inTags({ ParentTree: object }),
+		keeps: 'Kids Nums Limits',
+		has: { Kids: [{ Nums: [0, TAG], Sample: OUT }], Nums: [0, [TAG]] }
+	},
+	{
+		kind: 'ids',
+		on: 'catalog',
+		at: (object) => inTags({ IDTree: object }),
+		keeps: 'Kids Names Limits',
+		has: {
+			Kids: [{ Names: [PDFString.of('A'), TAG], Sample: OUT }],
+			Names: [PDFString.of('A'), TAG]
+		}
+	}
 ];
 
 /** The keys the background has of a case's object, or of an array the positions that are not null, and the background's bytes. */
@@ -471,11 +549,19 @@ async function background({ on, at, keeps, has = {}, pick }: Case, told?: string
 
 	let path: (string | number)[] = [];
 	let layer: PDFObject | undefined;
+	let tag: PDFObject | undefined;
 	const made = (planted: unknown, trail: (string | number)[]): PDFObject => {
 		if (planted === object) path = trail;
 		if (planted === PAGE) return ref;
 		if (planted === LAYER)
 			return (layer ??= context.register(context.obj({ Type: 'OCG', Sample: made(OUT, []) })));
+		if (planted === TAG)
+			return (tag ??= context.register(context.obj({ S: 'P', Sample: made(OUT, []) })));
+		if (planted === A_LINK) {
+			const link = context.register(context.obj({ ...LINK, Dest: ['Fit'] }));
+			page.set(PDFName.of('Annots'), context.obj([link]));
+			return link;
+		}
 		if (planted === OUT) return context.register(context.obj({ Private: PDFString.of('PRIVATE') }));
 		if (Array.isArray(planted))
 			return context.obj(planted.map((part, index) => made(part, [...trail, index])));

@@ -384,18 +384,6 @@ it('keeps no key that leads to a kind and references an object the file does not
 	]);
 });
 
-it('keeps what the tags name, through a dictionary, an array and a stream', async () => {
-	const { text } = await background((_, context) => {
-		const marked = context.register(context.obj({ Sample: PDFString.of('KEPT') }));
-		const stream = context.register(context.stream('x', { Sample: marked }));
-		const tags = context.obj({ K: context.register(context.obj([stream])) });
-		context
-			.lookup(context.trailerInfo.Root, PDFDict)
-			.set(PDFName.of('StructTreeRoot'), context.register(tags));
-	});
-	expect(text).toContain('KEPT');
-});
-
 it('keeps no page that the page tree holds as a dictionary written in /Kids', async () => {
 	const { doc, text } = await background((node, context) => {
 		const tree = node.lookup(PDFName.of('Parent'), PDFDict);
