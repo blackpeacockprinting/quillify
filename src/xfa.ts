@@ -250,6 +250,9 @@ function standard14(run: Run): StandardFonts {
  * of its field tree, and holds no name as both a field and the parent of one,
  * which a field named as the subform beside it asks for. pdf.js joins the `/T`
  * of a field's ancestors with periods, so the inventory reads the whole name.
+ *
+ * A signature field is a dictionary of the keys the inventory reads, since
+ * pdf-lib has no class that creates one.
  */
 function stamp(doc: PDFDocument, widgets: XfaWidget[]): void {
 	const { acroForm } = doc.getForm();
@@ -304,6 +307,20 @@ function stamp(doc: PDFDocument, widgets: XfaWidget[]): void {
 			dropdown.addOptions(widget.options.length ? widget.options : ['']);
 			dropdown.addToPage(page, box);
 			tooltip(dropdown, widget.tooltip);
+			continue;
+		}
+		if (widget.kind === 'signature') {
+			const ref = doc.context.register(
+				doc.context.obj({
+					FT: 'Sig',
+					Subtype: 'Widget',
+					T: PDFHexString.fromText(widget.name),
+					Rect: [box.x, box.y, box.x + box.width, box.y + box.height],
+					...(widget.tooltip ? { TU: PDFHexString.fromText(widget.tooltip) } : {})
+				})
+			);
+			page.node.addAnnot(ref);
+			acroForm.addField(ref);
 			continue;
 		}
 		const field = rooted(PDFAcroText.create(doc.context), widget.name, PDFTextField.of);

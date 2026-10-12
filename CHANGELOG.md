@@ -9,6 +9,7 @@ What a consumer of the package can observe, by release.
 - A dynamic form whose text holds a tab converts. The text on each side of the tab is drawn where the layout put it, where the tab refused the whole form as `unpaintable` with `construct: 'glyph'`: of the 57 Air Force files the 10 October run refused for a glyph, `sanitize` returns a form for 41, refuses 6 for too many fields and 1 for none, and refuses 9 for another character. A character the standard fonts cannot encode still refuses the form, and the refusal's `detail` is now the part of the line between tabs that holds it.
 - A dynamic form's rectangle is redrawn with its border centered on the rectangle's edge, as the layout has it, where the border sat half its width inside the edge. On DAF 988 and DD 2875 eight rectangles move out by 0.25 to 0.75 pt, so their `form.pdf` differs from the one before. No field moves.
 - A dynamic form's rectangle keeps its rounded corners, where the redraw drew them square. One published Air Force form on hand has such a rectangle, DAF 1971 on its page 6.
+- A dynamic form keeps its signature fields: each is a field of kind `signature` at its box, a quill carries it as an unbound `signature` widget, and the caption printed in it is on the page. DD 2875 gains 7 fields and five captions, DAF 988 7 fields and DAF 1288 6 fields and four captions, and no other field of theirs changes. The pdf.js worker the package ships is changed at one more line for it.
 
 ## 0.2.0
 
