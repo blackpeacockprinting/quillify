@@ -14,9 +14,10 @@ import type {
 } from './index.js';
 
 // The import compiles every module behind the entry point, which takes seconds on a loaded machine.
-it('imports where there is no DOM, and exports the public functions and nothing else', async () => {
+it('imports where there is no DOM, and exports the public functions, the limits and nothing else', async () => {
 	expect(Object.keys(await import('./index.js')).sort()).toEqual([
 		'check',
+		'limits',
 		'quillify',
 		'sanitize',
 		'suggest'
