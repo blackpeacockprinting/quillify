@@ -94,9 +94,10 @@ it('ships the pdf.js worker as the installed one but for the notice, the guards 
 			'extraNode[$getSubformParent] = savedMethod;',
 			'extraNode[$getSubformParent] = savedMethod; root[$extra].firstUnsplittable = savedFirst;'
 		],
+		['if (!this.ui) {', 'if (!this.ui || this.ui.defaultUi || !this.ui[$getExtra]()) {'],
 		[
 			'const ui = this.ui[$toHTML]().html;',
-			'const ui = this.ui[$toHTML]().html ?? (this.ui.signature ? { name: "label", attributes: { class: ["xfaLabel"] }, children: [{ name: "div", attributes: { class: ["xfaSignature"], style: { width: "100%" } }, children: [] }] } : null);'
+			'const ui = this.ui[$toHTML]().html ?? { name: "label", attributes: { class: ["xfaLabel"] }, children: [{ name: "div", attributes: { class: [this.ui.signature ? "xfaSignature" : this.ui.barcode ? "xfaBarcode" : this.ui.passwordEdit ? "xfaPasswordEdit" : "xfaImageEdit"], style: { width: "100%" } }, children: [] }] };'
 		],
 		['this[$extra].pageSetIndex = -1;', 'this[$extra].pageSetIndex = -1; this[$cleanPage]();'],
 		[
