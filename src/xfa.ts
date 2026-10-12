@@ -22,7 +22,7 @@ import type { PDFAcroField, PDFRef } from 'pdf-lib';
 import { displayList, type DisplayList, type Run } from './display-list.js';
 import { openPdf } from './pdfjs.js';
 import { Refused } from './refusal.js';
-import { MAX_PAGES } from './types.js';
+import { MAX_PAGES, MAX_PICTURE_PIXELS } from './types.js';
 import { XfaStage } from './xfa-layer.js';
 import { harvestWidgets, type XfaWidget } from './xfa-widgets.js';
 
@@ -54,6 +54,7 @@ export async function xfaToAcroForm(bytes: Uint8Array, signal?: AbortSignal): Pr
 		const out = await PDFDocument.create();
 		const fonts = new Map<StandardFonts, PDFFont>();
 		const widgets: XfaWidget[] = [];
+		let pixels = 0;
 
 		for (let number = 1; number <= pdf.numPages; number++) {
 			const laid = await within(pdf.getPage(number).then((page) => stage.lay(page)));
@@ -64,6 +65,14 @@ export async function xfaToAcroForm(bytes: Uint8Array, signal?: AbortSignal): Pr
 			for (const span of laid.layer.querySelectorAll('.xfaPageCount'))
 				span.textContent = String(pdf.numPages);
 			const list = displayList(laid, number);
+			for (const { image } of list.pictures) pixels += image.naturalWidth * image.naturalHeight;
+			if (pixels > MAX_PICTURE_PIXELS)
+				throw new Refused({
+					code: 'unpaintable',
+					page: number - 1,
+					construct: 'image',
+					detail: 'pixels'
+				});
 			for (const widget of harvestWidgets(laid, number)) widgets.push(widget);
 			await paint(out.addPage([list.width, list.height]), number, list, async (name) => {
 				let font = fonts.get(name);
@@ -81,7 +90,7 @@ export async function xfaToAcroForm(bytes: Uint8Array, signal?: AbortSignal): Pr
 }
 
 /** PDF's origin is bottom-left; every primitive arrives top-left. */
-function paint(
+async function paint(
 	page: PDFPage,
 	pageNumber: number,
 	list: DisplayList,
@@ -146,6 +155,19 @@ function paint(
 				box.y + box.h,
 				right
 			);
+	}
+	for (const { x, y, w, h, image } of list.pictures) {
+		// The pixels are read off a canvas of the host page's. The frame's policy
+		// governs what its document loads, and the picture is of the page's origin.
+		const canvas = document.createElement('canvas');
+		canvas.width = image.naturalWidth;
+		canvas.height = image.naturalHeight;
+		canvas.getContext('2d')!.drawImage(image, 0, 0);
+		const png = canvas.toDataURL('image/png');
+		// What a canvas with a side the browser will not make gives.
+		if (png === 'data:,')
+			throw new Refused({ code: 'unpaintable', page: pageNumber - 1, construct: 'image' });
+		page.drawImage(await page.doc.embedPng(png), { x, y: H - y - h, width: w, height: h });
 	}
 	for (const line of list.lines)
 		page.drawLine({

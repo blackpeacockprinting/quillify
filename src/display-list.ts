@@ -22,6 +22,15 @@ export interface Box {
 	radius?: number;
 }
 
+/** A picture, at the box the browser paints its pixels in. */
+export interface Picture {
+	x: number;
+	y: number;
+	w: number;
+	h: number;
+	image: HTMLImageElement;
+}
+
 export interface Line {
 	x1: number;
 	y1: number;
@@ -49,6 +58,7 @@ export interface Run {
 
 export interface DisplayList {
 	boxes: Box[];
+	pictures: Picture[];
 	lines: Line[];
 	runs: Run[];
 	width: number;
@@ -79,18 +89,20 @@ function stroked(style: CSSStyleDeclaration): Edge | null {
  * Turn a laid-out XFA page into primitives in page points. The browser solved
  * the layout, and the rects here are read off it.
  *
- * What it can express is text, CSS backgrounds and borders, and inline SVG
- * `line` and `rect`. An image, a background image, a `rect` filled with a
- * gradient or a pattern, another SVG shape, a border style it cannot draw and a
- * transform it cannot carry are refused with the construct named: a background
- * that is silently incomplete is worse than not taking the form. An element
- * hidden by its own style, an SVG `line` with no stroke, a `rect` with neither
- * stroke nor fill and an HTML element under 0.3 pt on a side are passed over.
+ * What it can express is text, CSS backgrounds and borders, pictures, and
+ * inline SVG `line` and `rect`. A picture that did not load, a background
+ * image, a `rect` filled with a gradient or a pattern, another SVG shape, a
+ * border style it cannot draw and a transform it cannot carry are refused with
+ * the construct named: a background that is silently incomplete is worse than
+ * not taking the form. An element hidden by its own style, an SVG `line` with
+ * no stroke, a `rect` with neither stroke nor fill and an HTML element under
+ * 0.3 pt on a side are passed over.
  */
 export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 	const { layer, origin } = page;
 	const view = layer.ownerDocument.defaultView!;
 	const boxes: Box[] = [];
+	const pictures: Picture[] = [];
 	const lines: Line[] = [];
 	const runs: Run[] = [];
 	const X = (v: number) => +(v - origin.left).toFixed(2);
@@ -105,10 +117,32 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 	for (const el of layer.querySelectorAll<HTMLElement>('*')) {
 		const tag = el.tagName.toLowerCase();
 		if (tag === 'svg' || tag === 'option' || tag === 'g' || tag === 'defs') continue;
-		if (tag === 'img' || el.classList.contains('xfaImage')) refuse('image');
 
 		const style = view.getComputedStyle(el);
 		if (style.visibility === 'hidden' || style.display === 'none') continue;
+
+		if (tag === 'img' || el.classList.contains('xfaImage')) {
+			const image = el as HTMLImageElement;
+			// A picture that did not load has no size.
+			if (!image.naturalWidth || !image.naturalHeight) refuse('image');
+			if (unrepresentable(style.transform)) refuse('transform');
+			const rect = image.getBoundingClientRect();
+			if (rect.width < 0.3 || rect.height < 0.3) continue;
+			// pdf.js stretches a picture to its box where the template says so. Any
+			// other the stylesheet fits into the box whole, from the top left.
+			const fit =
+				style.objectFit === 'contain'
+					? Math.min(rect.width / image.naturalWidth, rect.height / image.naturalHeight)
+					: 0;
+			pictures.push({
+				x: X(rect.x),
+				y: Y(rect.y),
+				w: +(fit ? image.naturalWidth * fit : rect.width).toFixed(2),
+				h: +(fit ? image.naturalHeight * fit : rect.height).toFixed(2),
+				image
+			});
+			continue;
+		}
 
 		if (tag === 'line' || tag === 'rect') {
 			const svg = (el as unknown as SVGElement).ownerSVGElement;
@@ -209,7 +243,7 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 	}
 
 	collectText(layer, X, Y, runs);
-	return { boxes, lines, runs, width: page.width, height: page.height };
+	return { boxes, pictures, lines, runs, width: page.width, height: page.height };
 }
 
 /**

@@ -98,6 +98,13 @@ export const MAX_INFLATED_BYTES = 64 * 1024 * 1024;
 export const MAX_PAGES = 25;
 export const MAX_WIDGETS = 1000;
 /**
+ * The most pixels the pictures of a dynamic form come to, each use counted.
+ * At four bytes a pixel that is 32 MB on a canvas, and as much in the
+ * background when the pictures are noise with an alpha channel. Of the 65 Air
+ * Force forms with a picture the largest comes to 6,958,512 (AF 4035).
+ */
+export const MAX_PICTURE_PIXELS = 8_000_000;
+/**
  * How long `sanitize` works on a file before it refuses it. Of 59 published
  * forms the slowest takes 2.7 s (SF 2809).
  */
