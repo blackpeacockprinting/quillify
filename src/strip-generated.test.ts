@@ -7,7 +7,9 @@
  * can hold itself. Each file is refused, or its background is read back by the
  * table: every key of a dictionary is one its row lists, with what the row
  * says it leads to, the file holds no object that reading does not reach, and
- * none but a link says `/Type /Annot` or `/Subtype /Widget`.
+ * none but a link says `/Type /Annot` or `/Subtype /Widget`. A file that is
+ * stripped keeps its page, the page's content, and each dictionary the
+ * generator hung on the envelope where its key leads to one.
  * A failure prints the smallest file that makes it.
  */
 
@@ -270,7 +272,28 @@ it(`refuses, or strips to the table, each of ${RUNS} generated files of seed ${S
 					expect(thrown).toBeInstanceOf(Refused);
 				});
 				if (!background) return;
-				read(await PDFDocument.load(background, { updateMetadata: false }));
+				const after = await PDFDocument.load(background, { updateMetadata: false });
+				read(after);
+				// What the generator hung on the envelope is still there: a dictionary
+				// where its key leads to one, and the page's content.
+				const before = await PDFDocument.load(source, { updateMetadata: false });
+				expect(after.getPageCount()).toBe(before.getPageCount());
+				const envelope = (doc: PDFDocument): [kind: string, holder: PDFDict][] => [
+					['page', doc.getPage(0).node],
+					['tree', doc.catalog.Pages()],
+					['catalog', doc.catalog]
+				];
+				const left = envelope(after);
+				for (const [index, [kind, holder]] of envelope(before).entries())
+					for (const [key, to] of ROWS.get(kind)!) {
+						const had = holder.lookup(PDFName.of(key));
+						const has = left[index][1].lookup(PDFName.of(key));
+						const row = STREAMS.includes(to) ? undefined : ROWS.get(to);
+						if (had instanceof PDFDict && row && !row.has('0'))
+							expect(has, `${key} of the ${kind}`).toBeInstanceOf(PDFDict);
+						if (key === 'Contents' && (had instanceof PDFArray || had instanceof PDFStream))
+							expect(has?.constructor, `${key} of the ${kind}`).toBe(had.constructor);
+					}
 				stripped++;
 			} catch (thrown) {
 				throw new Error(`${thrown}\n${new TextDecoder('latin1').decode(source)}`, {
@@ -278,8 +301,14 @@ it(`refuses, or strips to the table, each of ${RUNS} generated files of seed ${S
 				});
 			}
 		}),
-		// Shrinking stops in time for the failure to be printed.
-		{ seed: SEED, numRuns: RUNS, interruptAfterTimeLimit: 30_000 }
+		// Shrinking stops in time for the failure to be printed, and a run the
+		// limit ends before its last file fails.
+		{
+			seed: SEED,
+			numRuns: RUNS,
+			interruptAfterTimeLimit: 30_000,
+			markInterruptAsFailure: true
+		}
 	);
 	expect(stripped).toBeGreaterThan(RUNS / 3);
 }, 60_000);

@@ -4,8 +4,8 @@ import {
 	PDFDocument,
 	PDFName,
 	PDFString,
+	PDFRawStream,
 	decodePDFRawStream,
-	type PDFRawStream,
 	type PDFRef
 } from 'pdf-lib';
 import { expect, it } from 'vitest';
@@ -64,7 +64,7 @@ async function laidOut(bytes: Uint8Array, char: string) {
 	}
 }
 
-/** The pieces of text pdf.js reads off the redrawn page, each with where it starts and its width, and the page's fonts. */
+/** The pieces of text pdf.js reads off the redrawn page, each with where it starts and its width, the page's fonts, and each horizontal scale its content sets. */
 async function redrawn(bytes: Uint8Array) {
 	const converted = await xfaToAcroForm(bytes);
 	const doc = await PDFDocument.load(converted);
@@ -74,6 +74,18 @@ async function redrawn(bytes: Uint8Array) {
 			named.map((font) => doc.context.lookup(font, PDFDict).get(PDFName.of('BaseFont'))!.toString())
 		)
 	];
+	const scales = doc.context
+		.enumerateIndirectObjects()
+		.filter(
+			([, object]) => object instanceof PDFRawStream && !object.dict.has(PDFName.of('Subtype'))
+		)
+		.flatMap(([, object]) =>
+			[
+				...new TextDecoder()
+					.decode(decodePDFRawStream(object as PDFRawStream).decode())
+					.matchAll(/(\S+) Tz/g)
+			].map(([, scale]) => Number(scale))
+		);
 	const { pdf, close } = await openPdf(converted);
 	try {
 		const { items } = await (await pdf.getPage(1)).getTextContent();
@@ -82,7 +94,7 @@ async function redrawn(bytes: Uint8Array) {
 				? [{ text: item.str.trim(), x: item.transform[4], y: item.transform[5], width: item.width }]
 				: []
 		);
-		return { fonts, pieces };
+		return { fonts, pieces, scales };
 	} finally {
 		await close();
 	}
@@ -126,6 +138,40 @@ it('draws a mark in a turned run along the way the run reads', async () => {
 	expect(after.x).toBeCloseTo(before.x, 2);
 	expect(Math.abs(792 - mark.y - layout.bottom)).toBeLessThan(0.05);
 	expect(Math.abs(792 - after.y - (await laidOut(bytes, 'a')).bottom)).toBeLessThan(1.1);
+}, 120_000);
+
+// A form that carries a font dictionary is laid out in the face it names, and
+// Arial is the Liberation Sans the package ships, whose triangle is 0.99 em
+// wide. The one of ZapfDingbats is 0.892 em, so the run is drawn 4% wider.
+it('draws a mark in a run it scales across where the scale puts it', async () => {
+	const form = await PDFDocument.load(
+		await dynamicForm(
+			'<draw x="100pt" y="300pt" w="200pt" h="60pt"><font typeface="Arial" size="10pt"/><value><text>I ▲ J</text></value></draw>'
+		),
+		{ updateMetadata: false }
+	);
+	form.catalog
+		.lookup(PDFName.of('AcroForm'), PDFDict)
+		.set(PDFName.of('DR'), form.context.obj({ Font: {} }));
+	const bytes = await form.save();
+
+	const { fonts, pieces, scales } = await redrawn(bytes);
+	expect(pieces.map(({ text }) => text)).toEqual(['I', 's', 'J']);
+	expect(fonts).toEqual(['/Helvetica', '/ZapfDingbats']);
+	const [before, mark, after] = pieces;
+	const first = await laidOut(bytes, 'I');
+	const last = await laidOut(bytes, 'J');
+	// To half a percent: the width a browser gives a run differs a little by
+	// platform, 104.3% on macOS and 104.1% on Linux.
+	expect(scales).toEqual([expect.closeTo(104.2, 0), 100]);
+	expect(Math.abs(after.x + after.width - last.left - last.width)).toBeLessThan(0.05);
+	expect(Math.abs(before.width - (first.width * scales[0]) / 100)).toBeLessThan(0.05);
+	expect(Math.abs(before.x - first.left)).toBeLessThan(0.05);
+	// The scale widens the spaces as it widens the letters, so the mark is as far
+	// from the letter before it as the letter after it is from the mark.
+	const gap = mark.x - before.x - before.width;
+	expect(gap).toBeGreaterThan(2.7);
+	expect(Math.abs(after.x - mark.x - mark.width - gap)).toBeLessThan(0.05);
 }, 120_000);
 
 it('draws U+2010 as the hyphen of the face its run is in', async () => {
