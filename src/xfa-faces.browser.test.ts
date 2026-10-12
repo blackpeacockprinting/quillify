@@ -27,7 +27,8 @@ async function redrawn() {
 	const lay = XfaStage.prototype.lay;
 	vi.spyOn(XfaStage.prototype, 'lay').mockImplementation(async function (this: XfaStage, page) {
 		const laid = await lay.call(this, page);
-		for (const run of displayList(laid, page.pageNumber).runs) runs.push(run);
+		for (const item of displayList(laid, page.pageNumber).drawn)
+			if ('text' in item) runs.push(item);
 		return laid;
 	});
 	return { pdf: await xfaToAcroForm(await normalizePdf(await published(saarUrl))), runs };
