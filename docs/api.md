@@ -46,7 +46,7 @@ A `Form` is `{ pdf, pages, fields }`: the background PDF, each page's size in po
 
 ## suggest
 
-Returns an entry for each field, named from the form's own tooltips: `{ id, keep, name, description }`, with an optional `example` and, on a text field, `text` (`line`, `paragraph` or `lines`). Names are snake_case.
+Returns an entry for each field, named from the form's own tooltips: `{ id, keep, name, description }`. A caller may add an `example` and, on a text field, `text` (`line`, `paragraph` or `lines`). Names are snake_case.
 
 A naming is `{ name, description, fields }`, and those entries are its `fields`. A read-only field is left out whatever `keep` says.
 
@@ -73,11 +73,11 @@ Returns what is wrong with a naming, and an empty list when nothing is. A naming
 
 Builds the quill and resolves to `{ ok: true, tree }` or `{ ok: false, problems }`. The problems are `check`'s, and `engine` when the engine refuses the files.
 
-`tree` maps a file name to its bytes (`Quill.yaml`, `form.json`, `form.pdf`, `example.md`), and `Quill.fromTree` takes it.
+`tree` maps a file name to its bytes (`Quill.yaml`, `form.json`, `form.pdf`, and `example.md` when a kept field has an example or is a dropdown with an option), and `Quill.fromTree` takes it.
 
 ## limits
 
-Frozen. The largest file in bytes, the most pages and the most fields `sanitize` takes, each as its refusal's `limit` carries it.
+Frozen. The largest file in bytes (8,388,608), the most pages and the most fields `sanitize` takes. Print a refusal's own `limit`: `too_large` carries 67,108,864 for the decoded bound.
 
 ## Trust
 

@@ -37,11 +37,11 @@ Reasons: [the decision log and research notes written before v0.3.0](https://git
 
 ## Not handled
 
-Known, and no vulnerability to report: each is an open limit.
+Known limits, and no vulnerability to report.
 
 - Entries flattened into page content read as print: check the pages before sharing a quill.
 - Tag strings no page shows (`/Alt`, `/ActualText`, `/E`, `/T`, `/ID`, `/Lang`) stay, and filled fields are untagged (#192).
-- Content in a layer that is off stays (#32).
+- Content in a layer that is off stays (decided in #32).
 - A dictionary by name (`/Resources` maps, `/RoleMap`, `/ClassMap`) keeps values under names the file chose.
 - qpdf's memory before a refusal is unbounded (#46).
 - An image counts for what its dictionary declares. A codec's own header is not read, and an image inside a content stream is not counted.

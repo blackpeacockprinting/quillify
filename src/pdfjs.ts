@@ -5,8 +5,9 @@ import type { PDFDocumentProxy } from 'pdfjs-dist';
 // inside `new Worker(...)`, the URL makes it bundle the file again.
 const WORKER = new URL('../assets/pdf.worker.js', import.meta.url);
 
-// The faces pdf.js lays a dynamic form's Arial, Helvetica, Myriad Pro, Calibri
-// and Segoe UI out in, each named so that a bundler copies it.
+// The faces pdf.js lays a dynamic form's Arial, Helvetica, Myriad Pro and
+// Calibri out in, and any face the form's font list lacks, each named so that
+// a bundler copies it.
 const FACES: Record<string, URL> = {
 	'LiberationSans-Regular.ttf': new URL('../assets/LiberationSans-Regular.ttf', import.meta.url),
 	'LiberationSans-Bold.ttf': new URL('../assets/LiberationSans-Bold.ttf', import.meta.url),

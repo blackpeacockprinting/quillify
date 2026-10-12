@@ -100,7 +100,7 @@ export const MAX_INFLATED_BYTES = 64 * 1024 * 1024;
 /** The most pages and fields a form has and is taken. The engine takes at most 1,000 fields in a block. */
 export const MAX_PAGES = 25;
 export const MAX_WIDGETS = 1000;
-/** The limits a consumer prints, each under the name its refusal counts by. */
+/** The limits a consumer prints before a read. A refusal's own `limit` is the one to print after it: `too_large` carries `MAX_INFLATED_BYTES` for the decoded bound. */
 export const limits = Object.freeze({ bytes: MAX_BYTES, pages: MAX_PAGES, fields: MAX_WIDGETS });
 /**
  * The longest side a page has and is taken, in points, and the farthest its
