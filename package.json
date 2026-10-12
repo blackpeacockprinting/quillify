@@ -51,6 +51,7 @@
 		"@quillmark/wasm": "0.124.0",
 		"@types/node": "24.19.0",
 		"@vitest/browser-playwright": "5.0.2",
+		"fast-check": "4.10.2",
 		"playwright": "1.63.0",
 		"prettier": "3.9.9",
 		"typescript": "6.0.3",
