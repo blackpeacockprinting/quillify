@@ -3,10 +3,11 @@
  * is. Each file here is built from bytes and is under the cap on the file as
  * stored. A stream that two readers can read two ways is not counted: the
  * file is refused as damaged. An image comes to the bytes its dictionary
- * declares, and one whose dictionary does not say is refused as damaged.
+ * declares, or to what the header of its JPEG or JPEG 2000 data says when
+ * that is more, and one whose dictionary does not say is refused as damaged.
  */
 
-import { PDFDocument, PDFHexString, PDFName, PDFRawStream, type PDFRef } from 'pdf-lib';
+import { PDFDocument, PDFHexString, PDFName, PDFNumber, PDFRawStream, type PDFRef } from 'pdf-lib';
 import { afterEach, expect, it, vi } from 'vitest';
 import { templateForm } from '../test/dynamic-form.js';
 import { sanitize } from './sanitize.js';
@@ -466,6 +467,259 @@ it('counts a CCITT image for its own width and height when they are the larger',
 		DecodeParms: { K: -1, Columns: 1, Rows: 0 }
 	});
 	expect(await tooLarge(pdf)).toBeLessThan(BOUND + 5 * MiB);
+}, 60_000);
+
+/**
+ * A JPEG that is its frame header and no more: a start-of-frame segment
+ * under `marker`, with `before` between the start of the image and it.
+ */
+const frame = (
+	width: number,
+	height: number,
+	{ components = 1, bits = 8, marker = 0xc0, before = [] as number[] } = {}
+) =>
+	Uint8Array.of(
+		...[0xff, 0xd8, ...before, 0xff, marker, 0, 8 + 3 * components, bits],
+		...[height >> 8, height & 255, width >> 8, width & 255, components],
+		...Array<number>(3 * components).fill(0x11),
+		...[0xff, 0xd9]
+	);
+
+/**
+ * A JPEG 2000 codestream that is its SIZ segment and no more: an image of
+ * the size given, with a component of each of `bits`, `inset` each way from
+ * the origin of its grid.
+ */
+function codestream(width: number, height: number, bits = [8], inset = 0): Uint8Array {
+	const out = new Uint8Array(42 + 3 * bits.length);
+	const view = new DataView(out.buffer);
+	[0xff4f, 0xff51, 38 + 3 * bits.length, 0].forEach((value, at) => view.setUint16(2 * at, value));
+	[inset + width, inset + height, inset, inset, inset + width, inset + height, 0, 0].forEach(
+		(value, at) => view.setUint32(8 + 4 * at, value)
+	);
+	view.setUint16(40, bits.length);
+	bits.forEach((depth, at) => out.set([depth - 1, 1, 1], 42 + 3 * at));
+	return out;
+}
+
+/** A box of a JP2 file: its length, its type and what it holds. */
+function box(type: string, ...parts: (string | Uint8Array)[]): Uint8Array {
+	const body = joined(...parts);
+	const size = new Uint8Array(4);
+	new DataView(size.buffer).setUint32(0, 8 + body.length);
+	return joined(size, type, body);
+}
+
+/** A box whose length is written wide, in eight bytes after its type. */
+const wide = (type: string, body: Uint8Array) =>
+	joined(
+		Uint8Array.of(0, 0, 0, 1),
+		type,
+		Uint8Array.of(0, 0, 0, 0, 0, 0, 0, 16 + body.length),
+		body
+	);
+
+/** A JP2 file whose image header says a gray pixel, with `stream` for its codestream after `between`. */
+const jp2 = (stream: Uint8Array, between = new Uint8Array()) =>
+	joined(
+		box('jP  ', Uint8Array.of(0x0d, 0x0a, 0x87, 0x0a)),
+		box('ftyp', 'jp2 ', new Uint8Array(4), 'jp2 '),
+		box('jp2h', box('ihdr', Uint8Array.of(0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 7, 7, 0, 0))),
+		between,
+		box('jp2c', stream)
+	);
+
+/**
+ * What a marker reader passes on its way to a frame: an application segment
+ * of 16 bytes, a Huffman table of 10 under a marker numbered among the
+ * frames', a restart marker, which has no length, a byte that is no marker,
+ * a zero after FF, which is no marker either, and a fill byte.
+ */
+const AHEAD = [
+	...[0xff, 0xe0, 0, 16, ...Array<number>(14).fill(0)],
+	...[0xff, 0xc4, 0, 10, ...Array<number>(8).fill(0)],
+	...[0xff, 0xd0, 0x55, 0xff, 0x00, 0xff]
+];
+type Headed = (size: number) => Uint8Array | Promise<Uint8Array>;
+
+/**
+ * Each image's dictionary says a gray pixel of eight bits, and its codec's own
+ * header says 4,096 wide (but for the last two) at a height that comes to
+ * 60 MiB and at one that comes to 66 MiB. A decoder goes by the header.
+ */
+it.each<[string, Filter, Headed, number, number]>([
+	['a JPEG of a byte', 'DCTDecode', (height) => frame(4096, height), 15360, 16896],
+	['a JPEG of three bytes', 'DCTDecode', (h) => frame(4096, h, { components: 3 }), 5120, 5632],
+	['a JPEG of twelve bits', 'DCTDecode', (h) => frame(4096, h, { bits: 12 }), 10240, 11264],
+	['a progressive JPEG', 'DCTDecode', (h) => frame(4096, h, { marker: 0xc2 }), 15360, 16896],
+	[
+		'a JPEG whose frame comes after a segment, a table, a restart, a stray byte and a fill byte',
+		'DCTDecode',
+		(height) => frame(4096, height, { before: AHEAD }),
+		15360,
+		16896
+	],
+	[
+		'a JPEG that starts after bytes whose segment would pass over it',
+		'DCTDecode',
+		(height) => Uint8Array.of(0, 0, 0xff, 0xe0, 0, 19, ...frame(4096, height)),
+		15360,
+		16896
+	],
+	[
+		'a JPEG under Flate',
+		['FlateDecode', 'DCTDecode'],
+		(height) => deflated(frame(4096, height)),
+		15360,
+		16896
+	],
+	['a JPEG 2000 codestream', 'JPXDecode', (height) => codestream(4096, height), 15360, 16896],
+	[
+		'a JPEG 2000 codestream of three components',
+		'JPXDecode',
+		(height) => codestream(4096, height, [8, 8, 8]),
+		5120,
+		5632
+	],
+	[
+		'a JPEG 2000 codestream of a bit in its first component and sixteen in the others',
+		'JPXDecode',
+		(height) => codestream(4096, height, [1, 16, 16]),
+		2560,
+		2816
+	],
+	[
+		'a JPEG 2000 codestream in from the origin of its grid',
+		'JPXDecode',
+		(height) => codestream(4096, height, [8], 1_000_000),
+		15360,
+		16896
+	],
+	['a JP2 file', 'JPXDecode', (height) => jp2(codestream(4096, height)), 15360, 16896],
+	[
+		'a JP2 file with a box of a wide length',
+		'JPXDecode',
+		(height) => jp2(codestream(4096, height), wide('free', new Uint8Array(8))),
+		15360,
+		16896
+	],
+	// The codestream is in the first `jp2c` box, and the one after it is empty.
+	[
+		'a JP2 file whose codestream is in a box of a wide length',
+		'JPXDecode',
+		(height) => jp2(new Uint8Array(), wide('jp2c', codestream(4096, height))),
+		15360,
+		16896
+	],
+	[
+		'a JP2 file under Flate',
+		['FlateDecode', 'JPXDecode'],
+		(height) => deflated(jp2(codestream(4096, height))),
+		15360,
+		16896
+	],
+	[
+		'a JPEG 2000 codestream wider than a JPEG can say',
+		'JPXDecode',
+		(height) => codestream(30_000 * 64, height),
+		32,
+		36
+	],
+	// A frame of no height takes it from a DNL marker after the scan, which can say 65,535.
+	[
+		'a JPEG whose frame leaves its height to a later marker',
+		'DCTDecode',
+		(width) => frame(width, 0),
+		960,
+		1056
+	]
+])(
+	'counts an image of 1 by 1 for what its own header says, in %s',
+	async (_, filter, headed, under, over) => {
+		await reads(await image(filter, await headed(under)));
+		expect(await tooLarge(await image(filter, await headed(over)))).toBeLessThan(BOUND + 3 * MiB);
+	},
+	60_000
+);
+
+it.each<[string, Filter, Uint8Array]>([
+	['a JPEG', 'DCTDecode', frame(64, 64)],
+	['a JPEG 2000 codestream', 'JPXDecode', codestream(64, 64)],
+	['a JP2 file', 'JPXDecode', jp2(codestream(64, 64))]
+])(
+	'reads an image whose dictionary says what the header of %s says',
+	async (_, filter, bytes) => {
+		await reads(await image(filter, bytes, { Width: 64, Height: 64 }));
+	},
+	60_000
+);
+
+const VAST = jp2(codestream(30_000, 30_000));
+
+it.each<[string, Filter, Uint8Array]>([
+	['a JPEG cut short in its frame header', 'DCTDecode', frame(30_000, 30_000).slice(0, 8)],
+	[
+		'a JPEG whose segment before the frame runs past its end',
+		'DCTDecode',
+		frame(30_000, 30_000, { before: [0xff, 0xe0, 0xff, 0xff] })
+	],
+	// The frame a thumbnail carries is in a segment's data, and is passed over with it.
+	[
+		'a JPEG with a frame header inside an application segment',
+		'DCTDecode',
+		frame(1, 1, { before: [0xff, 0xe1, 0, 15, ...frame(30_000, 30_000).slice(2)] })
+	],
+	['a JPEG with no frame header', 'DCTDecode', JPEG],
+	[
+		'a JPEG 2000 codestream cut short in its SIZ segment',
+		'JPXDecode',
+		codestream(30_000, 30_000).slice(0, 14)
+	],
+	['a JP2 file cut short before its codestream', 'JPXDecode', VAST.slice(0, 60)],
+	['a JP2 file cut short in its SIZ segment', 'JPXDecode', VAST.slice(0, -31)],
+	[
+		'a JP2 file with a box of no length before its codestream',
+		'JPXDecode',
+		jp2(codestream(30_000, 30_000), new Uint8Array(8))
+	]
+])(
+	'reads an image of 1 by 1 as its dictionary says, in %s',
+	async (_, filter, bytes) => {
+		await reads(await image(filter, bytes));
+	},
+	60_000
+);
+
+/** A number written as given: more digits than pdf-lib writes for any number. */
+function written(digits: string): PDFNumber {
+	const number = PDFNumber.of(1);
+	Object.assign(number, { stringValue: digits });
+	return number;
+}
+
+const E308 = `1${'0'.repeat(308)}`;
+
+/**
+ * qpdf writes nothing for a file with an integer past 64 bits, and keeps a
+ * real number as it is written. pdf-lib reads 400 digits as infinity, and
+ * 1e308 at eight bits to the pixel passes the largest number there is.
+ */
+it.each([
+	['400 digits', '9'.repeat(400)],
+	['400 digits and a fraction', `${'9'.repeat(400)}.0`],
+	['1e308, as 309 digits', E308],
+	['1e308, as 309 digits and a fraction', `${E308}.0`]
+])(
+	'refuses as damaged an image whose width is %s',
+	async (_, digits) => {
+		await damaged(await image('DCTDecode', JPEG, { Width: written(digits) }));
+	},
+	60_000
+);
+
+it('refuses an image whose width is 1e300 for a count that is a number', async () => {
+	const pdf = await image('DCTDecode', JPEG, { Width: written(`1${'0'.repeat(300)}.0`) });
+	expect(await tooLarge(pdf)).toBeLessThan(Infinity);
 }, 60_000);
 
 it.each<[string, Declared]>([

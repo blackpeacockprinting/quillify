@@ -4,6 +4,7 @@ What a consumer can observe, in the latest release and since. Earlier releases a
 
 ## Unreleased
 
+- A JPEG or JPEG 2000 image counts toward the 64 MiB bound for what its own header says where that is more than its dictionary declares. An image whose size is no finite number, or a file with an object pdf-lib cannot read, is `damaged`.
 - A dynamic form no longer needs `img-src data:` from a host's content security policy. Without it the browser logged an error for each field, and the form converted all the same.
 - In a dynamic form's text a soft hyphen (U+00AD) inside a line is no longer drawn as a hyphen, and a non-breaking hyphen (U+2011) is drawn as one. A form with U+2011 was `unpaintable` with `construct: 'glyph'`.
 - A file qpdf cannot rewrite is refused without pdf.js opening it, which held 1.5 GiB for one file of 0.5 MB. A PDF cut off mid-file is now `damaged`, not `not_pdf`, and a malformed encryption dictionary is refused where `sanitize` threw.
