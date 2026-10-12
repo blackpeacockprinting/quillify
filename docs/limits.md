@@ -19,13 +19,13 @@ It is drawn as pdf.js lays it out, in Helvetica, Times or Courier, and a mark th
 
 - A hairline under half a point, or a rule half a point from a fill, can come out a pixel off its layout.
 - pdf.js's layout is not always Acrobat's ([#120](https://github.com/tonguetoquill/quillify/issues/120)).
-- Arial and Helvetica are laid out in Liberation Sans, which the package ships. Other faces use what the machine has ([#197](https://github.com/tonguetoquill/quillify/issues/197)).
-- Refused: a turned field, a field off its page, a dotted border, an SVG shape other than a line, a rectangle or an ellipse, a barcode or password field ([#42](https://github.com/tonguetoquill/quillify/issues/42)), and a character no standard font holds.
+- Arial, Helvetica, Myriad Pro, Calibri and faces the form's font list lacks are laid out in the shipped Liberation Sans. One listed and not embedded, or any with no list, uses the machine's ([#197](https://github.com/tonguetoquill/quillify/issues/197)).
+- Refused: a field that is turned, off its page, a barcode or a password; a turned picture or line, a caption turned in a cell that flows, and a turn not by quarters; a picture that does not load; a gradient or pattern fill; a dotted border; an SVG shape other than a line, a rectangle or an ellipse; and a character no standard font holds. [#42](https://github.com/tonguetoquill/quillify/issues/42) has the turned field, the border and the shape.
 
 ## Every form
 
-- A signature field becomes an unsigned widget. What signing locks is not carried ([#124](https://github.com/tonguetoquill/quillify/issues/124)).
+- A signature field becomes an unsigned widget. What signing locks is not carried (decided in [#124](https://github.com/tonguetoquill/quillify/issues/124)).
 - A radio group reaches the quill as one boolean a button ([#41](https://github.com/tonguetoquill/quillify/issues/41)), and a field has a name and no title ([#36](https://github.com/tonguetoquill/quillify/issues/36)).
-- A dropdown with `>`, `;` or `|` in an option becomes a text field ([#88](https://github.com/tonguetoquill/quillify/issues/88)).
-- The background keeps links to `http`, `https` or a place in the file, and no other annotation ([#68](https://github.com/tonguetoquill/quillify/issues/68)). It keeps a layer that is off ([#32](https://github.com/tonguetoquill/quillify/issues/32)), and its stamped fields are untagged ([#192](https://github.com/tonguetoquill/quillify/issues/192)).
+- A dropdown with `>`, `;` or `|` in an option becomes a text field.
+- The background keeps links to `http`, `https` or a place in the file, and no other annotation ([#68](https://github.com/tonguetoquill/quillify/issues/68)). It keeps a layer that is off, and its stamped fields are untagged ([#192](https://github.com/tonguetoquill/quillify/issues/192)).
 - A `zoom` on the host page that the layout frame cannot undo exactly makes `sanitize` reject with an error that names it.

@@ -27,7 +27,7 @@ flowchart TD
 
 - In: what qpdf wrote. Out: the same bytes, or for a dynamic form a PDF redrawn from pdf.js's layout, with an AcroForm field for each control.
 - Drop nothing quietly: a construct the redraw cannot draw refuses the file as `unpaintable`.
-- pdf.js runs none of the form's scripts (#121).
+- pdf.js runs none of the form's scripts.
 
 ### Inventory (`inventory.ts`)
 
@@ -78,7 +78,7 @@ flowchart TD
 
 ## Assets and the pdf.js worker
 
-`npm run assets` builds `assets/` from `node_modules` and `src/faces/`. It applies the guards in `scripts/assets.js` to the pdf.js worker and fails if a guard does not find its line. A test (`test/assets.test.ts`) holds the shipped worker to the installed one but for those changes.
+`npm run assets` builds `assets/` from `node_modules`, `src/qpdf-handler.js`, `src/xfa-layer.css` and `src/faces/`. It applies the guards in `scripts/assets.js` to the pdf.js worker and fails if a guard does not find its line. A test (`test/assets.test.ts`) holds the shipped worker to the installed one but for those changes.
 
 ## Tests
 
