@@ -97,6 +97,23 @@ const handler = readFileSync('src/qpdf-handler.js', 'utf8');
 
 const stylesheet = readFileSync('src/xfa-layer.css', 'utf8');
 
+// Liberation Sans 2.1.5, under the SIL Open Font License 1.1. pdfjs-dist has
+// 1.07.4 in standard_fonts/, under GPL v2 with a font exception.
+const FACES = 'src/faces';
+const FACE_HASHES = {
+	Regular: '76d04c18ea243f426b7de1f3ad208e927008f961dc5945e5aad352d0dfde8ee8',
+	Bold: '788abee4c806d660e8aee46689dd8540cd4bb98da03dcc9d171ce3efd99a9173',
+	Italic: 'e5bae5c4cde31f22142753855f4f8fb86da6ff39955ed3c0a11248b0d16948b0',
+	BoldItalic: '698da70fc191cc5f33ad4d6d3fe830fe4624b898ea2e3169955928b7c491f1ee'
+};
+const faces = Object.entries(FACE_HASHES).map(([style, expected]) => {
+	const name = `LiberationSans-${style}.ttf`;
+	const face = readFileSync(`${FACES}/${name}`);
+	const found = hash('sha256', face);
+	if (found !== expected) throw new Error(`${name} hashes to ${found}, expected ${expected}`);
+	return [name, face];
+});
+
 rmSync('assets', { recursive: true, force: true });
 mkdirSync('assets');
 for (const [name, content] of [
@@ -112,6 +129,7 @@ for (const [name, content] of [
 			handler
 	],
 	['qpdf.wasm', wasm],
+	...faces,
 	['xfa-layer.js', `export default ${JSON.stringify(stylesheet)};\n`],
 	['xfa-layer.d.ts', 'declare const stylesheet: string;\nexport default stylesheet;\n']
 ]) {

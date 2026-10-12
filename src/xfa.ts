@@ -181,7 +181,10 @@ async function drawRuns(
 		// horizontal scaling then pins the whole run to the width the browser
 		// measured, so the error stays inside the run instead of drifting across
 		// the line.
-		const natural = font.widthOfTextAtSize(run.text, run.size);
+		// pdf-lib kerns the width it measures and writes no kerning, so the width
+		// it draws a run at is the sum of the widths of its characters.
+		let natural = 0;
+		for (const char of run.text) natural += font.widthOfTextAtSize(char, run.size);
 		const spaced = natural + run.letterSpacing * Math.max(0, run.text.length - 1);
 		const scale =
 			spaced > 0 && run.width > 0 ? Math.max(50, Math.min(200, (100 * run.width) / spaced)) : 100;
