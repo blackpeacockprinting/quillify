@@ -6,7 +6,7 @@ The library is measured on 59 published federal forms, 24 MB of them. `manifest.
 QUILLIFY_CORPUS=<directory that holds the PDFs> npm run corpus
 ```
 
-The run takes each form through `sanitize`, `suggest` and `quillify`, and has the engine render the quill with nothing filled in. It reads the fields back from the rendered PDF and holds each to the name, the page and the rect `form.json` gives it. Then it holds the outcome to the manifest's: `converted` with the counts of pages, fields and places, or a refusal's code. It stops at the first form that differs and prints the refusal or the problems it got.
+The run takes each form through `sanitize`, `suggest` and `quillify`, and has the engine render the quill with nothing filled in. It reads the fields back from the rendered PDF and holds each to the name, the page and the rect `form.json` gives it. It walks the background of each form `sanitize` takes against the strip's table, with the walker the gate runs on the fixtures: every key in the row of its kind, every object reached, and none as two kinds. Then it holds the outcome to the manifest's: `converted` with the counts of pages, fields and places, or a refusal's code. It stops at the first form that differs and prints the refusal or the problems it got.
 
 Before any form it checks the directory against the manifest, and stops if a form is missing or if the directory holds a file whose name ends in `.pdf` that the manifest does not name. A later revision of a form is such a file. Keep `#`, `?` and `%` out of the directory's path: the test server answers 404 for a file under `#` or `?`, and under a `%` that does not begin an escape.
 

@@ -6,6 +6,7 @@
 
 import { expect, inject, it } from 'vitest';
 import { quillify, sanitize, suggest } from '../src/index.js';
+import { walked } from '../test/background.js';
 import { expectClosure } from '../test/closure.js';
 import { fromTree, render } from '../test/engine.js';
 import manifest from './manifest.json' with { type: 'json' };
@@ -24,12 +25,14 @@ it('the directory holds every form of the manifest and no other PDF', () => {
 /**
  * A refusal's code, or `converted` once the engine has stamped a field at every
  * place `form.json` gives, with what was read. `why` is the refusal or the
- * problems, for the failure to print.
+ * problems, for the failure to print. The background of a form that converts
+ * is walked against the strip's table on the way.
  */
 async function outcome(pdf: Uint8Array) {
 	const read = await sanitize(pdf);
 	if (!read.ok) return { outcome: read.refusal.code, why: read.refusal };
 	const { form } = read;
+	expect((await walked(form.pdf)).problems, 'the background against the table').toEqual([]);
 	const built = await quillify(form, {
 		name: 'corpus',
 		description: 'A form of the corpus.',
