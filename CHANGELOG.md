@@ -4,6 +4,8 @@ What a consumer can observe, by release.
 
 ## Unreleased
 
+- `limits` is exported: `{ bytes, pages, fields }`, the largest file, the most pages and the most fields `sanitize` takes.
+
 ## v0.3.0 - 2026-10-12
 
 More dynamic forms convert, and the package is on npm. Every entry about a form here means a dynamic form.

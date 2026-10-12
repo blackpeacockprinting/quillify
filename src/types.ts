@@ -97,6 +97,8 @@ export const MAX_INFLATED_BYTES = 64 * 1024 * 1024;
 /** The most pages and fields a form has and is taken. The engine takes at most 1,000 fields in a block. */
 export const MAX_PAGES = 25;
 export const MAX_WIDGETS = 1000;
+/** The limits a consumer prints, each under the name its refusal counts by. */
+export const limits = Object.freeze({ bytes: MAX_BYTES, pages: MAX_PAGES, fields: MAX_WIDGETS });
 /**
  * The most pixels the pictures of a dynamic form come to, each use counted.
  * At four bytes a pixel that is 32 MB on a canvas, and as much in the

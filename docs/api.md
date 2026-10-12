@@ -5,9 +5,10 @@ sanitize(pdf: Uint8Array): Promise<Sanitized>
 suggest(fields: readonly Field[]): FieldNaming[]
 check(fields: readonly Field[], naming: Naming): Problem[]
 quillify(form: Form, naming: Naming): Promise<Quillified>
+limits: { bytes: number; pages: number; fields: number }
 ```
 
-Every type named here is exported. `sanitize` needs a browser, and the other three need no DOM.
+Every type named here is exported. `sanitize` needs a browser, and the other three functions need no DOM.
 
 ## sanitize
 
@@ -73,6 +74,10 @@ Returns what is wrong with a naming, and an empty list when nothing is. A naming
 Builds the quill and resolves to `{ ok: true, tree }` or `{ ok: false, problems }`. The problems are `check`'s, and `engine` when the engine refuses the files.
 
 `tree` maps a file name to its bytes (`Quill.yaml`, `form.json`, `form.pdf`, `example.md`), and `Quill.fromTree` takes it.
+
+## limits
+
+Frozen. The largest file in bytes, the most pages and the most fields `sanitize` takes, each as its refusal's `limit` carries it.
 
 ## Trust
 
