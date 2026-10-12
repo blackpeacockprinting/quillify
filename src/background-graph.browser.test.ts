@@ -97,17 +97,12 @@ for (const [name, build] of Object.entries(BUILT))
 
 /** What a file of one page puts on its catalog, and as `Resources` on its page. The page lists as an annotation every object `made` registers. */
 type Hostile = (made: (keys: object) => PDFRef, here: PDFRef) => Record<string, object>;
+const WIDGET = { Subtype: 'Widget', FT: 'Tx', V: PDFString.of('x'), Rect: [0, 0, 1, 1] };
 const HOSTILE: Record<string, Hostile> = {
-	'a widget the tags name as an element, in the parent tree and in the ID tree': (made) => {
-		const widget = made({ Subtype: 'Widget', FT: 'Tx', V: PDFString.of('x'), Rect: [0, 0, 1, 1] });
+	'a widget the tags name in the parent tree and in the ID tree': (made) => {
+		const widget = made(WIDGET);
 		const IDTree = { Names: [PDFString.of('a'), widget] };
-		return {
-			StructTreeRoot: { K: [widget], ParentTree: { Nums: [0, [widget, [widget]]] }, IDTree }
-		};
-	},
-	'a widget that is a /RoleMap, a /ClassMap and a /Font': (made) => {
-		const widget = made({ Subtype: 'Widget', FT: 'Tx', V: PDFString.of('x'), Rect: [0, 0, 1, 1] });
-		return { StructTreeRoot: { RoleMap: widget, ClassMap: widget }, Resources: { Font: widget } };
+		return { StructTreeRoot: { ParentTree: { Nums: [0, [widget, [widget]]] }, IDTree } };
 	},
 	'an object reference to a kept link that two elements and the parent tree share': (
 		made,
@@ -132,21 +127,39 @@ const HOSTILE: Record<string, Hostile> = {
 	}
 };
 
+/** A file the strip refuses: a key reaches a widget as a kind. */
+const REFUSED: Record<string, Hostile> = {
+	'a widget the tags name as an element': (made) => ({ StructTreeRoot: { K: [made(WIDGET)] } }),
+	'a widget that is a /RoleMap, a /ClassMap and a /Font': (made) => {
+		const widget = made(WIDGET);
+		return { StructTreeRoot: { RoleMap: widget, ClassMap: widget }, Resources: { Font: widget } };
+	}
+};
+
+/** What the strip makes of the file of a case. */
+async function stripped(plant: Hostile) {
+	const doc = await PDFDocument.create();
+	const { context, catalog } = doc;
+	const { node, ref } = doc.addPage([612, 792]);
+	const annots: PDFRef[] = [];
+	const made = (keys: object) =>
+		annots[annots.push(context.register(context.obj(keys as never))) - 1];
+	for (const [key, keys] of Object.entries(plant(made, ref)))
+		(key === 'Resources' ? node : catalog).set(PDFName.of(key), context.obj(keys as never));
+	node.set(PDFName.of('Annots'), context.obj(annots));
+	const saved = await doc.save({ useObjectStreams: false });
+	return stripAcroForm(saved, await viewsOf(saved, [[0, 0, 612, 792]]));
+}
+
 for (const [name, plant] of Object.entries(HOSTILE))
 	it(`${name}: the background holds what the table lists, and every object of it is reached as one kind`, async () => {
-		const doc = await PDFDocument.create();
-		const { context, catalog } = doc;
-		const { node, ref } = doc.addPage([612, 792]);
-		const annots: PDFRef[] = [];
-		const made = (keys: object) =>
-			annots[annots.push(context.register(context.obj(keys as never))) - 1];
-		for (const [key, keys] of Object.entries(plant(made, ref)))
-			(key === 'Resources' ? node : catalog).set(PDFName.of(key), context.obj(keys as never));
-		node.set(PDFName.of('Annots'), context.obj(annots));
-		const saved = await doc.save({ useObjectStreams: false });
-		const views = await viewsOf(saved, [[0, 0, 612, 792]]);
-		expect(wrong(await walked(await stripAcroForm(saved, views)))).toEqual(RIGHT);
+		expect(wrong(await walked(await stripped(plant)))).toEqual(RIGHT);
 	}, 120_000);
+
+for (const [name, plant] of Object.entries(REFUSED))
+	it(`${name}: the file is refused as damaged`, async () => {
+		await expect(stripped(plant)).rejects.toMatchObject({ refusal: { code: 'damaged' } });
+	});
 
 it('the ten fixtures hold, kind by kind, the keys the golden records', async () => {
 	const held = new Map<string, Set<string>>();

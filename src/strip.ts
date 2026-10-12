@@ -10,7 +10,8 @@ import {
 	PDFRef,
 	PDFStream,
 	PDFString,
-	type PDFObject
+	type PDFObject,
+	type PDFPage
 } from 'pdf-lib';
 import { Refused } from './refusal.js';
 import type { View } from './types.js';
@@ -290,12 +291,17 @@ const PICKS = new Map(
  * and an object reference whose `/Obj` is not such a link is taken out of its
  * element's `/K`.
  *
- * An object that reads as an annotation or as a page, and is neither a page of
- * `views` nor a link that stays, is deleted outright before the walk. No widget
- * and no page outside the page tree is then in the file, whatever names one, a
- * dictionary by name included, and the fields and appearance streams that hung
- * off it are out of the walk's reach: a background that still carries a form
- * layer is one the renderer would stamp a second one over.
+ * An object that says `/Type /Annot`, `/Subtype /Widget` or `/Type /Page`, and
+ * is neither a page of `views` nor a link that stays, has no kind. A file in
+ * which a key reaches one as a kind is refused as `damaged`, the catalog itself
+ * included, and so is a file whose catalog or page tree pdf-lib cannot read. A
+ * marked-content property list may say `/Type /Page`, and a `/Rect` says
+ * nothing: a kept object loses the keys its row does not list. So no object of
+ * a background is a widget or a page outside the page tree, and the fields and
+ * appearance streams that hung off one are out of the walk's reach: a
+ * background that still carries a form layer is one the renderer would stamp a
+ * second one over. A dictionary written in place is not an object: one by name
+ * keeps the plain values a file writes in it, a widget's among them.
  */
 export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<Uint8Array> {
 	const doc = await PDFDocument.load(bytes, { updateMetadata: false });
@@ -304,11 +310,6 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 		object instanceof PDFDict ? object.lookup(PDFName.of(key)) : undefined;
 	const is = (object: unknown, key: string, name: string): object is PDFDict =>
 		at(object, key) === PDFName.of(name);
-	/** An annotation need not say it is one: a `/Rect` or a `/Subtype /Widget` is enough. */
-	const annotation = (object: unknown) =>
-		is(object, 'Type', 'Annot') ||
-		at(object, 'Rect') !== undefined ||
-		is(object, 'Subtype', 'Widget');
 
 	/** The action a link that stays keeps, `null` when it holds its destination itself, `false` when it goes. */
 	const leads = (link: PDFDict) => {
@@ -327,7 +328,13 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 		return /^https?:\/\//i.test(head) && action.clone();
 	};
 
-	const pages = doc.getPages();
+	// pdf-lib throws at a catalog or a page tree it does not read as one.
+	let pages: PDFPage[];
+	try {
+		pages = doc.getPages();
+	} catch {
+		throw new Refused({ code: 'damaged' });
+	}
 	const differs = pages.some(({ ref }, index) => {
 		const viewed = views[index]?.ref;
 		return viewed?.num !== ref.objectNumber || viewed.gen !== ref.generationNumber;
@@ -355,10 +362,6 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 	}
 	context.trailerInfo.Info = undefined;
 	context.trailerInfo.ID = undefined;
-
-	for (const [ref, object] of context.enumerateIndirectObjects())
-		if (!kept.has(ref) && !linked.has(ref) && (is(object, 'Type', 'Page') || annotation(object)))
-			context.delete(ref);
 
 	const claimed = new Map<PDFRef, Slot>();
 	const pending: [value: PDFArray | PDFDict | PDFStream, as: Slot][] = [];
@@ -402,11 +405,20 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 	 * Gives an object its kind and queues it, where this reach of it is as a kind.
 	 * An object that has one is reached as that kind and no other, or the file is
 	 * refused as `damaged`: the walk cuts it to the keys of the first, and a second
-	 * would read what is left. Whether this reach of it stays.
+	 * would read what is left. So is a file that reaches as a kind an object that
+	 * says it is an annotation or a page, and is neither a page of `views` nor a
+	 * link that stays. Whether this reach of it stays.
 	 */
 	const claim = (raw: PDFObject | undefined, value: PDFArray | PDFDict | PDFStream, as?: Slot) => {
 		const had = claimed.get(raw as PDFRef);
-		if (had && had !== as) throw new Refused({ code: 'damaged' });
+		const posed =
+			raw instanceof PDFRef &&
+			!kept.has(raw) &&
+			!linked.has(raw) &&
+			(is(value, 'Type', 'Annot') ||
+				is(value, 'Subtype', 'Widget') ||
+				(as !== slot('marked') && is(value, 'Type', 'Page')));
+		if ((had && had !== as) || (as && posed)) throw new Refused({ code: 'damaged' });
 		if (had || !as) return as !== undefined;
 		if (raw instanceof PDFRef) claimed.set(raw, as);
 		pending.push([value, as]);
@@ -473,10 +485,6 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 			}
 		}
 	}
-	// A page tree node that reads as an annotation is deleted above, and the page
-	// tree holds the pages under it no more.
-	if (pages.some(({ ref }) => claimed.get(ref) !== slot('page')))
-		throw new Refused({ code: 'damaged' });
 	// A back reference stays when the walk reached what it names as its kind.
 	// Where the slot takes many, a value that leads nowhere stays too, and an
 	// array is read part by part, and so is each array in it. An array is read

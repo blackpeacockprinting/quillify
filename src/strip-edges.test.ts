@@ -46,7 +46,7 @@ it('refuses as damaged a second page viewed as another generation of its object'
 	await expect(stripAcroForm(source, [first, other])).rejects.toMatchObject(DAMAGED);
 });
 
-it('refuses as damaged a file one of whose two pages sits under a node that reads as an annotation', async () => {
+it('keeps both pages of a file one of which sits under a node that has a /Rect, and not the key', async () => {
 	const { doc, page, context, catalog } = await sheet(2);
 	const tree = catalog.get(PDFName.of('Pages'));
 	const inner = context.register(
@@ -54,17 +54,20 @@ it('refuses as damaged a file one of whose two pages sits under a node that read
 	);
 	page.node.set(PDFName.of('Parent'), inner);
 	catalog.Pages().set(PDFName.of('Kids'), context.obj([inner, doc.getPages()[1].ref]));
-	await expect(stripped(doc)).rejects.toMatchObject(DAMAGED);
+	const read = await PDFDocument.load((await stripped(doc)).bytes);
+	expect(read.getPageCount()).toBe(2);
+	expect(read.getPage(0).node.Parent()!.has(PDFName.of('Rect'))).toBe(false);
 });
 
-it('keeps no key that names an annotation with no /Rect, told by its /Type or by its /Subtype', async () => {
-	const { doc, page, context } = await sheet();
-	const typed = context.register(context.obj({ Type: 'Annot' }));
-	const widget = context.register(context.obj({ Subtype: 'Widget' }));
-	page.node.set(PDFName.of('Resources'), context.obj({ Properties: { MC0: typed, MC1: widget } }));
-	const resources = (await stripped(doc)).page.lookup(PDFName.of('Resources'), PDFDict);
-	expect(resources.lookup(PDFName.of('Properties'), PDFDict).keys()).toEqual([]);
-});
+it.each([{ Type: 'Annot' }, { Subtype: 'Widget' }])(
+	'refuses as damaged a file whose /Properties names an object that says %o',
+	async (keys) => {
+		const { doc, page, context } = await sheet();
+		const MC0 = context.register(context.obj(keys));
+		page.node.set(PDFName.of('Resources'), context.obj({ Properties: { MC0 } }));
+		await expect(stripped(doc)).rejects.toMatchObject(DAMAGED);
+	}
+);
 
 it('keeps no link written in place that leads to a named destination', async () => {
 	const { doc, page, context } = await sheet();

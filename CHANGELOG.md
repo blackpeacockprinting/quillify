@@ -11,6 +11,7 @@ What a consumer can observe, in the latest release and since. Earlier releases a
 - An image counts toward the 64 MiB bound for the bytes its dictionary declares, so a file whose images declare more is `too_large`. An image whose dictionary does not say is `damaged`.
 - A page over 14,400 pt on a side, or with a box that far from the origin, is refused as `damaged`. No published form measured has one.
 - `limits` is exported: `{ bytes, pages, fields }`, the largest file, the most pages and the most fields `sanitize` takes.
+- A file whose catalog or page tree cannot be read as one, or whose background would keep an object that says it is an annotation or a page outside the page tree, is refused as `damaged`. The background step threw, or returned a background without that object, the catalog included.
 
 ## v0.3.0 - 2026-10-12
 

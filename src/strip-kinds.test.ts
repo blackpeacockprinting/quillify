@@ -12,6 +12,7 @@ import {
 	PDFNumber,
 	PDFRef,
 	PDFString,
+	type PDFCatalog,
 	type PDFContext,
 	type PDFObject,
 	type PDFRawStream
@@ -440,18 +441,162 @@ it('refuses as damaged a file whose first page names as its /Contents the /Kids 
 	});
 });
 
-it('refuses as damaged a file whose page sits under a page tree node that reads as an annotation', async () => {
+it('refuses as damaged a file whose page sits under a page tree node that says /Subtype /Widget', async () => {
 	const source = await PDFDocument.create();
 	const { context } = source;
 	const page = source.addPage([612, 792]);
 	const tree = source.catalog.get(PDFName.of('Pages'));
 	const inner = context.register(
-		context.obj({ Type: 'Pages', Parent: tree, Kids: [page.ref], Count: 1, Rect: [0, 0, 1, 1] })
+		context.obj({ Type: 'Pages', Parent: tree, Kids: [page.ref], Count: 1, Subtype: 'Widget' })
 	);
 	page.node.set(PDFName.of('Parent'), inner);
 	source.catalog.Pages().set(PDFName.of('Kids'), context.obj([inner]));
 	const saved = await source.save({ useObjectStreams: false });
 	await expect(stripAcroForm(saved, await viewsOf(saved, [BOX]))).rejects.toMatchObject({
+		refusal: { code: 'damaged' }
+	});
+});
+
+/** A dictionary that `holder` names under `key`, written as an object of its own. */
+const own = (holder: PDFDict, key: string, keys: Record<string, unknown> = {}) => {
+	const ref = holder.context.register(holder.context.obj(keys as never));
+	holder.set(PDFName.of(key), ref);
+	return holder.context.lookup(ref, PDFDict);
+};
+const fonts = (page: PDFDict) => own(own(page, 'Resources'), 'Font');
+const font = (page: PDFDict) =>
+	own(fonts(page), 'F1', { Type: 'Font', Subtype: 'Type1', BaseFont: 'Courier' });
+const tags = ({ catalog }: PDFDocument) =>
+	own(catalog, 'StructTreeRoot', { Type: 'StructTreeRoot' });
+
+/** The background of one page, as text, with what `plant` hangs on the file. The view is made by hand: pdf-lib lists no page of some of these files. */
+async function planted(plant: (source: PDFDocument, page: PDFDict) => void) {
+	const source = await PDFDocument.create();
+	const { node, ref } = source.addPage([612, 792]);
+	plant(source, node);
+	const view = { ref: { num: ref.objectNumber, gen: ref.generationNumber }, box: BOX };
+	const bytes = await stripAcroForm(await source.save({ useObjectStreams: false }), [view]);
+	expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
+	return new TextDecoder('latin1').decode(bytes);
+}
+
+it.each<[name: string, find: (source: PDFDocument, page: PDFDict) => PDFDict]>([
+	['the catalog', ({ catalog }) => catalog],
+	['the mark information', ({ catalog }) => own(catalog, 'MarkInfo', { Marked: true })],
+	['the layers', ({ catalog }) => own(catalog, 'OCProperties')],
+	['the default configuration', ({ catalog }) => own(own(catalog, 'OCProperties'), 'D')],
+	['a layer', ({ catalog }) => own(own(catalog, 'OCProperties'), 'OCGs', { Type: 'OCG' })],
+	['the structure tree', tags],
+	['a structure element', (source) => own(tags(source), 'K', { S: 'P' })],
+	["a page's resources", (_, page) => own(page, 'Resources')],
+	["a page's group", (_, page) => own(page, 'Group', { S: 'Transparency' })],
+	['a dictionary of fonts by name', (_, page) => fonts(page)],
+	['a font', (_, page) => font(page)],
+	[
+		"a font's descriptor",
+		(_, page) => own(font(page), 'FontDescriptor', { Type: 'FontDescriptor' })
+	],
+	['a graphics state', (_, page) => own(own(own(page, 'Resources'), 'ExtGState'), 'G1', { LW: 1 })]
+])(
+	'strips a file that reaches %s, with a /Rect too, and refuses it as damaged where that says /Type /Annot',
+	async (_, find) => {
+		const says = (key: string, value: PDFObject) =>
+			planted((source, page) => find(source, page).set(PDFName.of(key), value));
+		await planted(find);
+		await says('Rect', PDFNumber.of(0));
+		await expect(says('Type', PDFName.of('Annot'))).rejects.toMatchObject({
+			refusal: { code: 'damaged' }
+		});
+	}
+);
+
+it.each<[name: string, plant: (source: PDFDocument, page: PDFDict) => void, holds: RegExp]>([
+	[
+		'a catalog with a /Rect',
+		({ catalog }) => catalog.set(PDFName.of('Rect'), PDFNumber.of(0)),
+		/^(?![^]*\/Rect)/
+	],
+	[
+		'an empty page tree node with a /Rect',
+		({ catalog }) => {
+			const tree = catalog.get(PDFName.of('Pages'));
+			const empty = { Type: 'Pages', Parent: tree, Kids: [], Count: 0, Rect: [0, 0, 1, 1] };
+			catalog
+				.Pages()
+				.Kids()
+				.push(catalog.context.register(catalog.context.obj(empty)));
+		},
+		/^(?![^]*\/Rect)[^]*\/Count 0/
+	],
+	[
+		'a property list that says /Type /Page',
+		(_, page) => own(own(own(page, 'Resources'), 'Properties'), 'MC0', { Type: 'Page' }),
+		/\/MC0 \d+ 0 R/
+	],
+	[
+		'a form named /Rect in a dictionary of its own',
+		(_, page) =>
+			own(own(page, 'Resources'), 'XObject', {
+				Rect: page.context.register(page.context.stream('', FORM))
+			}),
+		/\/Rect \d+ 0 R/
+	],
+	[
+		'a glyph named /Rect in a dictionary of its own',
+		(_, page) => {
+			const type3 = {
+				Type: 'Font',
+				Subtype: 'Type3',
+				FontBBox: [0, 0, 1, 1],
+				FontMatrix: [1, 0, 0, 1, 0, 0]
+			};
+			const glyph = page.context.register(page.context.stream(''));
+			own(own(fonts(page), 'F1', type3), 'CharProcs', { Rect: glyph });
+		},
+		/\/Rect \d+ 0 R/
+	],
+	[
+		'a role named /Rect in a dictionary of its own',
+		(source) => own(tags(source), 'RoleMap', { Rect: 'P' }),
+		/\/Rect \/P/
+	]
+])('strips a file that holds %s, to what its kind keeps', async (_, plant, holds) => {
+	expect(await planted(plant)).toMatch(holds);
+});
+
+it('keeps a content stream whose dictionary has a /Rect, and not the key', async () => {
+	const { page, text } = await background((page, context) =>
+		page.set(
+			PDFName.of('Contents'),
+			context.register(context.stream('PAINT', { Rect: [0, 0, 1, 1] }))
+		)
+	);
+	expect(streamKeys(under(page, 'Contents'))).toEqual(['Length']);
+	expect(text).toContain('PAINT');
+});
+
+const says = (dict: PDFDict, key: string, name: string) =>
+	dict.set(PDFName.of(key), PDFName.of(name));
+
+it.each<[name: string, plant: (catalog: PDFCatalog) => void]>([
+	['catalog says /Subtype /Widget', (catalog) => says(catalog, 'Subtype', 'Widget')],
+	['catalog says /Type /Annot', (catalog) => says(catalog, 'Type', 'Annot')],
+	['catalog says /Type /Page', (catalog) => says(catalog, 'Type', 'Page')],
+	['page tree says /Type /Page', (catalog) => says(catalog.Pages(), 'Type', 'Page')],
+	[
+		'page tree holds itself',
+		(catalog) =>
+			catalog
+				.Pages()
+				.Kids()
+				.push(catalog.get(PDFName.of('Pages'))!)
+	]
+])('refuses as damaged a file whose %s', async (_, plant) => {
+	const source = await PDFDocument.create();
+	const { objectNumber: num, generationNumber: gen } = source.addPage([612, 792]).ref;
+	plant(source.catalog);
+	const saved = await source.save({ useObjectStreams: false });
+	await expect(stripAcroForm(saved, [{ ref: { num, gen }, box: BOX }])).rejects.toMatchObject({
 		refusal: { code: 'damaged' }
 	});
 });
