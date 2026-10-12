@@ -161,7 +161,9 @@ it('draws a mark in a run it scales across where the scale puts it', async () =>
 	const [before, mark, after] = pieces;
 	const first = await laidOut(bytes, 'I');
 	const last = await laidOut(bytes, 'J');
-	expect(scales).toEqual([expect.closeTo(104.3, 1), 100]);
+	// To half a percent: the width a browser gives a run differs a little by
+	// platform, 104.3% on macOS and 104.1% on Linux.
+	expect(scales).toEqual([expect.closeTo(104.2, 0), 100]);
 	expect(Math.abs(after.x + after.width - last.left - last.width)).toBeLessThan(0.05);
 	expect(Math.abs(before.width - (first.width * scales[0]) / 100)).toBeLessThan(0.05);
 	expect(Math.abs(before.x - first.left)).toBeLessThan(0.05);
