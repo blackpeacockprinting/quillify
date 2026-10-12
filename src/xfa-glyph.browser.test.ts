@@ -182,6 +182,27 @@ it('draws U+2010 as the hyphen of the face its run is in', async () => {
 	expect(Math.abs(pieces[0].x - (await laidOut(bytes, 'B')).left)).toBeLessThan(0.05);
 }, 120_000);
 
+it('draws U+2011 as the hyphen of the face its run is in', async () => {
+	const bytes = await printed('Form\u2011wide');
+	const { fonts, pieces } = await redrawn(bytes);
+	expect(pieces.map(({ text }) => text)).toEqual(['Form-wide']);
+	expect(fonts).toEqual(['/Times-Roman']);
+	const [piece] = pieces;
+	expect(Math.abs(piece.x - (await laidOut(bytes, 'F')).left)).toBeLessThan(0.05);
+	const last = await laidOut(bytes, 'e');
+	expect(Math.abs(piece.x + piece.width - last.left - last.width)).toBeLessThan(1.1);
+}, 120_000);
+
+it('draws no hyphen and leaves no room for a soft hyphen inside a line', async () => {
+	const bytes = await printed('co\u00adoperate \u25b2 after');
+	expect((await laidOut(bytes, '\u00ad')).width).toBe(0);
+	const { pieces } = await redrawn(bytes);
+	expect(pieces.map(({ text }) => text)).toEqual(['cooperate', 's', 'after']);
+	const [word, mark] = pieces;
+	expect(Math.abs(word.x - (await laidOut(bytes, 'c')).left)).toBeLessThan(0.05);
+	expect(Math.abs(mark.x - (await laidOut(bytes, '\u25b2')).left)).toBeLessThan(0.05);
+}, 120_000);
+
 it('refuses a dynamic form by the page and the run that hold a character no standard font can encode', async () => {
 	const bytes = await recaptioned('21. OPTIONAL INFORMATION', '21. OPTIONAL INFORMATION \u20dd');
 	await expect(xfaToAcroForm(await normalizePdf(bytes))).rejects.toMatchObject({
