@@ -29,8 +29,8 @@ describe('an inline SVG shape', () => {
 			),
 			1
 		);
-		expect(list.boxes).toHaveLength(1);
-		expect(list.boxes[0]).toMatchObject({ x: 17, y: 27, w: 106, h: 56 });
+		expect(list.drawn).toHaveLength(1);
+		expect(list.drawn[0]).toMatchObject({ x: 17, y: 27, w: 106, h: 56 });
 	});
 
 	it('draws a rect with no stroke as a box of its own size', () => {
@@ -38,8 +38,8 @@ describe('an inline SVG shape', () => {
 			page('<rect x="0" y="0" width="100" height="50" fill="#ccc" stroke="none" />'),
 			1
 		);
-		expect(list.boxes).toHaveLength(1);
-		expect(list.boxes[0]).toMatchObject({ x: 20, y: 30, w: 100, h: 50 });
+		expect(list.drawn).toHaveLength(1);
+		expect(list.drawn[0]).toMatchObject({ x: 20, y: 30, w: 100, h: 50 });
 	});
 
 	it('refuses an ellipse by name, since a box has four corners', () => {
@@ -50,5 +50,14 @@ describe('an inline SVG shape', () => {
 				refusal: { code: 'unpaintable', page: 2, construct: 'svg', detail: 'ellipse' }
 			})
 		);
+	});
+});
+
+describe('a page of many text nodes', () => {
+	it('draws the last of 200,000 under one positioned element', () => {
+		const laid = page('');
+		for (let i = 0; i < 200_000; i++) laid.layer.append(' ');
+		laid.layer.append('a');
+		expect(displayList(laid, 1).drawn).toMatchObject([{ text: 'a' }]);
 	});
 });

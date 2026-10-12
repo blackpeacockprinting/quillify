@@ -33,7 +33,7 @@ it("reads a page laid out in another document through that document, and never t
 	const displayStyle = style.mock.calls.length;
 	const widgets = harvestWidgets(page, 1);
 
-	expect(list.runs.map((run) => run.text)).toEqual(['Notional']);
+	expect(list.drawn).toMatchObject([{ text: 'Notional' }]);
 	expect(widgets).toMatchObject([{ name: 'p1.rank', x: 20, y: 30 }]);
 	expect({
 		canvas: canvas.mock.calls.length,

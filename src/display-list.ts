@@ -53,17 +53,17 @@ export interface Run {
 	italic: boolean;
 	colour: Colour;
 	letterSpacing: number;
-	/** What the browser measured, which `drawRuns` scales the run to. */
+	/** What the browser measured, which `drawRun` scales the run to. */
 	width: number;
 	/** Quarter turns counter-clockwise about the start of the baseline, when the run is turned. */
 	turn?: number;
 }
 
+export type Drawn = Box | Picture | Line | Run;
+
 export interface DisplayList {
-	boxes: Box[];
-	pictures: Picture[];
-	lines: Line[];
-	runs: Run[];
+	/** What the page shows, in the order the browser paints it. */
+	drawn: Drawn[];
 	width: number;
 	height: number;
 }
@@ -104,10 +104,7 @@ function stroked(style: CSSStyleDeclaration): Edge | null {
 export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 	const { layer, origin } = page;
 	const view = layer.ownerDocument.defaultView!;
-	const boxes: Box[] = [];
-	const pictures: Picture[] = [];
-	const lines: Line[] = [];
-	const runs: Run[] = [];
+	const drawn: Drawn[] = [];
 	// The quarter turns each element is laid out under, its own and its ancestors'.
 	const turns = new Map<Element, number>([[layer, 0]]);
 	const X = (v: number) => +(v - origin.left).toFixed(2);
@@ -119,7 +116,40 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 		throw new Refused({ code: 'unpaintable', page: pageNumber - 1, construct, detail });
 	};
 
-	for (const el of layer.querySelectorAll<HTMLElement>('*')) {
+	// CSS paints the boxes of what is in the flow under a positioned element,
+	// then its text, pictures and SVG shapes, then the positioned elements
+	// under it in tree order, each the same way.
+	const order: Node[] = [];
+	const under = (root: Element): void => {
+		const front: Node[] = [];
+		const positioned: Element[] = [];
+		const flow = (parent: Element): void => {
+			for (const node of parent.childNodes) {
+				if (node.nodeType === Node.TEXT_NODE) front.push(node);
+				if (node.nodeType !== Node.ELEMENT_NODE) continue;
+				const el = node as Element;
+				if (view.getComputedStyle(el).position !== 'static') positioned.push(el);
+				else {
+					(/^(img|line|rect|input)$/i.test(el.tagName) ? front : order).push(el);
+					flow(el);
+				}
+			}
+		};
+		flow(root);
+		for (const node of front) order.push(node);
+		for (const el of positioned) {
+			order.push(el);
+			under(el);
+		}
+	};
+	under(layer);
+
+	for (const node of order) {
+		if (node.nodeType === Node.TEXT_NODE) {
+			collectText(node, X, Y, drawn, turns);
+			continue;
+		}
+		const el = node as HTMLElement;
 		const tag = el.tagName.toLowerCase();
 		const style = view.getComputedStyle(el);
 		const own = quarterTurns(style.transform);
@@ -141,7 +171,7 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 				style.objectFit === 'contain'
 					? Math.min(rect.width / image.naturalWidth, rect.height / image.naturalHeight)
 					: 0;
-			pictures.push({
+			drawn.push({
 				x: X(rect.x),
 				y: Y(rect.y),
 				w: +(fit ? image.naturalWidth * fit : rect.width).toFixed(2),
@@ -166,7 +196,7 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 					if (!Number.isFinite(value)) return 0;
 					return raw.trim().endsWith('%') ? (span * value) / 100 : value;
 				};
-				lines.push({
+				drawn.push({
 					x1: X(svgRect.x + at('x1', svgRect.width)),
 					y1: Y(svgRect.y + at('y1', svgRect.height)),
 					x2: X(svgRect.x + at('x2', svgRect.width)),
@@ -188,7 +218,7 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 				const r = el.getBoundingClientRect();
 				// The browser draws a rect square when its rx is below zero.
 				const radius = parseFloat(style.rx);
-				boxes.push({
+				drawn.push({
 					x: X(r.x - half),
 					y: Y(r.y - half),
 					w: +(r.width + 2 * half).toFixed(2),
@@ -216,7 +246,7 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 			if (type === 'checkbox' || type === 'radio') {
 				const painted = square(rect);
 				const hair: Edge = { width: 1, colour: [0, 0, 0] };
-				boxes.push({
+				drawn.push({
 					x: X(painted.left),
 					y: Y(painted.top),
 					w: +painted.width.toFixed(2),
@@ -248,7 +278,7 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 		for (let quarter = turn; quarter > 0; quarter--) edges.push(edges.shift()!);
 		const fill = opaque(style.backgroundColor) ? rgb(style.backgroundColor) : null;
 		if (fill || edges.some(Boolean))
-			boxes.push({
+			drawn.push({
 				x: X(rect.x),
 				y: Y(rect.y),
 				w: +rect.width.toFixed(2),
@@ -257,9 +287,7 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 				edges
 			});
 	}
-
-	collectText(layer, X, Y, runs, turns);
-	return { boxes, pictures, lines, runs, width: page.width, height: page.height };
+	return { drawn, width: page.width, height: page.height };
 }
 
 /**
@@ -280,7 +308,7 @@ function quarterTurns(transform: string): number {
  * True for a transform a run's box cannot carry. XFA offsets caption
  * wrappers with a translation, which the rects already hold. A positive
  * horizontal scale is carried too: `getClientRects` reports the scaled width and
- * `drawRuns` puts it back as `Tz`, which is how LiveCycle's
+ * `drawRun` puts it back as `Tz`, which is how LiveCycle's
  * `xfa-font-horizontal-scale` reaches the page. A rotation, a skew, a mirror or
  * a vertical scale changes glyph shape or height, and a run carries neither. A
  * quarter turn is read apart, by `quarterTurns`.
@@ -305,103 +333,99 @@ function svgOnly(tag: string): boolean {
  * starts a run at the box the layout moved it to.
  */
 function collectText(
-	layer: HTMLElement,
+	node: Node,
 	X: (v: number) => number,
 	Y: (v: number) => number,
-	runs: Run[],
+	drawn: Drawn[],
 	turns: Map<Element, number>
 ): void {
-	const owner = layer.ownerDocument;
-	const view = owner.defaultView!;
+	const text = node.nodeValue;
+	const parent = node.parentElement;
+	if (!text || !text.trim() || !parent) return;
+	// A <select> is de-chromed above; only the option the form shows is drawn.
+	if (parent.tagName === 'OPTION' && !(parent as HTMLOptionElement).selected) return;
+	const owner = node.ownerDocument!;
+	const style = owner.defaultView!.getComputedStyle(parent);
+	if (style.visibility === 'hidden' || style.display === 'none') return;
 	const measure = owner.createElement('canvas').getContext('2d')!;
-	const walker = owner.createTreeWalker(layer, NodeFilter.SHOW_TEXT);
 	const range = owner.createRange();
-	for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-		const text = node.nodeValue;
-		const parent = node.parentElement;
-		if (!text || !text.trim() || !parent) continue;
-		// A <select> is de-chromed above; only the option the form shows is drawn.
-		if (parent.tagName === 'OPTION' && !(parent as HTMLOptionElement).selected) continue;
-		const style = view.getComputedStyle(parent);
-		if (style.visibility === 'hidden' || style.display === 'none') continue;
 
-		const size = parseFloat(style.fontSize);
-		measure.font = `${style.fontStyle} ${style.fontWeight} ${size}px ${style.fontFamily}`;
-		const descent = measure.measureText('Hg').fontBoundingBoxDescent ?? size * 0.21;
-		const common = {
-			size: +size.toFixed(2),
-			family: style.fontFamily,
-			bold: parseInt(style.fontWeight, 10) >= 600 || style.fontWeight === 'bold',
-			italic: style.fontStyle === 'italic' || style.fontStyle === 'oblique',
-			colour: rgb(style.color),
-			letterSpacing: parseFloat(style.letterSpacing) || 0
-		};
+	const size = parseFloat(style.fontSize);
+	measure.font = `${style.fontStyle} ${style.fontWeight} ${size}px ${style.fontFamily}`;
+	const descent = measure.measureText('Hg').fontBoundingBoxDescent ?? size * 0.21;
+	const common = {
+		size: +size.toFixed(2),
+		family: style.fontFamily,
+		bold: parseInt(style.fontWeight, 10) >= 600 || style.fontWeight === 'bold',
+		italic: style.fontStyle === 'italic' || style.fontStyle === 'oblique',
+		colour: rgb(style.color),
+		letterSpacing: parseFloat(style.letterSpacing) || 0
+	};
 
-		// Under a turn each rect is read in the frame the text is upright in, and
-		// the start of each line's baseline is turned back to the page.
-		const turn = turns.get(parent)!;
-		const [cos, sin] = [
-			[1, 0],
-			[0, -1],
-			[-1, 0],
-			[0, 1]
-		][turn];
-		const upright = ({ left, right, top, bottom }: DOMRect) => {
-			const [x1, x2] = [cos * left + sin * top, cos * right + sin * bottom];
-			const [y1, y2] = [cos * top - sin * left, cos * bottom - sin * right];
-			return {
-				x: Math.min(x1, x2),
-				right: Math.max(x1, x2),
-				top: Math.min(y1, y2),
-				bottom: Math.max(y1, y2)
-			};
+	// Under a turn each rect is read in the frame the text is upright in, and
+	// the start of each line's baseline is turned back to the page.
+	const turn = turns.get(parent)!;
+	const [cos, sin] = [
+		[1, 0],
+		[0, -1],
+		[-1, 0],
+		[0, 1]
+	][turn];
+	const upright = ({ left, right, top, bottom }: DOMRect) => {
+		const [x1, x2] = [cos * left + sin * top, cos * right + sin * bottom];
+		const [y1, y2] = [cos * top - sin * left, cos * bottom - sin * right];
+		return {
+			x: Math.min(x1, x2),
+			right: Math.max(x1, x2),
+			top: Math.min(y1, y2),
+			bottom: Math.max(y1, y2)
 		};
+	};
 
-		let start = 0;
-		let top: number | null = null;
-		let box: { x: number; bottom: number; right: number } | null = null;
-		const flush = (end: number): void => {
-			const slice = text.slice(start, end);
-			if (end <= start || !box || !slice.trim()) return;
-			const base = box.bottom - descent;
-			runs.push({
-				text: slice,
-				x: X(cos * box.x - sin * base),
-				baseline: Y(sin * box.x + cos * base),
-				width: +(box.right - box.x).toFixed(2),
-				turn: turn || undefined,
-				...common
-			});
-		};
-		for (let i = 0; i < text.length; i++) {
-			if (text[i] === '\t') {
-				flush(i);
-				start = i + 1;
-				top = null;
-				box = null;
-				continue;
-			}
-			range.setStart(node, i);
-			range.setEnd(node, i + 1);
-			const rect = range.getClientRects()[0];
-			if (!rect) continue;
-			const glyph = upright(rect);
-			if (top === null || Math.abs(glyph.top - top) < 0.6) {
-				top ??= glyph.top;
-				box = box
-					? {
-							x: Math.min(box.x, glyph.x),
-							bottom: Math.max(box.bottom, glyph.bottom),
-							right: Math.max(box.right, glyph.right)
-						}
-					: { x: glyph.x, bottom: glyph.bottom, right: glyph.right };
-			} else {
-				flush(i);
-				start = i;
-				top = glyph.top;
-				box = { x: glyph.x, bottom: glyph.bottom, right: glyph.right };
-			}
+	let start = 0;
+	let top: number | null = null;
+	let box: { x: number; bottom: number; right: number } | null = null;
+	const flush = (end: number): void => {
+		const slice = text.slice(start, end);
+		if (end <= start || !box || !slice.trim()) return;
+		const base = box.bottom - descent;
+		drawn.push({
+			text: slice,
+			x: X(cos * box.x - sin * base),
+			baseline: Y(sin * box.x + cos * base),
+			width: +(box.right - box.x).toFixed(2),
+			turn: turn || undefined,
+			...common
+		});
+	};
+	for (let i = 0; i < text.length; i++) {
+		if (text[i] === '\t') {
+			flush(i);
+			start = i + 1;
+			top = null;
+			box = null;
+			continue;
 		}
-		flush(text.length);
+		range.setStart(node, i);
+		range.setEnd(node, i + 1);
+		const rect = range.getClientRects()[0];
+		if (!rect) continue;
+		const glyph = upright(rect);
+		if (top === null || Math.abs(glyph.top - top) < 0.6) {
+			top ??= glyph.top;
+			box = box
+				? {
+						x: Math.min(box.x, glyph.x),
+						bottom: Math.max(box.bottom, glyph.bottom),
+						right: Math.max(box.right, glyph.right)
+					}
+				: { x: glyph.x, bottom: glyph.bottom, right: glyph.right };
+		} else {
+			flush(i);
+			start = i;
+			top = glyph.top;
+			box = { x: glyph.x, bottom: glyph.bottom, right: glyph.right };
+		}
 	}
+	flush(text.length);
 }

@@ -68,7 +68,7 @@ async function laidOut(bytes: Uint8Array) {
 					});
 			}
 		}
-		return { placed, runs: displayList(laid, 1).runs };
+		return { placed, runs: displayList(laid, 1).drawn.filter((item) => 'text' in item) };
 	} finally {
 		stage.close();
 		await opened.close();

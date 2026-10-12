@@ -96,7 +96,7 @@ it('draws a turned caption where the layout has it, reading the way the layout r
 				: [box.width, from[0] - box.x, to[0] - box.x];
 		const start = (alongX ?? alongY)! * long;
 		expect(Math.abs(at - start), `${text}: where it starts`).toBeLessThan(1);
-		// drawRuns leaves a run that is within 3% of its measured width as it is.
+		// drawRun leaves a run that is within 3% of its measured width as it is.
 		expect(Math.abs(end - (long - start)), `${text}: where it ends`).toBeLessThan(1 + 0.03 * long);
 		// The baseline lies inside the box the other way.
 		const [across, low, high] =

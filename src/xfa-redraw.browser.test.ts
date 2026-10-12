@@ -25,7 +25,8 @@ const fixtures = import.meta.glob<string>('../test/fixtures/D{AF1288,AF988,D2875
 
 const rectangle = (y: number, inner: string) =>
 	`<draw x="20pt" y="${y}pt" w="200pt" h="40pt"><value><rectangle>${inner}</rectangle></value></draw>`;
-const FILLED = '<edge presence="hidden"/><fill><color value="200,200,200"/></fill>';
+const GRAY = '<fill><color value="200,200,200"/></fill>';
+const FILLED = `<edge presence="hidden"/>${GRAY}`;
 
 /**
  * A PNG in base64, as a template holds a picture: a quarter each of red, green
@@ -108,7 +109,17 @@ const built = {
 		bordered(20, 260, 150, 40, dash(2) + SOLID + dash(2) + SOLID) +
 		bordered(400, 20, 9, 12, dash(4)) +
 		bordered(430, 20, 13, 14, dash(4)) +
-		bordered(460, 20, 6, 6.5, dash(1))
+		bordered(460, 20, 6, 6.5, dash(1)),
+	// The first box has a fill and a border of its own, which the layout
+	// paints over the fill. The band is a fill over the border of the subform
+	// that holds it. A fill then lies over a rule, and one over a picture.
+	'what lies over what':
+		`<draw x="20pt" y="20pt" w="200pt" h="40pt"><border><edge thickness="4pt"/>${GRAY}</border></draw>` +
+		`<subform x="20pt" y="100pt" w="200pt" layout="tb"><border><edge thickness="4pt"/></border><draw w="200pt" h="40pt"><border>${NO_EDGE}${GRAY}</border></draw></subform>` +
+		`<draw x="20pt" y="200pt" w="200pt" h="0pt"><value><line><edge thickness="4pt"/></line></value></draw>` +
+		`<draw x="80pt" y="190pt" w="50pt" h="20pt"><value><rectangle>${FILLED}</rectangle></value></draw>` +
+		picture(260, 60, 'none', png(200, 120)) +
+		`<draw x="80pt" y="270pt" w="50pt" h="20pt"><value><rectangle>${FILLED}</rectangle></value></draw>`
 };
 
 /**
@@ -213,11 +224,11 @@ async function laidOut(bytes: Uint8Array): Promise<Page[]> {
 }
 
 /**
- * Each page of the redraw as pdf.js paints it, with no glyph: the standard 14
- * come with no file, and pdf.js sets such a face through the canvas's own
- * `fillText`.
+ * Each page of the redraw as pdf.js paints it, with no glyph unless `text` asks
+ * for them: the standard 14 come with no file, and pdf.js sets such a face
+ * through the canvas's own `fillText`.
  */
-async function redrawn(bytes: Uint8Array): Promise<ImageData[]> {
+async function redrawn(bytes: Uint8Array, text = false): Promise<ImageData[]> {
 	const { AnnotationMode } = await import('pdfjs-dist');
 	const { pdf, close } = await openPdf(bytes);
 	try {
@@ -229,7 +240,7 @@ async function redrawn(bytes: Uint8Array): Promise<ImageData[]> {
 			canvas.width = Math.ceil(viewport.width);
 			canvas.height = Math.ceil(viewport.height);
 			const context = canvas.getContext('2d')!;
-			context.fillText = () => {};
+			if (!text) context.fillText = () => {};
 			await page.render({ canvas, viewport, annotationMode: AnnotationMode.DISABLE }).promise;
 			pages.push(context.getImageData(0, 0, canvas.width, canvas.height));
 		}
@@ -345,4 +356,23 @@ it('a redraw with a rectangle left out differs from its layout in both counts', 
 	const { ink, fill } = differ(picture, redraw, buttons);
 	expect(ink).toBeGreaterThan(0);
 	expect(fill).toBeGreaterThan(0);
+}, 120_000);
+
+it('text that a fill lies over in the layout does not show in the redraw', async () => {
+	const words = (y: number) =>
+		`<draw x="30pt" y="${y}pt" w="180pt" h="20pt"><font typeface="Arial" size="14pt"/><value><text>Notional words</text></value></draw>`;
+	const bytes = await normalizePdf(
+		await dynamicForm(words(30) + rectangle(20, FILLED) + rectangle(100, FILLED) + words(110))
+	);
+	const [{ data, width }] = await redrawn(await xfaToAcroForm(bytes), true);
+	/** The pixels of text inside the rectangle at `y`, which are darker than its fill. */
+	const ink = (y: number) => {
+		let count = 0;
+		for (let v = (y + 1) * SCALE; v < (y + 39) * SCALE; v++)
+			for (let u = 21 * SCALE; u < 219 * SCALE; u++) if (data[4 * (v * width + u)] < 128) count++;
+		return count;
+	};
+
+	expect(ink(100), 'text over a fill').toBeGreaterThan(100);
+	expect(ink(20), 'text under a fill').toBe(0);
 }, 120_000);

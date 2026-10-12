@@ -83,7 +83,11 @@ it('stamps a check box and a radio button on the square the browser paints', asy
 		});
 
 		expect(harvestWidgets(laid, 1).map(boxOf)).toEqual(squares.map(near));
-		expect(displayList(laid, 1).boxes.map(boxOf)).toEqual(squares.map(near));
+		expect(
+			displayList(laid, 1)
+				.drawn.filter((item) => 'edges' in item)
+				.map(boxOf)
+		).toEqual(squares.map(near));
 
 		// And the browser does paint each control in that square of its box.
 		expect(devicePixelRatio, 'a pixel of the screenshot is a CSS pixel').toBe(1);
