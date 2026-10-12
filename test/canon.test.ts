@@ -7,7 +7,7 @@ const read = (path: string) => readFileSync(path, 'utf8');
 const rows = (text: string) => text.split('\n').filter((line) => line.startsWith('| `'));
 
 it('lists every module under src/ in the architecture page, and no other', () => {
-	const page = read('prose/canon/ARCHITECTURE.md');
+	const page = read('docs/architecture.md');
 	const table = rows(page.slice(page.indexOf('## Modules'), page.indexOf('## Shapes')));
 	expect(table.map((row) => /^\| `([\w/-]+\.ts)`\s*\|/.exec(row)?.[1]).sort()).toEqual(
 		readdirSync('src', { recursive: true, encoding: 'utf8' })

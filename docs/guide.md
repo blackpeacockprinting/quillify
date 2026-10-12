@@ -1,0 +1,48 @@
+# Guide
+
+## What the package loads
+
+Nothing until the first `sanitize`. Then, from `assets/` beside the build:
+
+| File                          | Size    | When           |
+| ----------------------------- | ------- | -------------- |
+| `pdf.worker.js`               | 2.2 MB  | every file     |
+| `qpdf.worker.js`, `qpdf.wasm` | 1.4 MB  | every file     |
+| four `LiberationSans-*.ttf`   | 1.65 MB | a dynamic form |
+
+A bundler has to follow `new URL('../assets/…', import.meta.url)` to copy them. Vite does. No other bundler is measured yet ([#101](https://github.com/tonguetoquill/quillify/issues/101)).
+
+## Content security policy
+
+| Where                                 | Needs                                                      |
+| ------------------------------------- | ---------------------------------------------------------- |
+| the page                              | `worker-src 'self'`, `connect-src 'self'`, `img-src blob:` |
+| the response serving `qpdf.worker.js` | `script-src 'wasm-unsafe-eval'`, `connect-src 'self'`      |
+
+## The engine
+
+`@quillmark/wasm` 0.124.0 or later is a peer. `quillify` calls its `init()` itself. A host that hands `init` a source of its own calls it before the first `quillify`.
+
+## Naming
+
+`suggest` gives a first naming. A person, or a model, edits it, `check` says what is wrong as they go, and `quillify` builds the quill.
+
+## From a quill to a filled PDF
+
+`Engine` is imported from `@quillmark/wasm`, `Quill` and `Document` come from its `init()`, and `values` is keyed by the naming's names.
+
+```ts
+const quill = Quill.fromTree(built.tree);
+const doc = new Document(`${quill.metadata.name}@${quill.metadata.version}`);
+quill.writer(doc).setAll(values);
+const out = await new Engine().render(quill, doc, { format: 'pdf' });
+const filled = out.artifacts[0].bytes;
+```
+
+## Time
+
+Every measured form reads in under 3 s on a laptop. A read cannot be stopped ([#188](https://github.com/tonguetoquill/quillify/issues/188)). One with a worker still busy after 60 s is refused as `too_slow`.
+
+## Versions
+
+Before 1.0 a minor release may change what your code must do, and the changelog says how to move. A patch release does not, and adds no refusal code.

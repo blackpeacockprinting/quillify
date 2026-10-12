@@ -1,4 +1,4 @@
-// prose/research/pdfjs-som-null-guard.diff has the diagnosis behind the null guard.
+// The diagnosis behind the null guard is in the history: prose/research/pdfjs-som-null-guard.diff at 84619f7.
 
 import { hash } from 'node:crypto';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';

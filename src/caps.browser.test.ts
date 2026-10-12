@@ -1,5 +1,5 @@
 /**
- * The caps at the values the measurement in `prose/DECISIONS.md` gives them: a
+ * The caps at the values the measurement of #201 gives them: a
  * form at the cap converts and one past it is refused. The numbers are written
  * out here so that a change of a constant has to change a test.
  */
