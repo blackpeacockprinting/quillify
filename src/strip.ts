@@ -42,7 +42,7 @@ import type { View } from './types.js';
  * number where it writes a number. Where `PICK` names a last kind, one that is
  * told as none of the others is of that kind.
  */
-const KINDS: Record<string, string> = {
+export const KINDS: Record<string, string> = {
 	catalog: 'Type Pages:tree OCProperties:layers StructTreeRoot:tags MarkInfo:marks Lang',
 	tree: 'Type Parent:^tree Kids:[node] Count Resources:resources Rotate',
 	page:
@@ -138,7 +138,7 @@ const KINDS: Record<string, string> = {
 	parents: 'Kids:[parents] Nums:[^elem] Limits',
 	ids: 'Kids:[ids] Names:[^elem] Limits'
 };
-const STREAMS = [
+export const STREAMS = [
 	'content',
 	'image',
 	'form',
@@ -151,8 +151,8 @@ const STREAMS = [
 	'cmap',
 	'fontfile'
 ];
-const STREAM = 'Length Filter DecodeParms:[parms]';
-const PICK: Record<string, [key: string, kinds: Record<string, string>, other?: string]> = {
+export const STREAM = 'Length Filter DecodeParms:[parms]';
+export const PICK: Record<string, [key: string, kinds: Record<string, string>, other?: string]> = {
 	node: ['Type', { Pages: 'tree', Page: 'page' }],
 	action: ['S', { URI: 'uri', GoTo: 'goto' }],
 	xobject: ['Subtype', { Image: 'image', Form: 'form' }],

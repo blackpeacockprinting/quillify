@@ -39,7 +39,7 @@ The inventory and the strip both read the output of the conversion, so for a dyn
 
 ## What parses the bytes
 
-Every parser of the bytes a caller hands in runs inside `sanitize`. The engine reads the quill's files, which this library saved, and one of them still carries the file's own bytes: a static form's `form.pdf` holds the page content, fonts and images of the file, which the strip keeps and does not read ([`SECURITY.md`](../../SECURITY.md), #25). The engine decodes them when a consumer opens or renders a document. A dynamic form's `form.pdf` is the redraw.
+Every parser of the bytes a caller hands in runs inside `sanitize`. The engine reads the quill's files, which this library saved, and one of them still carries the file's own bytes: a static form's `form.pdf` holds the page content, fonts and images of the file, which the strip keeps and does not read ([`SECURITY.md`](../../SECURITY.md)). The engine decodes them when a consumer opens or renders a document. A dynamic form's `form.pdf` is the redraw.
 
 | Parser | Called from | What it reads | Where it runs |
 | --- | --- | --- | --- |
@@ -122,6 +122,7 @@ A test file's name picks its runner: `*.browser.test.ts` runs in headless Chromi
 - **Closure.** For the ten fixtures in the gate, and for 49 published forms in `npm run corpus`, the engine renders the quill and every stamped field is read back with qpdf at the page and rect `form.json` gives.
 - **Page identity.** Every pixel of each fixture's pages, the background against the file the strip was given, with annotations not drawn. For a dynamic form that file is the redraw.
 - **Rules of the strip.** A test for each thing the background must not keep, most on a PDF built in the test. Of the `strip*` files two strip a fixture, the synthetic sample and SF 1152 for its thumbnails, and `published-forms.browser.test.ts` holds the backgrounds of the six static fixtures to no form, no usage-rights signature, no XFA packet, no XMP, no script and no `/Info`.
+- **The background's graph.** qpdf writes the background of each fixture, of a form from each builder in `test/` and of four hostile files built in the test, as JSON, and `test/background.ts` walks it from the trailer against the strip's table, which it shares as data: every key of every dictionary is in the row of its kind, every object is reached, none as two kinds, and every reference resolves. Beside the table it holds a list of names no background may hold, a golden of the keys the fixtures hold by kind, and that no row says `*`. `npm run corpus` walks the 49 the same way.
 - **Layers.** A form built in the test with an optional content group that is off, one on for the screen and off for paper, and the pattern Acrobat Designer writes: the groups and their default state in the background and in the rendered file, and the pixels pdf.js and the engine's own painter paint from them.
 - **Isolation.** What the frame may load, what the host page takes from it, and what `sanitize` requests.
 - **The package.** What `assets/` holds, what a tarball holds, that the package imports by its own name where there is no DOM, and that `NOTICE` names what is installed.

@@ -1,0 +1,234 @@
+{
+	"ICCBased": [
+		"0",
+		"1"
+	],
+	"attributes": [
+		"BBox",
+		"BackgroundColor",
+		"BlockAlign",
+		"BorderColor",
+		"BorderStyle",
+		"BorderThickness",
+		"ColSpan",
+		"ColumnCount",
+		"ColumnGap",
+		"ColumnWidths",
+		"EndIndent",
+		"Headers",
+		"Height",
+		"InlineAlign",
+		"LineHeight",
+		"ListNumbering",
+		"O",
+		"Placement",
+		"Role",
+		"RowSpan",
+		"Scope",
+		"SpaceAfter",
+		"StartIndent",
+		"TextAlign",
+		"TextIndent",
+		"Width",
+		"checked"
+	],
+	"border": [
+		"S",
+		"Type",
+		"W"
+	],
+	"catalog": [
+		"Lang",
+		"MarkInfo",
+		"Pages",
+		"StructTreeRoot",
+		"Type"
+	],
+	"cidfont": [
+		"BaseFont",
+		"CIDSystemInfo",
+		"CIDToGIDMap",
+		"DW",
+		"FontDescriptor",
+		"Subtype",
+		"Type",
+		"W"
+	],
+	"cidsystem": [
+		"Ordering",
+		"Registry",
+		"Supplement"
+	],
+	"cmap": [
+		"Filter",
+		"Length"
+	],
+	"content": [
+		"Filter",
+		"Length"
+	],
+	"data": [
+		"Filter",
+		"Length"
+	],
+	"descriptor": [
+		"Ascent",
+		"AvgWidth",
+		"CIDSet",
+		"CapHeight",
+		"CharSet",
+		"Descent",
+		"Flags",
+		"FontBBox",
+		"FontFamily",
+		"FontFile2",
+		"FontFile3",
+		"FontName",
+		"FontStretch",
+		"FontWeight",
+		"ItalicAngle",
+		"Leading",
+		"MaxWidth",
+		"StemH",
+		"StemV",
+		"Type",
+		"XHeight"
+	],
+	"elem": [
+		"A",
+		"Alt",
+		"C",
+		"E",
+		"ID",
+		"K",
+		"P",
+		"Pg",
+		"S",
+		"T",
+		"Type"
+	],
+	"encoding": [
+		"BaseEncoding",
+		"Differences",
+		"Type"
+	],
+	"fontfile": [
+		"Filter",
+		"Length",
+		"Length1",
+		"Subtype"
+	],
+	"group": [
+		"CS",
+		"S",
+		"Type"
+	],
+	"gstate": [
+		"BM",
+		"CA",
+		"SA",
+		"SM",
+		"TR2",
+		"Type",
+		"ca"
+	],
+	"icc": [
+		"Alternate",
+		"Filter",
+		"Length",
+		"N"
+	],
+	"ids": [
+		"Kids",
+		"Limits",
+		"Names"
+	],
+	"image": [
+		"BitsPerComponent",
+		"ColorSpace",
+		"Filter",
+		"Height",
+		"Length",
+		"Subtype",
+		"Type",
+		"Width"
+	],
+	"link": [
+		"A",
+		"BS",
+		"Border",
+		"Rect",
+		"StructParent",
+		"Subtype",
+		"Type"
+	],
+	"marks": [
+		"Marked"
+	],
+	"objr": [
+		"Obj",
+		"Pg",
+		"Type"
+	],
+	"page": [
+		"Annots",
+		"Contents",
+		"Group",
+		"MediaBox",
+		"Parent",
+		"Resources",
+		"Rotate",
+		"StructParents",
+		"Tabs",
+		"Type"
+	],
+	"parents": [
+		"Kids",
+		"Limits",
+		"Nums"
+	],
+	"resources": [
+		"ColorSpace",
+		"ExtGState",
+		"Font",
+		"ProcSet",
+		"XObject"
+	],
+	"simple": [
+		"BaseFont",
+		"Encoding",
+		"FirstChar",
+		"FontDescriptor",
+		"LastChar",
+		"Subtype",
+		"ToUnicode",
+		"Type",
+		"Widths"
+	],
+	"tags": [
+		"ClassMap",
+		"IDTree",
+		"K",
+		"ParentTree",
+		"ParentTreeNextKey",
+		"RoleMap",
+		"Type"
+	],
+	"tree": [
+		"Count",
+		"Kids",
+		"Type"
+	],
+	"type0": [
+		"BaseFont",
+		"DescendantFonts",
+		"Encoding",
+		"Subtype",
+		"ToUnicode",
+		"Type"
+	],
+	"uri": [
+		"S",
+		"URI"
+	]
+}
