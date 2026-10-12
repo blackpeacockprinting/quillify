@@ -13,15 +13,25 @@ const serve: BrowserCommand<[asset: string]> = ({ page }, asset) =>
 
 // A page's resource timing leaves out what its workers ask for, so a test that
 // holds the library to its own files has the browser list every HTTP request.
-const requested: string[] = [];
-const note = (request: { url(): string }) => void requested.push(request.url());
-const listen: BrowserCommand<[]> = ({ page }) => {
-	requested.length = 0;
-	page.context().on('request', note);
+// Sessions run side by side, each in a context of its own, and a listener's
+// `this` is the context it is on.
+const requested = new WeakMap<object, string[]>();
+function note(this: object, request: { url(): string }) {
+	requested.get(this)!.push(request.url());
+}
+// A request is reported to Playwright apart from the page's commands, and the
+// report can be heard after the command that followed it. Each command waits
+// for the page to answer Playwright first: the answer is heard behind every
+// report the browser sent before it.
+const listen: BrowserCommand<[]> = async ({ page, context }) => {
+	await page.evaluate(() => {});
+	requested.set(context, []);
+	context.on('request', note);
 };
-const heard: BrowserCommand<[]> = ({ page }) => {
-	page.context().off('request', note);
-	return [...requested];
+const heard: BrowserCommand<[]> = async ({ page, context }) => {
+	await page.evaluate(() => {});
+	context.off('request', note);
+	return requested.get(context)!;
 };
 
 declare module 'vitest/browser' {

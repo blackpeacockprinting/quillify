@@ -144,8 +144,7 @@ it("requests nothing but the package's own files while sanitize reads a form", a
 		byFrame.push(...timing.getEntriesByType('resource').map((entry) => entry.name));
 		return laid;
 	});
-	// The form is fetched inside the window and named below. Fetched just before
-	// it, the request can still be reported once the listening has begun.
+	// The form is fetched inside the window and named below.
 	await commands.listen();
 	expect(await sanitize(await published(saarUrl))).toMatchObject({ ok: true });
 	const requested = (await commands.heard()).map((url) => new URL(url));
