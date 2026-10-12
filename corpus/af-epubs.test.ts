@@ -74,40 +74,42 @@ it('holds the kinds and the encryption the record tabulates', () => {
 
 it('holds the outcomes the record tabulates', () => {
 	expect(count('outcome')).toEqual({
-		converted: 1143,
-		no_fields: 160,
-		too_many_fields: 17,
-		unpaintable: 16,
+		converted: 1147,
+		no_fields: 161,
+		too_many_fields: 16,
 		problems: 14,
+		layout: 7,
+		unpaintable: 5,
 		portfolio: 4
 	});
 	expect(count('outcome', departmental)).toEqual({
-		converted: 792,
+		converted: 797,
 		no_fields: 148,
-		unpaintable: 12,
 		too_many_fields: 10,
-		portfolio: 4
+		unpaintable: 4,
+		portfolio: 4,
+		layout: 3
 	});
-	expect(count('kind', converted)).toEqual({ dynamic: 885, hybrid: 241, plain: 17 });
+	expect(count('kind', converted)).toEqual({ dynamic: 889, hybrid: 241, plain: 17 });
 	expect({
 		pages: converted.reduce((total, file) => total + file.pages!, 0),
 		fields: converted.reduce((total, file) => total + file.fields!, 0),
 		longest: Math.max(...converted.map((file) => file.pages!))
-	}).toEqual({ pages: 1916, fields: 159870, longest: 19 });
+	}).toEqual({ pages: 1928, fields: 160676, longest: 19 });
 });
 
 it('holds what the record says stands in the way, where a line gives the reason', () => {
-	expect(count('construct')).toEqual({ glyph: 11, transform: 4, svg: 1 });
+	expect(count('construct')).toEqual({ transform: 4, glyph: 1 });
 	expect(count('problem')).toEqual({ nothing_kept: 14 });
 
 	const over = files
 		.filter((file) => file.outcome === 'too_many_fields')
 		.map((file) => file.fields!)
 		.sort((a, b) => a - b);
-	expect({ fewest: over[0], most: over.at(-1), median: over[8] }).toEqual({
+	expect({ files: over.length, fewest: over[0], most: over.at(-1) }).toEqual({
+		files: 16,
 		fewest: 1009,
-		most: 2039,
-		median: 1122
+		most: 2039
 	});
 });
 
@@ -118,5 +120,5 @@ it('holds the files with no field to what the record says they are', () => {
 		dynamic: unfielded.filter((file) => file.kind === 'dynamic').length,
 		notices: files.filter((file) => file.notice).length,
 		noticesAmongThem: unfielded.filter((file) => file.notice).length
-	}).toEqual({ xfaNothingLaidOut: 87, dynamic: 36, notices: 14, noticesAmongThem: 14 });
+	}).toEqual({ xfaNothingLaidOut: 87, dynamic: 37, notices: 14, noticesAmongThem: 14 });
 });
