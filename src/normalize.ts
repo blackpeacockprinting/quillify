@@ -28,7 +28,17 @@
  * page's thread and before any other reader opens it.
  */
 
-import { ParseSpeeds, PDFArray, PDFDocument, PDFName, PDFRawStream } from 'pdf-lib';
+import {
+	ParseSpeeds,
+	PDFArray,
+	PDFBool,
+	PDFDict,
+	PDFDocument,
+	PDFName,
+	PDFNumber,
+	PDFRawStream,
+	PDFStream
+} from 'pdf-lib';
 import { openPdf } from './pdfjs.js';
 import { Refused } from './refusal.js';
 import { MAX_BYTES, MAX_INFLATED_BYTES } from './types.js';
@@ -63,15 +73,64 @@ const TYPED = new RegExp(`/(?:${spelled('ObjStm')}|${spelled('XRef')})`);
  * 1 MB handed over whole.
  */
 const SLICE = 1024;
-/** What qpdf leaves a stream under, alone or after one Flate layer. Each gives pixels, which are not counted. */
+/** What qpdf leaves a stream under, alone or after one Flate layer. Each gives pixels. */
 const CODECS = ['DCTDecode', 'JPXDecode', 'CCITTFaxDecode', 'JBIG2Decode'];
+/** The components of a pixel in a color space that is this name or an array that begins with it. */
+const COMPONENTS = new Map([
+	['DeviceGray', 1],
+	['CalGray', 1],
+	['Indexed', 1],
+	['Separation', 1],
+	['DeviceRGB', 3],
+	['CalRGB', 3],
+	['Lab', 3],
+	['DeviceCMYK', 4]
+]);
 
 /**
- * The size of the file qpdf wrote and of what its Flate streams decode to,
- * added up no further than the bound. pdf-lib lists the streams and the
- * browser inflates each, keeping nothing. A stream the browser's decoder
- * rejects, or one under a filter qpdf has not taken off, is a stream two
- * readers can read two ways, and the file is refused as `damaged`.
+ * The bytes an image's pixels come to as its dictionary declares them: rows
+ * of whole bytes, at its bits to a component and the components of its color
+ * space, or at a bit to the pixel for a mask. A halftone's threshold array
+ * says a width and a height too, and neither bits nor a color space: a stream
+ * with a `/HalftoneType` and neither comes to two bytes to the pixel, the most
+ * such an array holds. A stream with no `/Width` and no `/Height` is no image
+ * and comes to none. One with either whose dictionary does not say what it
+ * comes to, in a component or more of a bit or more, is refused as `damaged`.
+ */
+function declared(dict: PDFDict): number {
+	if (!dict.has(PDFName.of('Width')) && !dict.has(PDFName.of('Height'))) return 0;
+	const number = (from: PDFDict, key: string) => {
+		const value = from.lookup(PDFName.of(key));
+		return value instanceof PDFNumber ? value.asNumber() : NaN;
+	};
+	const mask = dict.lookup(PDFName.of('ImageMask')) === PDFBool.True;
+	const space = dict.lookup(PDFName.of('ColorSpace'));
+	const threshold =
+		dict.has(PDFName.of('HalftoneType')) && !space && !dict.has(PDFName.of('BitsPerComponent'));
+	const [family, part] = space instanceof PDFArray ? [space.lookup(0), space.lookup(1)] : [space];
+	const name = family instanceof PDFName ? family.decodeText() : '';
+	const components =
+		mask || threshold
+			? 1
+			: name === 'ICCBased' && part instanceof PDFStream
+				? number(part.dict, 'N')
+				: name === 'DeviceN' && part instanceof PDFArray
+					? part.size()
+					: (COMPONENTS.get(name) ?? NaN);
+	const bits = mask ? 1 : threshold ? 16 : number(dict, 'BitsPerComponent');
+	const bytes = Math.ceil((number(dict, 'Width') * components * bits) / 8) * number(dict, 'Height');
+	if (!(components >= 1 && bits >= 1 && bytes >= 0)) throw new Refused({ code: 'damaged' });
+	return bytes;
+}
+
+/**
+ * The size of the file qpdf wrote and of what its streams decode to, added up
+ * no further than the bound. pdf-lib lists the streams and the browser
+ * inflates each Flate one, keeping nothing. An image comes to what its
+ * dictionary declares, or to what its Flate layer gives when that is more. A
+ * stream the browser's decoder rejects, or one under a filter qpdf has not
+ * taken off, is a stream two readers can read two ways, and the file is
+ * refused as `damaged`.
  */
 async function inflated(pdf: Uint8Array): Promise<number> {
 	let total = pdf.byteLength;
@@ -98,8 +157,12 @@ async function inflated(pdf: Uint8Array): Promise<number> {
 		const rest = chain.slice(flate ? 1 : 0);
 		if (rest.length > 1 || rest.some((name) => !CODECS.includes(name)))
 			throw new Refused({ code: 'damaged' });
+		const least = total + declared(dict);
 		// An empty stream is one to every reader, and to the decoder a stream cut short.
-		if (!flate || !contents.length) continue;
+		if (!flate || !contents.length) {
+			total = least;
+			continue;
+		}
 
 		let at = 0;
 		const reader = new ReadableStream<BufferSource>({
@@ -120,6 +183,7 @@ async function inflated(pdf: Uint8Array): Promise<number> {
 		} finally {
 			void reader.cancel().catch(() => {});
 		}
+		total = Math.max(total, least);
 	}
 	return total;
 }
