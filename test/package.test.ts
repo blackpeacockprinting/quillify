@@ -82,7 +82,7 @@ it('declares the packages the build imports as its dependencies, and no other', 
 	);
 });
 
-it('gives plain Node, where there is no DOM, its four functions under its own name', () => {
+it('gives plain Node, where there is no DOM, its four functions and the limits under its own name', () => {
 	const exported = execFileSync(
 		process.execPath,
 		[
@@ -92,10 +92,10 @@ it('gives plain Node, where there is no DOM, its four functions under its own na
 		],
 		{ encoding: 'utf8' }
 	);
-	expect(exported.trim()).toBe('check quillify sanitize suggest');
+	expect(exported.trim()).toBe('check limits quillify sanitize suggest');
 });
 
-it('declares the four functions and the public types, and no other name', () => {
+it('declares the four functions, the limits and the public types, and no other name', () => {
 	const declared = read(JSON.parse(read('package.json')).exports['.'].types).trim();
 	const lists = [...declared.matchAll(/^export (?:type )?\{([^}]*)\} from '[^']+';$/gm)];
 	// Every line is one such list, so nothing is exported by a star or declared in place.
@@ -108,7 +108,9 @@ it('declares the four functions and the public types, and no other name', () => 
 			'type Quillified',
 			'sanitize',
 			'type Sanitized',
-			...['Field', 'FieldNaming', 'Form', 'Naming', 'Place', 'Problem', 'Size', 'Refusal', 'Rect']
+			'limits',
+			'type Rect',
+			...['Field', 'FieldNaming', 'Form', 'Naming', 'Place', 'Problem', 'Size', 'Refusal']
 		].sort()
 	);
 });

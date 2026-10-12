@@ -8,7 +8,7 @@ import { PDFDocument } from 'pdf-lib';
 import { expect, it } from 'vitest';
 import { dynamicForm } from '../test/dynamic-form.js';
 import { fromTree, render } from '../test/engine.js';
-import { quillify, sanitize, suggest } from './index.js';
+import { limits, quillify, sanitize, suggest } from './index.js';
 
 /** Text fields on `pages` pages, `fields` of them on the first. */
 async function built(pages: number, fields: number) {
@@ -70,5 +70,22 @@ it('converts a form of 25 pages and refuses one of 26', async () => {
 	expect(await sanitize(await built(26, 1))).toEqual({
 		ok: false,
 		refusal: { code: 'too_many_pages', pages: 26, limit: 25 }
+	});
+}, 60_000);
+
+it('exports the three limits, each the one its refusal carries', async () => {
+	expect(limits).toEqual({ bytes: 8 * 1024 * 1024, pages: 25, fields: 1000 });
+	expect(Object.isFrozen(limits)).toBe(true);
+	expect(await sanitize(new Uint8Array(limits.bytes + 1))).toEqual({
+		ok: false,
+		refusal: { code: 'too_large', bytes: limits.bytes + 1, limit: limits.bytes }
+	});
+	expect(await sanitize(await built(limits.pages + 1, 1))).toEqual({
+		ok: false,
+		refusal: { code: 'too_many_pages', pages: limits.pages + 1, limit: limits.pages }
+	});
+	expect(await sanitize(await built(1, limits.fields + 1))).toEqual({
+		ok: false,
+		refusal: { code: 'too_many_fields', fields: limits.fields + 1, limit: limits.fields }
 	});
 }, 60_000);
