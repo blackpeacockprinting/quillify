@@ -105,6 +105,15 @@ it('ships the pdf.js worker as the installed one but for the notice, the guards 
 			'if (!formNode.bindItems.children.some(({ ref, connection }) => !connection && ref && searchNode(this.root, dataNode, ref, false, false))) return; for (const item of formNode.items.children) {'
 		],
 		[
+			'if (children.length === 0 && !this[$content]) {',
+			'if (this.embed) { const counter = this[$globalData].ids.get(this.embed)?.event?.children.find(event => event.activity === "ready" && event.ref === "$layout")?.script?.[$content].match(/^this\\.rawValue\\s*=\\s*xfa\\.layout\\.(page\\(this\\)|pageCount\\(\\));?$/); return counter ? HTMLResult.success({ name: "span", attributes: { class: [counter[1] === "page(this)" ? "xfaPageNumber" : "xfaPageCount"], style: mapStyle(this.style, this, this[$richText]) }, value: this[$content] }) : HTMLResult.EMPTY; } if (children.length === 0 && !this[$content]) {'
+		],
+		[
+			'super(attributes, "span");',
+			'super(attributes, "span"); const embed = attributes[$nsAttributes]?.xfa.embed; if (embed?.startsWith("#")) { this.embed = embed.slice(1); this[$content] = "00"; }'
+		],
+		['this._ids = new Map();', 'this._ids = new Map(); this._globalData.ids = this._ids;'],
+		[
 			'warn(`XFA - an error occurred during layout: ${e}`);',
 			'warn(`XFA - an error occurred during layout: ${e}`); throw new Error(`XFA layout: ${e.message}`);'
 		],

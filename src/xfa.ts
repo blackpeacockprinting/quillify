@@ -57,6 +57,12 @@ export async function xfaToAcroForm(bytes: Uint8Array, signal?: AbortSignal): Pr
 
 		for (let number = 1; number <= pdf.numPages; number++) {
 			const laid = await within(pdf.getPage(number).then((page) => stage.lay(page)));
+			// The shipped worker writes a span of one of these classes where the page's
+			// text embeds a page number or a page count that a layout script fills.
+			for (const span of laid.layer.querySelectorAll('.xfaPageNumber'))
+				span.textContent = String(number);
+			for (const span of laid.layer.querySelectorAll('.xfaPageCount'))
+				span.textContent = String(pdf.numPages);
 			const list = displayList(laid, number);
 			for (const widget of harvestWidgets(laid, number)) widgets.push(widget);
 			await paint(out.addPage([list.width, list.height]), number, list, async (name) => {

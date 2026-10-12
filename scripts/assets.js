@@ -46,6 +46,23 @@ const GUARDS = [
 	},
 	{
 		sites: 1,
+		line: 'if (children.length === 0 && !this[$content]) {',
+		guarded:
+			'if (this.embed) { const counter = this[$globalData].ids.get(this.embed)?.event?.children.find(event => event.activity === "ready" && event.ref === "$layout")?.script?.[$content].match(/^this\\.rawValue\\s*=\\s*xfa\\.layout\\.(page\\(this\\)|pageCount\\(\\));?$/); return counter ? HTMLResult.success({ name: "span", attributes: { class: [counter[1] === "page(this)" ? "xfaPageNumber" : "xfaPageCount"], style: mapStyle(this.style, this, this[$richText]) }, value: this[$content] }) : HTMLResult.EMPTY; } if (children.length === 0 && !this[$content]) {'
+	},
+	{
+		sites: 1,
+		line: 'super(attributes, "span");',
+		guarded:
+			'super(attributes, "span"); const embed = attributes[$nsAttributes]?.xfa.embed; if (embed?.startsWith("#")) { this.embed = embed.slice(1); this[$content] = "00"; }'
+	},
+	{
+		sites: 1,
+		line: 'this._ids = new Map();',
+		guarded: 'this._ids = new Map(); this._globalData.ids = this._ids;'
+	},
+	{
+		sites: 1,
 		line: 'warn(`XFA - an error occurred during layout: ${e}`);',
 		guarded:
 			'warn(`XFA - an error occurred during layout: ${e}`); throw new Error(`XFA layout: ${e.message}`);'
@@ -85,7 +102,7 @@ mkdirSync('assets');
 for (const [name, content] of [
 	[
 		'pdf.worker.js',
-		`/* The worker of pdfjs-dist ${version} (build/pdf.worker.mjs), changed: a null guard added at two sites, a page's first unsplittable node no longer taken from an overflow leader or trailer, a page set made to clear its page areas' counts when it starts another pass, a field with no control or a default one given a text control, a field whose control has no HTML given a box for it so that its caption is laid out, a list bound to data the file does not hold left with the items its template lists, an exception of the XFA layout thrown on after it is logged, and the last line, which named a source map, removed. */\n` +
+		`/* The worker of pdfjs-dist ${version} (build/pdf.worker.mjs), changed: a null guard added at two sites, a page's first unsplittable node no longer taken from an overflow leader or trailer, a page set made to clear its page areas' counts when it starts another pass, a field with no control or a default one given a text control, a field whose control has no HTML given a box for it so that its caption is laid out, a list bound to data the file does not hold left with the items its template lists, a span marked where a page's text embeds a page number or a page count that a layout script fills, an exception of the XFA layout thrown on after it is logged, and the last line, which named a source map, removed. */\n` +
 			worker
 	],
 	[

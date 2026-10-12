@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
 import { templateForm } from '../test/dynamic-form.js';
+import { openPdf } from './pdfjs.js';
 import { sanitize } from './sanitize.js';
 
 /** A page-high subform with one text field. */
@@ -54,3 +55,41 @@ it.each([
 	},
 	20_000
 );
+
+/** A hidden field whose script runs when the layout is ready. */
+const counter = (id: string, script: string) =>
+	`<field id="${id}" name="${id}" presence="hidden" w="50pt" h="10pt"><ui><numericEdit/></ui><event activity="ready" ref="$layout"><script contentType="application/x-javascript">${script}</script></event></field>`;
+/** A page area whose text embeds the two fields `counters` holds, as Designer writes a page number. */
+const numbered = (counters: string) =>
+	templateForm(
+		`<template xmlns="http://www.xfa.org/schema/xfa-template/3.3/"><subform name="form1" layout="tb"><pageSet><pageArea name="Page1"><contentArea w="612pt" h="740pt"/><medium short="612pt" long="792pt"/><draw x="400pt" y="760pt" w="100pt" h="12pt"><value><exData contentType="text/html"><body xmlns="http://www.w3.org/1999/xhtml" xmlns:xfa="http://www.xfa.org/schema/xfa-data/1.0/"><p>Page <span xfa:embedType="uri" xfa:embedMode="raw" xfa:embed="#n"/> of <span xfa:embedType="uri" xfa:embedMode="raw" xfa:embed="#of"/></p></body></exData></value></draw>${counters}</pageArea></pageSet>${sheet('a')}${sheet('b')}</subform></template>`
+	);
+
+it.each([
+	[
+		'prints the page number and the page count a layout script would write',
+		'this.rawValue = xfa.layout.page(this);',
+		'this.rawValue = xfa.layout.pageCount();',
+		['Page 1 of 2', 'Page 2 of 2']
+	],
+	[
+		'prints nothing for a layout script that writes anything else',
+		'this.rawValue = this.parent.index + 1;',
+		'this.rawValue = xfa.layout.pageCount() + 1;',
+		['Page of', 'Page of']
+	]
+])('%s', async (_, number, count, footers) => {
+	const read = await sanitize(await numbered(counter('n', number) + counter('of', count)));
+	if (!read.ok) throw new Error(`refused as ${read.refusal.code}`);
+	const { pdf, close } = await openPdf(read.form.pdf);
+	try {
+		const printed = [];
+		for (let n = 1; n <= pdf.numPages; n++) {
+			const { items } = await (await pdf.getPage(n)).getTextContent();
+			printed.push(items.map((item) => ('str' in item ? item.str : '')).join(''));
+		}
+		expect(printed).toEqual(footers);
+	} finally {
+		await close();
+	}
+});
