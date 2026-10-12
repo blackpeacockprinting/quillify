@@ -4,7 +4,9 @@ What a consumer can observe, by release.
 
 ## Unreleased
 
-Every entry about a form here means a dynamic form.
+## v0.3.0 - 2026-10-12
+
+More dynamic forms convert, and the package is on npm. Every entry about a form here means a dynamic form.
 
 ### Converts now
 
@@ -30,6 +32,7 @@ Every entry about a form here means a dynamic form.
 - `form.pdf` bytes can differ from v0.2.0's.
 - `pdfjs-dist` and the shipped worker are 6.4.299, and must match.
 - Package renamed `@quillmark/quillify`, on npm under Apache-2.0. Import from the new name.
+- The tarball carries the license texts of what it redistributes, in `licenses/`.
 
 ### Needs from the host page
 
