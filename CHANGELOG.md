@@ -4,6 +4,8 @@ What a consumer of the package can observe, by release.
 
 ## Unreleased
 
+- The pdf.js worker the package ships is the 6.4.299 worker, where it was the 6.3.289 one, with the guards it had, and the package depends on `pdfjs-dist` 6.4.299. pdf.js rejects an open when the installed `pdfjs-dist` and the worker are of different releases, so the two move together. No form converts differently: the fixtures, the 59 forms and the Air Force's 1,354 files come out the same under both, field for field, and every `form.pdf` is the same bytes.
+
 ## 0.2.0
 
 11 October 2026. Hardening: a background is rebuilt from a table of what each kind of dictionary keeps, `sanitize` bounds what a file decodes to and how long it may take, and qpdf runs in a worker of its own for each file.

@@ -2,7 +2,7 @@ quillify redistributes four files that are other projects' work. Everything
 else it depends on is installed by its consumer and is not in the package.
 
 assets/pdf.worker.js
-  The worker of pdf.js: build/pdf.worker.mjs of pdfjs-dist 6.3.289,
+  The worker of pdf.js: build/pdf.worker.mjs of pdfjs-dist 6.4.299,
   Copyright 2024 Mozilla Foundation, under the Apache License 2.0
   (licenses/pdf.js-LICENSE).
   Changed: a null guard added at two sites, a page's first unsplittable
@@ -12,7 +12,7 @@ assets/pdf.worker.js
   a source map, removed. The file's first line says the same.
 
 assets/xfa-layer.js
-  Lines 1267 to 1585 of web/pdf_viewer.css of pdfjs-dist 6.3.289, unchanged,
+  Lines 1270 to 1588 of web/pdf_viewer.css of pdfjs-dist 6.4.299, unchanged,
   under a header comment and as the text of a JavaScript module.
   Copyright 2014 Mozilla Foundation, under the Apache License 2.0
   (licenses/pdf.js-LICENSE).

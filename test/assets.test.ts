@@ -33,7 +33,7 @@ it('starts each of its two workers in one place, from the constant that holds it
 
 it('ships the pdf.js worker under a first line that says it was changed', () => {
 	const [first] = asset('pdf.worker.js').toString().split('\n', 1);
-	expect(first, STALE).toMatch(/^\/\* The worker of pdfjs-dist 6\.3\.289 .*changed.*\*\/$/);
+	expect(first, STALE).toMatch(/^\/\* The worker of pdfjs-dist 6\.4\.299 .*changed.*\*\/$/);
 });
 
 it('ships the pdf.js worker with the null guard at both sites and no site without it', () => {
