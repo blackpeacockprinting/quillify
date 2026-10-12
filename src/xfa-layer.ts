@@ -35,10 +35,10 @@ const SHELL = `<meta http-equiv="Content-Security-Policy" content="default-src '
  * can zoom the frame, which the frame undoes, or `lay` throws.
  *
  * The frame runs no script, and its policy lets its document load only an
- * image from `blob:` or `data:`, which is how pdf.js hands it a form's images
- * and the stylesheet its field background. A face of the form is not the
- * document's to load: pdf.js makes it in the host page's realm, from the
- * file's bytes, a `local()` name or a face the package ships.
+ * image from `blob:`, which is how pdf.js hands it a form's images, or from
+ * `data:`. A face of the form is not the document's to load: pdf.js makes it
+ * in the host page's realm, from the file's bytes, a `local()` name or a face
+ * the package ships.
  */
 export class XfaStage {
 	readonly #frame = document.createElement('iframe');

@@ -101,7 +101,11 @@ export const MAX_INFLATED_BYTES = 64 * 1024 * 1024;
 export const MAX_PAGES = 25;
 export const MAX_WIDGETS = 1000;
 /** The limits a consumer prints before a read. A refusal's own `limit` is the one to print after it: `too_large` carries `MAX_INFLATED_BYTES` for the decoded bound. */
-export const limits = Object.freeze({ bytes: MAX_BYTES, pages: MAX_PAGES, fields: MAX_WIDGETS });
+export const limits: Readonly<{ bytes: number; pages: number; fields: number }> = Object.freeze({
+	bytes: MAX_BYTES,
+	pages: MAX_PAGES,
+	fields: MAX_WIDGETS
+});
 /**
  * The longest side a page has and is taken, in points, and the farthest its
  * box reaches from the origin: the PDF specification's limit for a side (ISO

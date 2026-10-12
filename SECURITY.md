@@ -43,7 +43,7 @@ Known limits, and no vulnerability to report.
 - Tag strings no page shows (`/Alt`, `/ActualText`, `/E`, `/T`, `/ID`, `/Lang`) stay, and filled fields are untagged (#192).
 - Content in a layer that is off stays (decided in #32).
 - A dictionary by name (`/Resources` maps, `/RoleMap`, `/ClassMap`) keeps values under names the file chose.
-- qpdf's memory before a refusal is unbounded (#46).
+- qpdf's memory before a refusal is unbounded.
 - An image counts for the most its dictionary, its JPEG or JPEG 2000 header, or a CCITT image's `/DecodeParms` says. Not read: a JBIG2 stream's own size, which lies behind segments of varying length, and an image inside a content stream, whose end only a content-stream parser finds.
 - The bound counts bytes, not pixels: an image of 22,000 by 22,000 at a bit a pixel counts 60 MB, and the engine at 0.124.0 traps after 8 s painting its page to a canvas (#259).
 - `qpdf.wasm` is one publisher's prebuilt binary. A 1 kB file traps or hangs it, and a trap ends chrome-headless-shell on Linux (#46).
