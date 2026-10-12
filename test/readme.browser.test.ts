@@ -7,7 +7,7 @@ import form from './fixtures/DD1610_Request_and_Authorization_for_TDY_Travel.pdf
 
 /** The block's own imports, which the test stands in for with the modules of this checkout. */
 const IMPORTS = `import { init } from '@quillmark/wasm';
-import { quillify, sanitize, suggest } from 'quillify';
+import { quillify, sanitize, suggest } from '@quillmark/quillify';
 `;
 
 it('runs the block the README prints under Use, as it is printed', async () => {
