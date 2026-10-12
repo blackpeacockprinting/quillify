@@ -117,7 +117,7 @@ describe('what the redraw of a dynamic form refuses', () => {
 			box('transform:rotate(90deg)'),
 			{ construct: 'transform' }
 		],
-		['a dashed border', box('border:1px dashed #000'), { construct: 'border', detail: 'dashed' }]
+		['a dotted border', box('border:1px dotted #000'), { construct: 'border', detail: 'dotted' }]
 	])('refuses %s by its page and its construct', (_, html, construct) => {
 		// displayList takes pdf.js's page number, which counts from 1.
 		expect(() => displayList(laid(html), 2)).toThrow(

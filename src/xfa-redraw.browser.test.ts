@@ -52,6 +52,12 @@ const picture = (y: number, h: number, aspect: string, base64: string) =>
 /** A bordered caption of 120 by 30 pt, turned about its top left corner at (x, y). */
 const turned = (rotate: number, x: number, y: number) =>
 	`<draw x="${x}pt" y="${y}pt" w="120pt" h="30pt" rotate="${rotate}"><border><edge thickness="4pt"><color value="255,0,0"/></edge><edge presence="hidden"/><edge presence="hidden"/><edge thickness="2pt"/></border><value><text>Sample</text></value></draw>`;
+/** A box with the border `edges` make: one edge for every side, or four from the top round. */
+const bordered = (x: number, y: number, w: number, h: number, edges: string) =>
+	`<draw x="${x}pt" y="${y}pt" w="${w}pt" h="${h}pt"><border>${edges}</border></draw>`;
+const dash = (thickness: number) => `<edge stroke="dashed" thickness="${thickness}pt"/>`;
+const NO_EDGE = '<edge presence="hidden"/>';
+const SOLID = '<edge thickness="2pt"/>';
 /** Forms built here, each for something no dynamic fixture holds. */
 const built = {
 	'a fill with no border and a thick stroke':
@@ -88,7 +94,21 @@ const built = {
 		turned(90, 100, 200) +
 		turned(180, 400, 100) +
 		turned(270, 300, 250) +
-		`<draw x="450pt" y="400pt" w="120pt" h="30pt" rotate="90"><value><rectangle>${FILLED}</rectangle></value></draw>`
+		`<draw x="450pt" y="400pt" w="120pt" h="30pt" rotate="90"><value><rectangle>${FILLED}</rectangle></value></draw>`,
+	// The first two are what published forms have: every side of a box, and
+	// the bottom of one. The next two lie off a whole point, where the browser
+	// fits the gap to the pixels it paints. The fifth has solid sides. Of the
+	// last three, with their borders, the first is too short for two dashes and
+	// the others for two dashes and a whole gap.
+	'dashed borders':
+		bordered(20, 20, 115.25, 26, dash(1)) +
+		bordered(20, 80, 270, 40, NO_EDGE + NO_EDGE + dash(1) + NO_EDGE) +
+		bordered(20.4, 150.7, 133.3, 77.1, dash(2)) +
+		bordered(220.4, 150.7, 133.9, 77.6, dash(3)) +
+		bordered(20, 260, 150, 40, dash(2) + SOLID + dash(2) + SOLID) +
+		bordered(400, 20, 9, 12, dash(4)) +
+		bordered(430, 20, 13, 14, dash(4)) +
+		bordered(460, 20, 6, 6.5, dash(1))
 };
 
 /**

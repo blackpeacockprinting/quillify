@@ -973,3 +973,21 @@ Four things stay refused as `transform`. A turn on an element that is not placed
 `src/xfa-redraw.browser.test.ts` gets a form with three bordered captions, turned 90, 180 and 270 degrees, and a turned rectangle. It holds the borders and the fill, and it leaves text out. `src/xfa-turns.browser.test.ts` holds the text: each run of the redraw starts within a point of the end of the layout's text box that the turn starts it from, ends at the other, and has its baseline inside the box. It also holds the four refusals, each on a form built for it.
 
 **Unlock.** A field's widget that carries a turn (`/MK /R`), with an engine that fills it turned: a turned field is then stamped turned. pdf.js placing a turned cell of a flowed row inside its cell: the turn is then carried there too. A published form with a turned picture or line.
+
+## 11 Oct 2026: A dashed border of a dynamic form is redrawn with the dashes the browser paints
+
+Adds to "A dynamic form's redraw is held to its layout on rules, borders and fills".
+
+**Context.** pdf.js writes a template's edge whose stroke is `dashed`, `dashDot` or `dashDotDot` as a CSS border of the style `dashed`, and one whose stroke is `dotted` as `dotted`. The redraw refuses both as `unpaintable` with the construct `border` (#42). The run of 11 October over 1,354 Air Force files refused 2 for it, and a probe outside the repository laid them out: both are `dashed`, black and 1 px wide, every side of a box of 115.25 by 26 pt on one form and the bottom of a box of 270 by 597.13 pt on the other. Neither has a dotted edge.
+
+A dashed border has no pattern in CSS: the browser chooses one. The redraw is held to the layout's picture to a pixel, half a point, so it has to make the browser's choices, and the test built here found each of them by failing without it.
+
+**Decision.** A `dashed` edge is carried, and `paint` gives it the dashes Chromium paints. A dash is three widths long and a gap two where the edge is under 3 px wide, and two widths and one from there. An edge no longer than two dashes is painted whole. One no longer than two dashes and a gap has the dash and the gap shortened alike, so that it is dash, gap, dash. Any other starts and ends on a whole dash, and the gap is fitted: of the two counts of dashes the length lies between, the one whose gap is nearer the gap above. The browser fits the gap to the edge as it paints it, from a whole pixel to a whole pixel, so a box with a dashed edge is drawn on the pixels the browser snaps it to: a box of 270.5 pt from 19.75 pt has 55 dashes by its own length and 54 in the layout's picture, which paints it from 20 to 290.
+
+A `dotted` edge stays refused. No form laid out has one, and nothing here measured the dots.
+
+`src/refusal.browser.test.ts` held that a dashed border is refused. Its row now holds a dotted one. `src/xfa-redraw.browser.test.ts` gets a form with eight boxes: the two shapes published, two off a whole point at 2 and 3 pt wide, one with dashed and solid sides, and three short ones, one for each of the rules above.
+
+What this does not hold. The rules are Chromium's as the gate's Chromium paints them at one device pixel to the CSS pixel, where the layout's picture is made. On a screen of two device pixels to the CSS pixel the browser may snap an edge to half a pixel, and the redraw then has one dash more or fewer than that screen shows. A border width that is no whole number of pixels computes to one that is, and the picture, which is drawn at two pixels to the point, shows the width the template gives: a dashed edge of 0.5 or 2.5 pt differs from its picture, as a solid one of 0.5 pt does within the tolerance.
+
+**Unlock.** A published form with a dotted edge. A browser other than Chromium in the gate: its dashes are measured the same way.
