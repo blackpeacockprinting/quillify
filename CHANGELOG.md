@@ -9,7 +9,6 @@ Harder bounds on a hostile file, and more of a dynamic form's page redrawn.
 ### Converts now
 
 - A dynamic form with an ellipse, or with a character of Symbol or ZapfDingbats in its text (the triangles, mu, the arrows). U+2010 and U+2011 are drawn as a hyphen. Each was `unpaintable`.
-- A JPEG 2000 image that leaves out its color space or its bits. It was `damaged`.
 
 ### Refused now
 
@@ -22,14 +21,14 @@ Harder bounds on a hostile file, and more of a dynamic form's page redrawn.
 ### Changed
 
 - `limits` is exported: `{ bytes, pages, fields }`, the most of each `sanitize` takes.
-- A file qpdf cannot rewrite is refused without pdf.js opening it. A PDF cut off mid-file is `damaged`, not `not_pdf`, and a malformed encryption dictionary is refused where `sanitize` threw.
+- A file qpdf cannot rewrite is refused without pdf.js opening it. A PDF cut off mid-file is `damaged`, not `not_pdf`; one whose header starts past its first 1,024 bytes is `not_pdf`, not `damaged`; and a malformed encryption dictionary is refused where `sanitize` threw.
 - A dynamic form's page is redrawn in the order the browser paints it. No field moves.
 - A soft hyphen inside a line is not drawn, and a stroked rectangle of no width or no height is not redrawn as a bar.
 - No background keeps `/UserUnit`.
 
 ### Needs from the host page
 
-- A dynamic form no longer needs `img-src data:` in a content security policy.
+- Under a content security policy without `img-src data:`, a dynamic form no longer logs an error for each field.
 
 ## v0.3.0 - 2026-10-12
 

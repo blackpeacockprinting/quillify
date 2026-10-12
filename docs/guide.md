@@ -24,10 +24,10 @@ A bundler has to follow `new URL('../assets/…', import.meta.url)` to copy them
 
 ## Content security policy
 
-| Where                                 | Needs                                                      |
-| ------------------------------------- | ---------------------------------------------------------- |
-| the page                              | `worker-src 'self'`, `connect-src 'self'`, `img-src blob:` |
-| the response serving `qpdf.worker.js` | `script-src 'wasm-unsafe-eval'`, `connect-src 'self'`      |
+| Where                                 | Needs                                                                                                      |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| the page                              | `script-src 'wasm-unsafe-eval'` for the engine, `worker-src 'self'`, `connect-src 'self'`, `img-src blob:` |
+| the response serving `qpdf.worker.js` | `script-src 'wasm-unsafe-eval'`, `connect-src 'self'`                                                      |
 
 ## The engine
 
