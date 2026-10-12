@@ -5,6 +5,18 @@ import type { PDFDocumentProxy } from 'pdfjs-dist';
 // inside `new Worker(...)`, the URL makes it bundle the file again.
 const WORKER = new URL('../assets/pdf.worker.js', import.meta.url);
 
+// The faces pdf.js lays a dynamic form's Arial, Helvetica, Myriad Pro, Calibri
+// and Segoe UI out in, each named so that a bundler copies it.
+const FACES: Record<string, URL> = {
+	'LiberationSans-Regular.ttf': new URL('../assets/LiberationSans-Regular.ttf', import.meta.url),
+	'LiberationSans-Bold.ttf': new URL('../assets/LiberationSans-Bold.ttf', import.meta.url),
+	'LiberationSans-Italic.ttf': new URL('../assets/LiberationSans-Italic.ttf', import.meta.url),
+	'LiberationSans-BoldItalic.ttf': new URL(
+		'../assets/LiberationSans-BoldItalic.ttf',
+		import.meta.url
+	)
+};
+
 // The shipped worker rejects an open with what pdf.js's XFA layout threw, under
 // this prefix.
 const LAYOUT = 'XFA layout: ';
@@ -30,7 +42,29 @@ export async function openPdf(
 	signal?.throwIfAborted();
 	const port = new Worker(WORKER, { type: 'module' });
 	const worker = pdfjs.PDFWorker.create({ port });
-	const task = pdfjs.getDocument({ data: bytes.slice(), ...options, worker });
+	const task = pdfjs.getDocument({
+		data: bytes.slice(),
+		...options,
+		// What pdf.js asks the page for on its worker's behalf: a face of the
+		// package, and nothing else. pdf.js lays a form out without a face it did
+		// not get, so one that did not load ends the open: a request or a body
+		// that fails, and a status that is not ok.
+		BinaryDataFactory: class {
+			async fetch({ filename }: { filename: string }): Promise<Uint8Array> {
+				if (!Object.hasOwn(FACES, filename)) throw new Error(`The package ships no ${filename}.`);
+				try {
+					const response = await fetch(FACES[filename]);
+					if (response.ok) return new Uint8Array(await response.arrayBuffer());
+				} catch {
+					// Ends the open below, as a status that is not ok does.
+				}
+				const failed = new Error(`${filename} did not load from ${FACES[filename]}`);
+				give(failed);
+				throw failed;
+			}
+		},
+		worker
+	});
 
 	// A worker script that fails to load answers nothing, and neither does one
 	// that is busy when the signal fires. `task.destroy()` waits on an answer,

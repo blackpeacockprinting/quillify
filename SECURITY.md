@@ -4,7 +4,7 @@
 
 The bytes of a PDF nobody vouches for go in. A quill comes out, and other people fill it and pass it around. `sanitize` is the only function that reads the file: it returns a `Form`, which is the fields and a background PDF, or the reason the file is not taken. `quillify` builds the quill from that `Form` and a naming. The library has no interface and stores nothing.
 
-`sanitize` requests the package's own files and nothing else, which a test holds on a dynamic form. `quillify` has the engine load its own binary, which is the peer's file and the consumer's to serve.
+`sanitize` requests the package's own files and nothing else, which a test holds on a dynamic form. Four of those files are faces of Liberation Sans, which the page fetches for a dynamic form and for no other file. `quillify` has the engine load its own binary, which is the peer's file and the consumer's to serve.
 
 ## A form's strings are the file's
 
@@ -64,7 +64,7 @@ pdf.js lays an XFA form out in a DOM so its fields get positions. That DOM is bu
 
 The frame has `sandbox="allow-same-origin"`, so it runs no script, and its document carries the policy `default-src 'none'; img-src blob: data:`. That policy lets a form's images in: pdf.js hands the frame each image on a dynamic form's page as a `blob:` URL, the browser loads it there, and the page is then refused as `unpaintable`. The stylesheet the layout needs is adopted on that document, and the conversion ends with an error if it does not apply. No rule of the host page applies inside the frame's document, and the form's rules and fonts do not reach the host.
 
-The policy governs what the frame's document loads, and it names no font source. A form's font face is not the document's to load: pdf.js makes each face in the host page's realm, from the file's bytes or a `local()` name, and adds it to the frame's font set. The library never gives pdf.js a URL to fetch a font from.
+The policy governs what the frame's document loads, and it names no font source. A form's font face is not the document's to load: pdf.js makes each face in the host page's realm, from the file's bytes, a `local()` name or the bytes of a face the package ships, and adds it to the frame's font set, under the family name the form's rules ask for, so the browser lays the form's text out in it: in a face the file embeds too. The library gives pdf.js no URL to fetch a font from: pdf.js's worker asks the page for a face by file name, and the page answers for the four names the package ships, from its own files, and for no other. The file chooses which of the four are asked for, by the faces its text names, and nothing else about the request.
 
 The host page still reaches the frame element. A rule that hides it, or a script that takes it out of the document once it has loaded, ends the conversion with an error that says the host page hid or removed the frame. A frame taken out before it has loaded ends the conversion with an error that says so, before a worker starts: until the frame loads, a `MutationObserver` on the host document watches for it leaving. A `zoom` on the frame or an ancestor scales the layout inside it. The frame sets a zoom of its own that undoes its ancestors', read from `Element.currentCSSZoom`, and before a page is measured the conversion ends with an error that names the host page's zoom unless the zoom in effect on the frame is exactly 1. A browser that has `zoom` and no `currentCSSZoom` gets neither, and a zoom there scales the layout with nothing to report it.
 

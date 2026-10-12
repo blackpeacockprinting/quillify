@@ -38,7 +38,7 @@ const SHELL = `<meta http-equiv="Content-Security-Policy" content="default-src '
  * image from `blob:` or `data:`, which is how pdf.js hands it a form's images
  * and the stylesheet its field background. A face of the form is not the
  * document's to load: pdf.js makes it in the host page's realm, from the
- * file's bytes or a `local()` name.
+ * file's bytes, a `local()` name or a face the package ships.
  */
 export class XfaStage {
 	readonly #frame = document.createElement('iframe');
@@ -86,6 +86,15 @@ export class XfaStage {
 			const applies = view.getComputedStyle(probe).position === 'absolute';
 			probe.remove();
 			if (!applies) throw new Error('The XFA stylesheet did not apply to the stage.');
+
+			// pdf.js names a face with its family in quotes. Chromium keeps the quotes
+			// as part of the name, and no rule of the form then asks for that face.
+			const faces = frameDocument.fonts;
+			const add = faces.add.bind(faces);
+			faces.add = (face) => {
+				if (/^".*"$/.test(face.family)) face.family = face.family.slice(1, -1);
+				return add(face);
+			};
 			return frameDocument;
 		});
 	}
@@ -108,7 +117,9 @@ export class XfaStage {
 
 		const frameDocument = await this.ready;
 		const host = frameDocument.createElement('div');
-		host.style.cssText = `position:relative;overflow:hidden;background:#fff;width:${viewport.width}px;height:${viewport.height}px`;
+		// On Linux Chromium fits text to the pixel grid and rounds each advance to
+		// a whole pixel, unless the text asks for geometric precision.
+		host.style.cssText = `position:relative;overflow:hidden;background:#fff;text-rendering:geometricPrecision;width:${viewport.width}px;height:${viewport.height}px`;
 		const layer = frameDocument.createElement('div');
 		layer.className = 'xfaLayer';
 		host.append(layer);
