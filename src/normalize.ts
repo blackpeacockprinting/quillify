@@ -96,12 +96,28 @@ const COMPONENTS = new Map([
  * such an array holds. A stream with no `/Width` and no `/Height` is no image
  * and comes to none. One with either whose dictionary does not say what it
  * comes to, in a component or more of a bit or more, is refused as `damaged`.
+ *
+ * JPEG 2000 data says its own color space and bits, so an image under
+ * `JPXDecode` may leave either out, and counts at four components for the
+ * one and eight bits for the other, what a painter makes of a pixel. A
+ * CCITT decoder goes by the `/Columns` and `/Rows` of its `/DecodeParms`,
+ * so each counts where it is written and more than the image's own.
+ * `chain` is the stream's filters.
  */
-function declared(dict: PDFDict): number {
+function declared(dict: PDFDict, chain: string[]): number {
 	if (!dict.has(PDFName.of('Width')) && !dict.has(PDFName.of('Height'))) return 0;
 	const number = (from: PDFDict, key: string) => {
 		const value = from.lookup(PDFName.of(key));
 		return value instanceof PDFNumber ? value.asNumber() : NaN;
+	};
+	const codec = chain.at(-1);
+	const jpx = codec === 'JPXDecode';
+	const parms = codec === 'CCITTFaxDecode' && dict.lookup(PDFName.of('DecodeParms'));
+	const fax = parms instanceof PDFArray ? parms.lookup(chain.length - 1) : parms;
+	const side = (key: string, said: string) => {
+		const own = number(dict, key);
+		const more = fax instanceof PDFDict ? number(fax, said) : NaN;
+		return more > own ? more : own;
 	};
 	const mask = dict.lookup(PDFName.of('ImageMask')) === PDFBool.True;
 	const space = dict.lookup(PDFName.of('ColorSpace'));
@@ -116,9 +132,18 @@ function declared(dict: PDFDict): number {
 				? number(part.dict, 'N')
 				: name === 'DeviceN' && part instanceof PDFArray
 					? part.size()
-					: (COMPONENTS.get(name) ?? NaN);
-	const bits = mask ? 1 : threshold ? 16 : number(dict, 'BitsPerComponent');
-	const bytes = Math.ceil((number(dict, 'Width') * components * bits) / 8) * number(dict, 'Height');
+					: jpx && !space
+						? 4
+						: (COMPONENTS.get(name) ?? NaN);
+	const bits = mask
+		? 1
+		: threshold
+			? 16
+			: jpx && !dict.has(PDFName.of('BitsPerComponent'))
+				? 8
+				: number(dict, 'BitsPerComponent');
+	const bytes =
+		Math.ceil((side('Width', 'Columns') * components * bits) / 8) * side('Height', 'Rows');
 	if (!(components >= 1 && bits >= 1 && bytes >= 0)) throw new Refused({ code: 'damaged' });
 	return bytes;
 }
@@ -157,7 +182,7 @@ async function inflated(pdf: Uint8Array): Promise<number> {
 		const rest = chain.slice(flate ? 1 : 0);
 		if (rest.length > 1 || rest.some((name) => !CODECS.includes(name)))
 			throw new Refused({ code: 'damaged' });
-		const least = total + declared(dict);
+		const least = total + declared(dict, chain);
 		// An empty stream is one to every reader, and to the decoder a stream cut short.
 		if (!flate || !contents.length) {
 			total = least;
