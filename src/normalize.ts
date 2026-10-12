@@ -34,6 +34,7 @@ import {
 	PDFBool,
 	PDFDict,
 	PDFDocument,
+	PDFInvalidObject,
 	PDFName,
 	PDFNumber,
 	PDFRawStream,
@@ -96,7 +97,8 @@ const COMPONENTS = new Map([
  * with a `/HalftoneType` and neither comes to two bytes to the pixel, the most
  * such an array holds. A stream with no `/Width` and no `/Height` is no image
  * and comes to none. One with either whose dictionary does not say what it
- * comes to, in a component or more of a bit or more, is refused as `damaged`.
+ * comes to, in a component or more of a bit or more and in a number short of
+ * infinity, is refused as `damaged`.
  *
  * JPEG 2000 data says its own color space and bits, so an image under
  * `JPXDecode` may leave either out, and counts at four components for the
@@ -145,18 +147,82 @@ function declared(dict: PDFDict, chain: string[]): number {
 				: number(dict, 'BitsPerComponent');
 	const bytes =
 		Math.ceil((side('Width', 'Columns') * components * bits) / 8) * side('Height', 'Rows');
-	if (!(components >= 1 && bits >= 1 && bytes >= 0)) throw new Refused({ code: 'damaged' });
+	if (!(components >= 1 && bits >= 1 && bytes >= 0 && bytes < Infinity))
+		throw new Refused({ code: 'damaged' });
 	return bytes;
+}
+
+/**
+ * The bytes an image's pixels come to as its codec's own header says them,
+ * which is what a decoder that goes by the stream makes: the first frame
+ * header of a JPEG, or the SIZ segment of a JPEG 2000 codestream, bare or in
+ * the `jp2c` box of a JP2 file. None under any other codec, and none where the
+ * header is not there or is cut short, which is where the view throws.
+ */
+function headed(codec: string | undefined, data: Uint8Array): number {
+	const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+	const bytes = (width: number, height: number, components: number, bits: number) =>
+		Math.ceil((width * components * bits) / 8) * height;
+	try {
+		if (codec === 'DCTDecode') {
+			// From the first start of an image, where a reader that looks for one begins.
+			let at = 0;
+			while (view.getUint16(at) !== 0xffd8) at += 1;
+			// As libjpeg finds a marker: past a byte that is none, a fill byte and a marker of no length.
+			for (at += 2; ;) {
+				const marker = view.getUint8(at) === 0xff ? view.getUint8(at + 1) : 0xff;
+				if (marker === 0xff) at += 1;
+				else if (marker >> 4 === 0xc && ![0xc4, 0xc8, 0xcc].includes(marker))
+					// A height of 0 is left to a DNL marker after the scan, which can say 65,535.
+					return bytes(
+						view.getUint16(at + 7),
+						view.getUint16(at + 5) || 0xffff,
+						view.getUint8(at + 9),
+						view.getUint8(at + 4)
+					);
+				else
+					at += marker <= 1 || (marker >= 0xd0 && marker <= 0xd9) ? 2 : 2 + view.getUint16(at + 2);
+			}
+		}
+		if (codec === 'JPXDecode') {
+			let at = 0;
+			// A JP2 file is boxes: a length and a type, or a 1, a type and a length of eight bytes.
+			if (view.getUint32(4) === 0x6a502020) {
+				const wide = () => view.getUint32(at) === 1;
+				while (view.getUint32(at + 4) !== 0x6a703263)
+					at += (wide() ? Number(view.getBigUint64(at + 8)) : view.getUint32(at)) || Infinity;
+				at += wide() ? 16 : 8;
+			}
+			// The image is its grid less where it starts in it, at the most bits any component says.
+			if (view.getUint32(at) === 0xff4fff51) {
+				const components = view.getUint16(at + 40);
+				let bits = 0;
+				for (let each = 0; each < components; each++)
+					bits = Math.max(bits, (view.getUint8(at + 42 + 3 * each) & 127) + 1);
+				return bytes(
+					view.getUint32(at + 8) - view.getUint32(at + 16),
+					view.getUint32(at + 12) - view.getUint32(at + 20),
+					components,
+					bits
+				);
+			}
+		}
+	} catch {
+		// No header to go by.
+	}
+	return 0;
 }
 
 /**
  * The size of the file qpdf wrote and of what its streams decode to, added up
  * no further than the bound. pdf-lib lists the streams and the browser
- * inflates each Flate one, keeping nothing. An image comes to what its
- * dictionary declares, or to what its Flate layer gives when that is more. A
- * stream the browser's decoder rejects, or one under a filter qpdf has not
- * taken off, is a stream two readers can read two ways, and the file is
- * refused as `damaged`.
+ * inflates each Flate one, keeping only what lies under a JPEG or JPEG 2000
+ * codec. An image comes to the most of what its dictionary declares, what
+ * its codec's own header says and what its Flate layer gives. An object
+ * pdf-lib cannot read, as a number of 400 digits, is one it would not count.
+ * Such an object, a stream the browser's decoder rejects, or one under a
+ * filter qpdf has not taken off, is one two readers can read two ways, and
+ * the file is refused as `damaged`.
  */
 async function inflated(pdf: Uint8Array): Promise<number> {
 	let total = pdf.byteLength;
@@ -169,6 +235,7 @@ async function inflated(pdf: Uint8Array): Promise<number> {
 		parseSpeed: ParseSpeeds.Fastest
 	});
 	for (const [, object] of context.enumerateIndirectObjects()) {
+		if (object instanceof PDFInvalidObject) throw new Refused({ code: 'damaged' });
 		if (!(object instanceof PDFRawStream)) continue;
 		const { dict, contents } = object;
 		const filter = dict.lookup(PDFName.of('Filter'));
@@ -183,14 +250,17 @@ async function inflated(pdf: Uint8Array): Promise<number> {
 		const rest = chain.slice(flate ? 1 : 0);
 		if (rest.length > 1 || rest.some((name) => !CODECS.includes(name)))
 			throw new Refused({ code: 'damaged' });
-		const least = total + declared(dict, chain);
+		const before = total;
+		const said = declared(dict, chain);
 		// An empty stream is one to every reader, and to the decoder a stream cut short.
 		if (!flate || !contents.length) {
-			total = least;
+			total += Math.max(said, headed(rest[0], contents));
 			continue;
 		}
 
 		let at = 0;
+		const keep = rest[0] === 'DCTDecode' || rest[0] === 'JPXDecode';
+		const under: Uint8Array<ArrayBuffer>[] = [];
 		const reader = new ReadableStream<BufferSource>({
 			pull(controller) {
 				if (at < contents.length) controller.enqueue(contents.slice(at, (at += SLICE)));
@@ -203,13 +273,15 @@ async function inflated(pdf: Uint8Array): Promise<number> {
 			for (let read = await reader.read(); !read.done; read = await reader.read()) {
 				total += read.value.byteLength;
 				if (total > MAX_INFLATED_BYTES) return total;
+				if (keep) under.push(read.value);
 			}
 		} catch {
 			throw new Refused({ code: 'damaged' });
 		} finally {
 			void reader.cancel().catch(() => {});
 		}
-		total = Math.max(total, least);
+		const own = keep ? headed(rest[0], new Uint8Array(await new Blob(under).arrayBuffer())) : 0;
+		total = Math.max(total, before + Math.max(said, own));
 	}
 	return total;
 }
