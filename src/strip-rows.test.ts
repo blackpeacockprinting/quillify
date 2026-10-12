@@ -107,8 +107,7 @@ const CASES: Case[] = [
 	{
 		kind: 'page',
 		on: 'page',
-		keeps:
-			'Type Parent Resources MediaBox Contents Rotate Group UserUnit StructParents Tabs Annots',
+		keeps: 'Type Parent Resources MediaBox Contents Rotate Group StructParents Tabs Annots',
 		has: {
 			Resources: RESOURCES,
 			Contents: [DATA],

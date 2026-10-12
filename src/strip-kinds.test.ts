@@ -305,7 +305,7 @@ it('keeps a value that leads nowhere under each key that names it by reference',
 	const { page } = await background((node, context) => {
 		const number = context.register(context.obj(0));
 		node.set(PDFName.of('Rotate'), number);
-		node.set(PDFName.of('UserUnit'), number);
+		node.set(PDFName.of('Tabs'), number);
 		const Widths = context.register(context.obj([500]));
 		const font = {
 			Type: 'Font',
@@ -319,7 +319,7 @@ it('keeps a value that leads nowhere under each key that names it by reference',
 			context.obj({ Font: { F1: { ...font, Widths }, F2: { ...font, Widths } } })
 		);
 	});
-	expect(keys(page)).toEqual(['MediaBox', 'Parent', 'Resources', 'Rotate', 'Type', 'UserUnit']);
+	expect(keys(page)).toEqual(['MediaBox', 'Parent', 'Resources', 'Rotate', 'Tabs', 'Type']);
 	for (const name of ['F1', 'F2']) {
 		const font = under(page, 'Resources', 'Font', name) as PDFDict;
 		expect(font.lookup(PDFName.of('Widths'), PDFArray).size()).toBe(1);

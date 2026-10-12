@@ -72,7 +72,7 @@ it('keeps of a page what paints and tags it, and nothing that acts or rides alon
 			BleedBox: [0, 0, 612, 792],
 			TrimBox: [0, 0, 612, 792],
 			Rotate: 0,
-			UserUnit: 1,
+			UserUnit: 1000,
 			Group: { Type: 'Group', S: 'Transparency' },
 			StructParents: 0,
 			Tabs: 'S'
@@ -88,8 +88,7 @@ it('keeps of a page what paints and tags it, and nothing that acts or rides alon
 		'Rotate',
 		'StructParents',
 		'Tabs',
-		'Type',
-		'UserUnit'
+		'Type'
 	]);
 	for (const marker of HOSTILE) expect(text).not.toContain(marker);
 });

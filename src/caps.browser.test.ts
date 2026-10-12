@@ -4,7 +4,7 @@
  * out here so that a change of a constant has to change a test.
  */
 
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFNumber } from 'pdf-lib';
 import { expect, it } from 'vitest';
 import { dynamicForm, templateForm } from '../test/dynamic-form.js';
 import { fromTree, render } from '../test/engine.js';
@@ -145,6 +145,26 @@ it('converts a page 14,400 pt wide about the origin and refuses one of 14,600, n
 		form: { pages: [{ width: 14400, height: 792 }] }
 	});
 	expect(await sanitize(await about(7300))).toEqual({ ok: false, refusal: { code: 'damaged' } });
+}, 60_000);
+
+it('refuses a page whose user unit is not 1, and keeps no /UserUnit on one whose unit is 1', async () => {
+	const scaled = async (unit: number) => {
+		const doc = await PDFDocument.create();
+		const page = doc.addPage([612, 792]);
+		page.node.set(PDFName.of('UserUnit'), PDFNumber.of(unit));
+		doc.getForm().createTextField('field').addToPage(page, { x: 20, y: 20, width: 10, height: 8 });
+		return doc.save();
+	};
+	for (const unit of [1000, 2, 0.5])
+		expect(await sanitize(await scaled(unit))).toEqual({
+			ok: false,
+			refusal: { code: 'damaged' }
+		});
+	const read = await sanitize(await scaled(1));
+	if (!read.ok) throw new Error(`refused as ${read.refusal.code}`);
+	expect(read.form.pages).toEqual([{ width: 612, height: 792 }]);
+	const [page] = (await PDFDocument.load(read.form.pdf)).getPages();
+	expect(page.node.has(PDFName.of('UserUnit'))).toBe(false);
 }, 60_000);
 
 it("converts a dynamic form's page 14,400 pt long and refuses one of 14,401", async () => {
