@@ -5,7 +5,7 @@
  */
 
 import { PDFDocument, PDFName, PDFNumber } from 'pdf-lib';
-import { expect, it } from 'vitest';
+import { expect, expectTypeOf, it } from 'vitest';
 import { dynamicForm, templateForm } from '../test/dynamic-form.js';
 import { fromTree, render } from '../test/engine.js';
 import { limits, quillify, sanitize, suggest } from './index.js';
@@ -76,6 +76,8 @@ it('converts a form of 25 pages and refuses one of 26', async () => {
 it('exports the three limits, each the one its refusal carries', async () => {
 	expect(limits).toEqual({ bytes: 8 * 1024 * 1024, pages: 25, fields: 1000 });
 	expect(Object.isFrozen(limits)).toBe(true);
+	// Numbers, and not the caps of the day: a cap that rises changes no type.
+	expectTypeOf(limits).toEqualTypeOf<Readonly<{ bytes: number; pages: number; fields: number }>>();
 	expect(await sanitize(new Uint8Array(limits.bytes + 1))).toEqual({
 		ok: false,
 		refusal: { code: 'too_large', bytes: limits.bytes + 1, limit: limits.bytes }
