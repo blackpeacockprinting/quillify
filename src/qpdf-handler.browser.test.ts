@@ -12,10 +12,11 @@ interface Answer {
 	loaded: boolean;
 	out?: Uint8Array;
 	size?: number;
+	said?: string;
 }
 
-/** What the handler answers one file with, under a limit of ten bytes, when the script before it defines `Module` as given. */
-function answer(module: string): Promise<Answer> {
+/** What the handler answers one file with, under a limit of ten bytes unless another is given, when the script before it defines `Module` as given. */
+function answer(module: string, limit = 10): Promise<Answer> {
 	const url = URL.createObjectURL(new Blob([`const Module = ${module};\n`, handler]));
 	const worker = new Worker(url);
 	return new Promise<Answer>((resolve, reject) => {
@@ -25,7 +26,7 @@ function answer(module: string): Promise<Answer> {
 			bytes: Uint8Array.of(1, 2),
 			flags: ['--flag'],
 			wasm: 'where/qpdf.wasm',
-			limit: 10
+			limit
 		});
 	}).finally(() => {
 		worker.terminate();
@@ -77,11 +78,20 @@ it('answers with no file when qpdf throws', async () => {
 		throw new WebAssembly.RuntimeError('memory access out of bounds');
 	}`;
 
-	expect(await answer(starts(trap))).toEqual({ loaded: true, size: 5 });
+	expect(await answer(starts(trap))).toEqual({ loaded: true, size: 5, said: '' });
+});
+
+it('answers with nothing qpdf said when qpdf throws, though it wrote to its error stream', async () => {
+	const trap = `(args, files, locateFile, FS) => {
+		FS.write({ fd: 2 }, new TextEncoder().encode('WARNING\\n'), 0, 8);
+		throw new WebAssembly.RuntimeError('memory access out of bounds');
+	}`;
+
+	expect(await answer(starts(trap))).toEqual({ loaded: true, size: 8, said: '' });
 });
 
 it('answers with no file when qpdf wrote none', async () => {
-	expect(await answer(starts('() => 2'))).toEqual({ loaded: true, size: 5 });
+	expect(await answer(starts('() => 2'))).toEqual({ loaded: true, size: 5, said: '' });
 });
 
 it('answers with no file when qpdf ends with an error, though it left part of one', async () => {
@@ -90,7 +100,7 @@ it('answers with no file when qpdf ends with an error, though it left part of on
 		return 2;
 	}`;
 
-	expect(await answer(starts(gaveUp))).toEqual({ loaded: true, size: 5 });
+	expect(await answer(starts(gaveUp))).toEqual({ loaded: true, size: 5, said: '' });
 });
 
 it('answers with the file when qpdf ends with warnings', async () => {
@@ -99,7 +109,12 @@ it('answers with the file when qpdf ends with warnings', async () => {
 		return 3;
 	}`;
 
-	expect(await answer(starts(warned))).toEqual({ loaded: true, out: Uint8Array.of(7), size: 5 });
+	expect(await answer(starts(warned))).toEqual({
+		loaded: true,
+		out: Uint8Array.of(7),
+		size: 5,
+		said: ''
+	});
 });
 
 it('answers with what qpdf wrote as the size, when that is more than its heap', async () => {
@@ -111,7 +126,8 @@ it('answers with what qpdf wrote as the size, when that is more than its heap', 
 	expect(await answer(starts(wrote))).toEqual({
 		loaded: true,
 		out: Uint8Array.of(1, 2, 3, 4, 5, 6, 7, 8),
-		size: 8
+		size: 8,
+		said: ''
 	});
 });
 
@@ -121,7 +137,24 @@ it('ends qpdf at the write that passes the limit, and answers with no file', asy
 		return 0;
 	}`;
 
-	expect(await answer(starts(fivePieces))).toEqual({ loaded: true, size: 12 });
+	expect(await answer(starts(fivePieces))).toEqual({ loaded: true, size: 12, said: '' });
+});
+
+it('answers with the end of what qpdf wrote to its error stream', async () => {
+	const said = `(args, files, locateFile, FS) => {
+		const write = (fd, piece) => FS.write({ fd }, new TextEncoder().encode(piece), 0, piece.length);
+		write(2, 'x'.repeat(2000));
+		write(2, 'no ');
+		write(1, 'to its output ');
+		write(2, 'file\\n');
+		return 2;
+	}`;
+
+	expect(await answer(starts(said), 5000)).toEqual({
+		loaded: true,
+		size: 2022,
+		said: `${'x'.repeat(1016)}no file\n`
+	});
 });
 
 it('says that the module did not start', async () => {

@@ -7,7 +7,7 @@
  */
 
 import { PDFDocument, PDFHexString, PDFName, PDFRawStream, type PDFRef } from 'pdf-lib';
-import { expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { templateForm } from '../test/dynamic-form.js';
 import { sanitize } from './sanitize.js';
 import { MAX_BYTES } from './types.js';
@@ -16,6 +16,10 @@ const MiB = 1024 * 1024;
 /** The bound, as the README states it. */
 const BOUND = 64 * MiB;
 const text = new TextEncoder();
+
+afterEach(() => {
+	vi.unstubAllGlobals();
+});
 
 function joined(...parts: (string | Uint8Array)[]): Uint8Array<ArrayBuffer> {
 	const bytes = parts.map((part) => (typeof part === 'string' ? text.encode(part) : part));
@@ -307,18 +311,30 @@ it('refuses an object stream that holds one object larger than the bound', async
 }, 120_000);
 
 /**
- * qpdf writes nothing for a file whose `startxref` points past its end, so
- * pdf.js opens the original, which the bound does not hold. It inflates the
- * object stream whole for the catalog and does not read it for the page.
+ * qpdf writes nothing for a file whose `startxref` points past its end. The
+ * bound does not hold the original, so no other reader is started on it:
+ * pdf.js inflates such an object stream whole when it holds the catalog.
  */
 it.each([
 	['the page', `${PAGE} >>`, '/Root 1 0 R'],
 	['the catalog', '<< /Type /Catalog /Pages 2 0 R >>', '/Root 3 0 R']
 ])(
-	'refuses as damaged a file qpdf gives up on, %s in an object stream of twice the bound',
+	'refuses as damaged a file qpdf gives up on, %s in an object stream of twice the bound, and starts no other worker',
 	async (_, object, root) => {
 		const pdf = respelled(await inObjectStream(object, 2 * BOUND), '/Root 1 0 R', root);
+		const started: string[] = [];
+		vi.stubGlobal(
+			'Worker',
+			class extends Worker {
+				constructor(url: string | URL, options?: WorkerOptions) {
+					super(url, options);
+					started.push(String(url).replace(/^.*\/|\?.*$/g, ''));
+				}
+			}
+		);
+
 		await damaged(respelled(pdf, 'startxref\n1', 'startxref\n9'));
+		expect(started).toEqual(['qpdf.worker.js']);
 	},
 	120_000
 );
