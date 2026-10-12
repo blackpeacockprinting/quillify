@@ -1,7 +1,7 @@
 /**
  * A dynamic form pdf.js cannot lay out is refused as `layout`, with the message
- * of the exception pdf.js's layout threw. One it lays out to a page of no size
- * is refused under the same code.
+ * of the exception pdf.js's layout threw. One it lays out to a page of no size,
+ * or with a field off its page, is refused under the same code.
  */
 
 import { PDFArray, PDFDict, PDFDocument, PDFName, PDFRawStream, decodePDFRawStream } from 'pdf-lib';
@@ -9,7 +9,7 @@ import type { PDFRef } from 'pdf-lib';
 import { afterEach, expect, it, vi } from 'vitest';
 import saarUrl from '../test/fixtures/DD2875_System_Authorization_Access_Request.pdf?url';
 import sampleUrl from '../test/fixtures/acroform-sample.pdf?url';
-import { templateForm } from '../test/dynamic-form.js';
+import { dynamicForm, templateForm } from '../test/dynamic-form.js';
 import { openPdf } from './pdfjs.js';
 import { sanitize } from './sanitize.js';
 import { xfaToAcroForm } from './xfa.js';
@@ -94,6 +94,22 @@ it.each([
 	},
 	60_000
 );
+
+/** A one-page dynamic form with one text field, `x` points from the left of its 612 pt page. */
+const fieldAt = (x: number) =>
+	dynamicForm(
+		`<field name="f" x="${x}pt" y="72pt" w="200pt" h="20pt"><ui><textEdit/></ui></field>`
+	);
+
+// pdf.js gives a field the place its layout comes to, on the page or not, and
+// a quill has no place for a field that is off it.
+it('refuses a field laid out off its page as layout, and keeps one that crosses the edge', async () => {
+	expect(await sanitize(await fieldAt(612))).toMatchObject({
+		refusal: { code: 'layout', detail: 'a field is off its page' }
+	});
+	const read = await sanitize(await fieldAt(500));
+	expect(read.ok && read.form.fields.map(({ places }) => places[0].rect.x)).toEqual([500]);
+}, 60_000);
 
 it('leaves no worker and no frame when it refuses a layout', async () => {
 	const count = { started: 0, live: new Set<Worker>() };

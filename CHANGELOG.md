@@ -4,6 +4,7 @@ What a consumer can observe, in the latest release and since. Earlier releases a
 
 ## Unreleased
 
+- A dynamic form with a field wholly off its page is refused as `layout`, with `detail: 'a field is off its page'`. It converted with that field out of reach.
 - A dynamic form's page is redrawn in the order the browser paints it: a border shows whole over its own fill, and a fill hides what lies under it. No field moves.
 - An image counts toward the 64 MiB bound for the bytes its dictionary declares, so a file whose images declare more is `too_large`. An image whose dictionary does not say is `damaged`.
 - A page over 14,400 pt on a side, or with a box that far from the origin, is refused as `damaged`. No published form measured has one.

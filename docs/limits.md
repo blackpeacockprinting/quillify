@@ -20,7 +20,7 @@ It is drawn as pdf.js lays it out, in Helvetica, Times or Courier. No script of 
 - A hairline under half a point, or a rule half a point from a fill, can come out a pixel off its layout.
 - pdf.js's layout is not always Acrobat's ([#120](https://github.com/tonguetoquill/quillify/issues/120)).
 - Arial and Helvetica are laid out in Liberation Sans, which the package ships. Other faces use what the machine has ([#197](https://github.com/tonguetoquill/quillify/issues/197)).
-- Refused: a turned field, a dotted border, an SVG shape other than a line or a rectangle, a barcode or password field ([#42](https://github.com/tonguetoquill/quillify/issues/42)), and a character outside the standard fonts ([#198](https://github.com/tonguetoquill/quillify/issues/198)).
+- Refused: a turned field, a field off its page, a dotted border, an SVG shape other than a line or a rectangle, a barcode or password field ([#42](https://github.com/tonguetoquill/quillify/issues/42)), and a character outside the standard fonts ([#198](https://github.com/tonguetoquill/quillify/issues/198)).
 
 ## Every form
 
