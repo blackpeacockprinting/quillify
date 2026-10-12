@@ -18,6 +18,8 @@ export interface Box {
 	fill: Colour | null;
 	/** Top, right, bottom, left. A null edge is not drawn. */
 	edges: [Edge | null, Edge | null, Edge | null, Edge | null];
+	/** The radius of an SVG rect's corners, along the middle of its border. */
+	radius?: number;
 }
 
 export interface Line {
@@ -142,13 +144,16 @@ export function displayList(page: XfaPage, pageNumber: number): DisplayList {
 				// that adds to the fill lies under the stroke.
 				const half = (edge?.width ?? 0) / 2;
 				const r = el.getBoundingClientRect();
+				// The browser draws a rect square when its rx is below zero.
+				const radius = parseFloat(style.rx);
 				boxes.push({
 					x: X(r.x - half),
 					y: Y(r.y - half),
 					w: +(r.width + 2 * half).toFixed(2),
 					h: +(r.height + 2 * half).toFixed(2),
 					fill,
-					edges: [edge, edge, edge, edge]
+					edges: [edge, edge, edge, edge],
+					radius: radius > 0 ? radius : undefined
 				});
 			}
 			continue;
