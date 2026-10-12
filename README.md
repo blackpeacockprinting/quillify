@@ -129,7 +129,8 @@ Outside `code`, `kind`, `construct` and `diagnostic`, a string in a `Form`, a re
 - A radio group reaches the quill as one boolean per button, and so does a set of checkboxes that share a name and turn on as different values. Where two boxes of such a set turn on as one value, the file ticks both together and the quill has a boolean for each ([#41](https://github.com/tonguetoquill/quillify/issues/41)).
 - A field gets a name and a description and no `title`, so an editor built on the quill shows a snake_case name where the form prints a label ([#36](https://github.com/tonguetoquill/quillify/issues/36)).
 - Of a page's annotations the background keeps its links and no other, so a strikeout, a text box or a stamp left on a published form is not in it. A link stays only when it leads to an `http` or `https` address or to a place in the file ([#68](https://github.com/tonguetoquill/quillify/issues/68)).
-- The strip holds the catalog, the page tree, a page, a link with its border and its destination, the layers and everything a page paints from to a table of keys. The structure tree and the mark information are still kept whole, with whatever the file put under them. Reading those against the table is v0.2.0 ([#25](https://github.com/tonguetoquill/quillify/issues/25)).
+- The strip holds every dictionary of a background to a table of keys: the catalog, the page tree, a page, a link, the layers, the structure tree and everything a page paints from. A test that walks each saved background against that table is v0.2.0 ([#25](https://github.com/tonguetoquill/quillify/issues/25)).
+- A background keeps the published form's tags, with the text they carry that no page shows: alternate text, titles and IDs. The fields the engine stamps on it are in no structure element, so the fields of a form filled from a quill are untagged, and that is the engine's to change ([#192](https://github.com/tonguetoquill/quillify/issues/192)).
 
 ## Working on it
 
