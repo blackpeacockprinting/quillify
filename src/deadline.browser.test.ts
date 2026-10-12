@@ -17,7 +17,7 @@ import { sanitize } from './sanitize.js';
 const fetched = async (url: string) => new Uint8Array(await (await fetch(url)).arrayBuffer());
 const sample = () => fetched(sampleUrl);
 const dynamic = () => fetched(dynamicUrl);
-/** qpdf writes no file for it, so pdf.js is asked to open it. */
+/** qpdf writes no file for it. */
 const notPdf = async () => new TextEncoder().encode('x');
 const TOO_SLOW = { ok: false, refusal: { code: 'too_slow', limit: 60 } };
 const frames = () => document.querySelectorAll('iframe');
@@ -147,7 +147,6 @@ const PDFJS = '/pdf.worker.js';
 it.each([
 	['the sample', 'qpdf never answers', sample, QPDF, undefined, 1],
 	['the sample', 'pdf.js never answers', sample, PDFJS, undefined, 2],
-	['a file qpdf writes nothing for', 'pdf.js never answers', notPdf, PDFJS, undefined, 2],
 	['a dynamic form', 'pdf.js gives no page of it', dynamic, PDFJS, 'GetPage', 2],
 	['the sample', 'pdf.js gives no metadata of it', sample, PDFJS, 'GetMetadata', 3],
 	['a portfolio', 'pdf.js gives no attachment of it', portfolio, PDFJS, 'GetAttachments', 3],
@@ -171,6 +170,16 @@ it.each([
 	},
 	10_000
 );
+
+it('refuses a file qpdf writes nothing for under its own code, and waits on no pdf.js worker', async () => {
+	const { listening, start } = deadline(100, true);
+	const count = workers(PDFJS, { dropped: start });
+
+	expect(await sanitize(await notPdf())).toEqual({ ok: false, refusal: { code: 'not_pdf' } });
+	expect(count).toEqual(['qpdf.worker.js']);
+	expect(live.size).toBe(0);
+	expect(listening.size).toBe(0);
+}, 10_000);
 
 it.each([
 	['pdf.js', PDFJS],

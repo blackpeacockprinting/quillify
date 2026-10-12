@@ -71,6 +71,29 @@ describe('normalizePdf', () => {
 		expect(next.getPageCount()).toBe(1);
 	}, 60_000);
 
+	it.each([
+		[1019, 'damaged'],
+		[1020, 'not_pdf']
+	])(
+		'refuses words under a PDF header that starts %i bytes in as %s: the header lies in the first 1,024',
+		async (spaces, code) => {
+			const bytes = new TextEncoder().encode(`${' '.repeat(spaces)}%PDF-1.7\njust words\n`);
+			await expect(normalizePdf(bytes)).rejects.toMatchObject({ refusal: { code } });
+		},
+		60_000
+	);
+
+	it('refuses as damaged a file whose own words name the encryption before the last line qpdf says', async () => {
+		// qpdf warns of the duplicated key by its name, and then ends for want of a page tree.
+		const head = '%PDF-1.7\n';
+		const catalog = '1 0 obj\n<< /Type /Catalog /encryption 1 /encryption 2 >>\nendobj\n';
+		const rows = `0000000000 65535 f \n${String(head.length).padStart(10, '0')} 00000 n \n`;
+		const bytes = new TextEncoder().encode(
+			`${head}${catalog}xref\n0 2\n${rows}trailer\n<< /Size 2 /Root 1 0 R >>\nstartxref\n${head.length + catalog.length}\n%%EOF\n`
+		);
+		await expect(normalizePdf(bytes)).rejects.toMatchObject({ refusal: { code: 'damaged' } });
+	}, 60_000);
+
 	it('refuses a file qpdf gives up on after it has written part of it', async () => {
 		const doc = await PDFDocument.create();
 		const sheet = doc.addPage([612, 792]);

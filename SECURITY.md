@@ -45,7 +45,6 @@ Known limits, and no vulnerability to report.
 - A dictionary by name (`/Resources` maps, `/RoleMap`, `/ClassMap`) keeps values under names the file chose.
 - qpdf's memory before a refusal is unbounded (#46).
 - An image counts for what its dictionary declares: a CCITT image for the `/Columns` and `/Rows` of its `/DecodeParms` where they are more, a JPEG 2000 image that leaves out its color space or its bits at four components or eight bits. A codec's own header is not read, and an image inside a content stream is not counted (#232).
-- When qpdf writes nothing, pdf.js opens the original, outside the 64 MiB bound, and inflates whole an object stream that holds the catalog: 512 MiB from a file of 0.5 MB held 1.5 GiB for 4.4 s. The memory goes with the worker (#164).
 - `qpdf.wasm` is one publisher's prebuilt binary. A 1 kB file traps or hangs it, and a trap ends chrome-headless-shell on Linux (#46).
 - A link with no scheme, or to `mailto:`, is removed (#68).
 - The deadline ends only a wait on a worker: a call can settle after 60 s.
