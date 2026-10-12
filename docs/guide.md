@@ -10,7 +10,17 @@ Nothing until the first `sanitize`. Then, from `assets/` beside the build:
 | `qpdf.worker.js`, `qpdf.wasm` | 1.4 MB  | every file     |
 | four `LiberationSans-*.ttf`   | 1.65 MB | a dynamic form |
 
-A bundler has to follow `new URL('../assets/…', import.meta.url)` to copy them. Vite does. No other bundler is measured yet ([#101](https://github.com/tonguetoquill/quillify/issues/101)).
+A bundler has to follow `new URL('../assets/…', import.meta.url)` to copy them.
+
+| Bundler   | Needs                                                                                                               |
+| --------- | ------------------------------------------------------------------------------------------------------------------- |
+| Vite      | nothing                                                                                                             |
+| webpack 5 | nothing. It minifies the two workers unless its minimizer excludes `/\.worker\./`                                   |
+| Parcel 2  | `packageExports`, and a `.parcelrc` that copies the workers raw                                                     |
+| Rollup    | node-resolve, commonjs and json, then `@web/rollup-plugin-import-meta-assets` or the files copied beside the output |
+| esbuild   | `--format=esm`, and the files copied beside the output                                                              |
+
+[#101](https://github.com/tonguetoquill/quillify/issues/101) has each bundler's lines.
 
 ## Content security policy
 
