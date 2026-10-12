@@ -306,6 +306,23 @@ it('refuses an object stream that holds one object larger than the bound', async
 	await tooLarge(await inObjectStream(`${PAGE} /Pad (`, BOUND, ') >>'));
 }, 120_000);
 
+/**
+ * qpdf writes nothing for a file whose `startxref` points past its end, so
+ * pdf.js opens the original, which the bound does not hold. It inflates the
+ * object stream whole for the catalog and does not read it for the page.
+ */
+it.each([
+	['the page', `${PAGE} >>`, '/Root 1 0 R'],
+	['the catalog', '<< /Type /Catalog /Pages 2 0 R >>', '/Root 3 0 R']
+])(
+	'refuses as damaged a file qpdf gives up on, %s in an object stream of twice the bound',
+	async (_, object, root) => {
+		const pdf = respelled(await inObjectStream(object, 2 * BOUND), '/Root 1 0 R', root);
+		await damaged(respelled(pdf, 'startxref\n1', 'startxref\n9'));
+	},
+	120_000
+);
+
 it('refuses a page of images that lie one inside the other, and ends qpdf near the bound', async () => {
 	// qpdf writes each of the 40 whole: 160 MiB, for a file of 4 MiB.
 	expect(await tooLarge(nested(40, 4 * MiB))).toBeLessThan(BOUND + 5 * MiB);
