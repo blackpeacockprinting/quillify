@@ -4,6 +4,7 @@ What a consumer can observe, in the latest release and since. Earlier releases a
 
 ## Unreleased
 
+- A CCITT image counts toward the 64 MiB bound for the `/Columns` and `/Rows` of its `/DecodeParms` where they are more than its own width and height. A JPEG 2000 image that leaves out its color space or its bits is not `damaged`: it counts at four components or eight bits.
 - A page whose `/UserUnit` is a positive number other than 1 is refused as `damaged`. It passed the 14,400 pt bound, and its background was not the size `form.pages` says. No background keeps the key.
 - A dynamic form with an ellipse is redrawn with it. It was `unpaintable` with `construct: 'svg'`. A stroked rectangle of no width or no height is no longer redrawn as a bar.
 - A character of Symbol or ZapfDingbats in a dynamic form's text (the triangles, mu, the arrows) is drawn, and U+2010 as a hyphen. The form was `unpaintable` with `construct: 'glyph'`, as one with a character no standard font holds still is.
