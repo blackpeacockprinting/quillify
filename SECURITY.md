@@ -28,7 +28,7 @@ Reasons: [the decision log and research notes written before v0.3.0](https://git
 ## Bounds
 
 - `MAX_BYTES`: 8 MiB, `too_large`
-- `MAX_INFLATED_BYTES` (qpdf's output plus decoded streams): 64 MiB, `too_large`
+- `MAX_INFLATED_BYTES` (qpdf's output, decoded streams and what each image declares): 64 MiB, `too_large`
 - `MAX_PAGES`: 25, `too_many_pages`
 - `MAX_WIDGETS` (fields): 1,000, `too_many_fields`
 - `MAX_SIDE` (a page's side, and its box's reach from the origin): 14,400 pt, `damaged`
@@ -44,7 +44,7 @@ Known, and no vulnerability to report: each is an open limit.
 - Content in a layer that is off stays (#32).
 - A dictionary by name (`/Resources` maps, `/RoleMap`, `/ClassMap`) keeps values under names the file chose.
 - qpdf's memory before a refusal is unbounded (#46).
-- An image under a codec counts as stored, whatever size it declares (#163).
+- An image counts for what its dictionary declares. A codec's own header is not read, and an image inside a content stream is not counted.
 - When qpdf writes nothing, pdf.js opens the original, and what it inflates is uncounted (#164).
 - `qpdf.wasm` is one publisher's prebuilt binary. A 1 kB file traps or hangs it, and a trap ends chrome-headless-shell on Linux (#46).
 - A link with no scheme, or to `mailto:`, is removed (#68).

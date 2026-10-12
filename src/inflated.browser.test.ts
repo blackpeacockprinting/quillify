@@ -2,10 +2,11 @@
  * What a file comes to once its streams are decoded is bounded, as the file
  * is. Each file here is built from bytes and is under the cap on the file as
  * stored. A stream that two readers can read two ways is not counted: the
- * file is refused as damaged.
+ * file is refused as damaged. An image comes to the bytes its dictionary
+ * declares, and one whose dictionary does not say is refused as damaged.
  */
 
-import { PDFDocument, PDFName, PDFRawStream, type PDFRef } from 'pdf-lib';
+import { PDFDocument, PDFHexString, PDFName, PDFRawStream, type PDFRef } from 'pdf-lib';
 import { expect, it } from 'vitest';
 import { templateForm } from '../test/dynamic-form.js';
 import { sanitize } from './sanitize.js';
@@ -58,7 +59,7 @@ const hex = (bytes: Uint8Array) =>
 	`${Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')}>`;
 
 type Filter = string | string[];
-type Build = (doc: PDFDocument, stream: (dict: object, bytes: Uint8Array) => PDFRef) => void;
+type Build = (doc: PDFDocument, stream: Stream) => void;
 
 /** One page with one text field, and what `build` adds to it. */
 async function form(build: Build): Promise<Uint8Array> {
@@ -82,29 +83,49 @@ const page = (...content: [filter: Filter, bytes: Uint8Array][]) =>
 			)
 	);
 
-/** A form whose page names one image, a pixel wide, with the filters and the bytes given. */
-const image = (Filter: Filter, bytes: Uint8Array) =>
-	form((doc, stream) =>
-		doc.getPage(0).node.set(
-			PDFName.of('Resources'),
-			doc.context.obj({
-				XObject: {
-					Im: stream(
-						{
-							Type: 'XObject',
-							Subtype: 'Image',
-							Width: 1,
-							Height: 1,
-							ColorSpace: 'DeviceGray',
-							BitsPerComponent: 8,
-							Filter
-						},
-						bytes
-					)
-				}
-			})
-		)
-	);
+type Stream = (dict: object, bytes: Uint8Array) => PDFRef;
+type Declared = object | ((doc: PDFDocument, stream: Stream) => object);
+
+/**
+ * A form whose page names one image with the filters and the bytes given: a
+ * gray pixel of eight bits, but for what `declared` says of it. A key it gives
+ * as undefined is left out.
+ */
+const image = (Filter: Filter | undefined, bytes: Uint8Array, declared: Declared = {}) =>
+	form((doc, stream) => {
+		const dict = {
+			Type: 'XObject',
+			Subtype: 'Image',
+			Width: 1,
+			Height: 1,
+			ColorSpace: 'DeviceGray',
+			BitsPerComponent: 8,
+			Filter,
+			...(typeof declared === 'function' ? declared(doc, stream) : declared)
+		};
+		const said = Object.entries(dict).filter(([, value]) => value !== undefined);
+		doc
+			.getPage(0)
+			.node.set(
+				PDFName.of('Resources'),
+				doc.context.obj({ XObject: { Im: stream(Object.fromEntries(said), bytes) } })
+			);
+	});
+
+/**
+ * A form whose page names a graphics state with a halftone of 4 by 4: a
+ * threshold array in a stream, which says a width and a height as an image does.
+ */
+const halftone = (HalftoneType: number, bytes: Uint8Array) =>
+	form((doc, stream) => {
+		const HT = stream({ Type: 'Halftone', HalftoneType, Width: 4, Height: 4 }, bytes);
+		doc
+			.getPage(0)
+			.node.set(
+				PDFName.of('Resources'),
+				doc.context.obj({ ExtGState: { G: { Type: 'ExtGState', HT } } })
+			);
+	});
 
 /** A form whose catalog names one more stream, with the dictionary given. */
 const stray = (dict: object, bytes: Uint8Array) =>
@@ -309,6 +330,150 @@ it('refuses an image whose Flate layer inflates past the bound before its codec'
 	const pdf = await image(['FlateDecode', 'DCTDecode'], await deflated(JPEG, 1.5 * BOUND));
 	expect(await tooLarge(pdf)).toBeLessThan(2 * BOUND);
 }, 120_000);
+
+it.each<[string, Filter | undefined, boolean]>([
+	['DCT', 'DCTDecode', false],
+	['JPX', 'JPXDecode', false],
+	['CCITT', 'CCITTFaxDecode', false],
+	['JBIG2', 'JBIG2Decode', false],
+	['Flate and then DCT', ['FlateDecode', 'DCTDecode'], true],
+	['Flate', 'FlateDecode', true],
+	['no filter', undefined, false]
+])(
+	'refuses an image of 30,000 by 30,000 under %s, for the 900 MB it declares',
+	async (_, filter, packed) => {
+		const bytes = packed ? await deflated(JPEG) : JPEG;
+		const pdf = await image(filter, bytes, { Width: 30_000, Height: 30_000 });
+		expect(await tooLarge(pdf)).toBeGreaterThan(900_000_000);
+	},
+	60_000
+);
+
+/** 4,096 by 4,096 pixels: 16 MiB at a byte to the pixel, a quarter of the bound. */
+const SIDE = { Width: 4096, Height: 4096 };
+const GRAY = { ColorSpace: 'DeviceGray', BitsPerComponent: 8 };
+
+it.each<[string, Declared]>([
+	['three bytes in DeviceRGB', { ColorSpace: 'DeviceRGB' }],
+	['three bytes in Lab', { ColorSpace: ['Lab', {}] }],
+	['two bytes at sixteen bits', { BitsPerComponent: 16 }],
+	['a byte in Indexed', { ColorSpace: ['Indexed', 'DeviceRGB', 0, PDFHexString.of('000000')] }],
+	['a byte in Separation', { ColorSpace: ['Separation', 'Spot', 'DeviceCMYK', {}] }],
+	// Sixteen times the pixels at a bit each: 32 MiB.
+	['a bit as a mask', { Width: 16_384, Height: 16_384, ImageMask: true, ColorSpace: undefined }]
+])(
+	'reads an image under a codec whose pixels come to under the bound, at %s',
+	async (_, declared) => {
+		await reads(await image('DCTDecode', JPEG, { ...SIDE, ...declared }));
+	},
+	60_000
+);
+
+it.each<[string, Declared]>([
+	['DeviceCMYK', { ColorSpace: 'DeviceCMYK' }],
+	[
+		'an ICC profile of four components',
+		(_, stream) => ({ ...SIDE, ColorSpace: ['ICCBased', stream({ N: 4 }, new Uint8Array())] })
+	],
+	['DeviceN of four colorants', { ColorSpace: ['DeviceN', ['C', 'M', 'Y', 'K'], 'DeviceCMYK', {}] }]
+])(
+	'refuses an image under a codec whose pixels come to the bound, at four bytes in %s',
+	async (_, declared) => {
+		const pdf = await image(
+			'DCTDecode',
+			JPEG,
+			typeof declared === 'function' ? declared : { ...SIDE, ...declared }
+		);
+		expect(await tooLarge(pdf)).toBeLessThan(BOUND + MiB);
+	},
+	60_000
+);
+
+it('counts an image under Flate for what it declares or what its stream gives, whichever is more', async () => {
+	// 16 MiB declared and 16 MiB in the stream are 16 MiB, and the image's mask is as much: 32 MiB.
+	const honest = await deflated('', 16 * MiB);
+	await reads(
+		await image('FlateDecode', honest, (_, stream) => ({
+			...SIDE,
+			SMask: stream({ Subtype: 'Image', ...SIDE, ...GRAY, Filter: 'FlateDecode' }, honest)
+		}))
+	);
+	// A pixel declared and 1.5 times the bound in the stream.
+	await tooLarge(await image('FlateDecode', await deflated('', 1.5 * BOUND)));
+}, 120_000);
+
+it('counts a soft mask that says no /Subtype', async () => {
+	const pdf = await image('DCTDecode', JPEG, (_, stream) => ({
+		SMask: stream({ Width: 30_000, Height: 30_000, ...GRAY, Filter: 'DCTDecode' }, JPEG)
+	}));
+	await tooLarge(pdf);
+}, 60_000);
+
+it.each<[string, Declared]>([
+	['no width', { Width: undefined }],
+	['no height', { Height: undefined }],
+	['a name for its width', { Width: 'Wide' }],
+	['a width under zero', { Width: -30_000 }],
+	['no bits to a component', { BitsPerComponent: undefined }],
+	['bits to a component under zero', { BitsPerComponent: -8 }],
+	['zero bits to a component', { BitsPerComponent: 0 }],
+	['a hundredth of a bit to a component', { BitsPerComponent: 0.01 }],
+	['no color space', { ColorSpace: undefined }],
+	['a color space nobody knows', { ColorSpace: 'Zip' }],
+	['a color space named as an object names a key of its own', { ColorSpace: 'constructor' }],
+	['a pattern for its color space', { ColorSpace: ['Pattern', 'DeviceRGB'] }],
+	['an ICC profile that says no /N', { ColorSpace: ['ICCBased', {}] }],
+	[
+		'an ICC profile of no components',
+		(_, stream) => ({ ColorSpace: ['ICCBased', stream({ N: 0 }, new Uint8Array())] })
+	],
+	['DeviceN of no colorants', { ColorSpace: ['DeviceN', [], 'DeviceCMYK', {}] }]
+])(
+	'refuses as damaged an image with %s',
+	async (_, declared) => {
+		const pdf = await image('DCTDecode', JPEG, (doc, stream) => ({
+			Width: 30_000,
+			Height: 30_000,
+			...(typeof declared === 'function' ? declared(doc, stream) : declared)
+		}));
+		await damaged(pdf);
+	},
+	60_000
+);
+
+it.each<[string, Filter | undefined, boolean]>([
+	['Flate', 'FlateDecode', true],
+	['no filter', undefined, false]
+])(
+	'refuses as damaged an image of zero bits to a component under %s',
+	async (_, filter, packed) => {
+		const bytes = packed ? await deflated(JPEG) : JPEG;
+		await damaged(await image(filter, bytes, { ...SIDE, BitsPerComponent: 0 }));
+	},
+	60_000
+);
+
+it.each([
+	[6, 16],
+	[16, 32]
+])(
+	'reads a page whose graphics state has a halftone of Type %i',
+	async (type, size) => {
+		await reads(await halftone(type, new Uint8Array(size)));
+	},
+	60_000
+);
+
+it('counts an image that says it is a halftone and no more, at two bytes to the pixel', async () => {
+	const pdf = await image('DCTDecode', JPEG, {
+		HalftoneType: 6,
+		Width: 30_000,
+		Height: 30_000,
+		ColorSpace: undefined,
+		BitsPerComponent: undefined
+	});
+	expect(await tooLarge(pdf)).toBeGreaterThan(1_800_000_000);
+}, 60_000);
 
 it.each<[string, (stream: Uint8Array) => Uint8Array]>([
 	// CINFO 8 names a window of 64 KiB, and the two bytes still pass the header's own check.

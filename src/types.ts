@@ -89,9 +89,12 @@ export type QuillTree = Map<string, Uint8Array>;
 export const MAX_BYTES = 8 * 1024 * 1024;
 /**
  * The most a file may come to once qpdf has it: the file qpdf writes together
- * with what its Flate streams decode to, and qpdf's own memory. Of 1,423
- * published files the largest comes to 15,046,490 bytes (DAF 57), and qpdf's
- * memory is 17,235,968 bytes after each.
+ * with what its Flate streams decode to and what its images declare, and
+ * qpdf's own memory. Of 1,423 published files the largest comes to
+ * 48,477,587 bytes (AF 4101), and qpdf's memory is 17,235,968 bytes after
+ * each. Their largest image is 6,026 by 4,523 pixels at a bit each, 3,410,342
+ * bytes (AF 1520), and the one that declares the most bytes is 2,322 by 2,916
+ * at three bytes each, 20,312,856 (AF 4101).
  */
 export const MAX_INFLATED_BYTES = 64 * 1024 * 1024;
 /** The most pages and fields a form has and is taken. The engine takes at most 1,000 fields in a block. */
