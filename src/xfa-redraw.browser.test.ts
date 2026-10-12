@@ -8,7 +8,7 @@
  * fallback and the redraw in the standard 14, so their glyphs differ.
  */
 
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import css from '../assets/xfa-layer.js';
 import { dynamicForm } from '../test/dynamic-form.js';
 import { normalizePdf } from './normalize.js';
@@ -141,6 +141,16 @@ const NO_TEXT = `.xfaLayer, .xfaLayer * { color: transparent !important; text-de
 .xfaLayer :is(input, textarea, select) { opacity: 0 !important }`;
 const SVG = 'http://www.w3.org/2000/svg';
 
+/** Each face made in this page, with the bytes it was made from: a face gives none back. */
+const made = vi.spyOn(globalThis, 'FontFace');
+
+async function dataUrl(blob: Blob): Promise<string> {
+	const reader = new FileReader();
+	reader.readAsDataURL(blob);
+	await new Promise((read) => (reader.onload = read));
+	return reader.result as string;
+}
+
 interface Page {
 	picture: ImageData;
 	/** The check boxes and radio buttons, where the redraw draws a square of its own. */
@@ -151,9 +161,9 @@ interface Page {
  * Each page of the layout as the browser paints it. A frame's pixels cannot be
  * read, so the page's elements go into an SVG image with the stage's
  * stylesheet, and the image onto a canvas. The image is a document of its own
- * and lays the page out again, with the faces of the machine and no other. It
- * loads nothing from outside itself, so each picture's `blob:` URL is
- * replaced with a `data:` URL of the same bytes.
+ * and lays the page out again. It loads nothing from outside itself, so each
+ * picture's `blob:` URL is replaced with a `data:` URL of the same bytes, and
+ * its style has each face of the stage's font set as one.
  */
 async function laidOut(bytes: Uint8Array): Promise<Page[]> {
 	const stage = new XfaStage();
@@ -166,11 +176,12 @@ async function laidOut(bytes: Uint8Array): Promise<Page[]> {
 			const buttons = harvestWidgets(laid, number).filter(
 				({ kind }) => kind === 'checkbox' || kind === 'radio'
 			);
-			for (const img of laid.layer.querySelectorAll('img')) {
-				const reader = new FileReader();
-				reader.readAsDataURL(await (await fetch(img.src)).blob());
-				await new Promise((read) => (reader.onload = read));
-				img.src = reader.result as string;
+			for (const img of laid.layer.querySelectorAll('img'))
+				img.src = await dataUrl(await (await fetch(img.src)).blob());
+			let faces = '';
+			for (const face of laid.layer.ownerDocument.fonts) {
+				const [, bytes] = made.mock.calls[made.mock.instances.indexOf(face)];
+				faces += `@font-face { font-family: ${JSON.stringify(face.family)}; font-weight: ${face.weight}; font-style: ${face.style}; src: url(${await dataUrl(new Blob([bytes as BufferSource]))}) }\n`;
 			}
 			const svg = document.createElementNS(SVG, 'svg');
 			const style = document.createElementNS(SVG, 'style');
@@ -179,7 +190,7 @@ async function laidOut(bytes: Uint8Array): Promise<Page[]> {
 			svg.setAttribute('height', String(laid.height));
 			foreign.setAttribute('width', '100%');
 			foreign.setAttribute('height', '100%');
-			style.textContent = css + NO_TEXT;
+			style.textContent = faces + css + NO_TEXT;
 			foreign.append(laid.layer.parentElement!);
 			svg.append(style, foreign);
 			const image = new Image();
