@@ -1,7 +1,8 @@
 /**
  * A dynamic form's redraw beside the layout it was read from. The browser
  * paints the layout and pdf.js paints the redraw, and the two pictures of each
- * page are held together on what is not text: rules, borders and fills.
+ * page are held together on what is not text: rules, borders, fills and
+ * pictures.
  *
  * Text is left out of both. The layout is set in the form's faces or a
  * fallback and the redraw in the standard 14, so their glyphs differ.
@@ -25,6 +26,29 @@ const fixtures = import.meta.glob<string>('../test/fixtures/D{AF1288,AF988,D2875
 const rectangle = (y: number, inner: string) =>
 	`<draw x="20pt" y="${y}pt" w="200pt" h="40pt"><value><rectangle>${inner}</rectangle></value></draw>`;
 const FILLED = '<edge presence="hidden"/><fill><color value="200,200,200"/></fill>';
+
+/**
+ * A PNG in base64, as a template holds a picture: a quarter each of red, green
+ * and blue, and the last quarter clear, so no turn or mirror of it is itself.
+ */
+function png(width: number, height: number): string {
+	const canvas = document.createElement('canvas');
+	canvas.width = width;
+	canvas.height = height;
+	const context = canvas.getContext('2d')!;
+	for (const [index, colour] of ['#c00000', '#007800', '#0000a0'].entries()) {
+		context.fillStyle = colour;
+		context.fillRect(
+			((index % 2) * width) / 2,
+			(Math.floor(index / 2) * height) / 2,
+			width / 2,
+			height / 2
+		);
+	}
+	return canvas.toDataURL('image/png').slice('data:image/png;base64,'.length);
+}
+const picture = (y: number, h: number, aspect: string, base64: string) =>
+	`<draw x="20pt" y="${y}pt" w="200pt" h="${h}pt"><value><image contentType="image/png" aspect="${aspect}">${base64}</image></value></draw>`;
 /** Forms built here, each for something no dynamic fixture holds. */
 const built = {
 	'a fill with no border and a thick stroke':
@@ -45,7 +69,15 @@ const built = {
 			180,
 			'<edge presence="hidden"/><corner radius="30pt" join="round"/><fill><color value="200,200,200"/></fill>'
 		) +
-		rectangle(260, '<edge thickness="2pt"/><corner radius="-5pt" join="round"/>')
+		rectangle(260, '<edge thickness="2pt"/><corner radius="-5pt" join="round"/>'),
+	// The first is stretched to its box and the second fitted into the top left
+	// of one, each at a pixel of its own to a pixel of the comparison. The third
+	// lies over a fill, which shows through its clear quarter.
+	pictures:
+		picture(20, 60, 'none', png(200, 120)) +
+		picture(100, 60, 'fit', png(120, 120)) +
+		rectangle(180, FILLED) +
+		picture(180, 40, 'none', png(400, 80))
 };
 
 /**
@@ -88,7 +120,9 @@ interface Page {
  * Each page of the layout as the browser paints it. A frame's pixels cannot be
  * read, so the page's elements go into an SVG image with the stage's
  * stylesheet, and the image onto a canvas. The image is a document of its own
- * and lays the page out again, with the faces of the machine and no other.
+ * and lays the page out again, with the faces of the machine and no other. It
+ * loads nothing from outside itself, so each picture's `blob:` URL is
+ * replaced with a `data:` URL of the same bytes.
  */
 async function laidOut(bytes: Uint8Array): Promise<Page[]> {
 	const stage = new XfaStage();
@@ -101,6 +135,12 @@ async function laidOut(bytes: Uint8Array): Promise<Page[]> {
 			const buttons = harvestWidgets(laid, number).filter(
 				({ kind }) => kind === 'checkbox' || kind === 'radio'
 			);
+			for (const img of laid.layer.querySelectorAll('img')) {
+				const reader = new FileReader();
+				reader.readAsDataURL(await (await fetch(img.src)).blob());
+				await new Promise((read) => (reader.onload = read));
+				img.src = reader.result as string;
+			}
 			const svg = document.createElementNS(SVG, 'svg');
 			const style = document.createElementNS(SVG, 'style');
 			const foreign = document.createElementNS(SVG, 'foreignObject');
@@ -231,7 +271,7 @@ const forms = [
 ];
 
 it.each(forms)(
-	'%s: the redraw has the rules, borders and fills of its layout',
+	'%s: the redraw has the rules, borders, fills and pictures of its layout',
 	async (_, read) => {
 		const bytes = await normalizePdf(await read());
 		const layout = await laidOut(bytes);
