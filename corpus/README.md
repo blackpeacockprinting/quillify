@@ -13,4 +13,4 @@ QUILLIFY_CORPUS=<directory that holds the PDFs> npm run corpus
 
 ## The Air Force files
 
-`af-epubs.manifest.json` is a second list: 1,354 PDFs from the Air Force's form lists, with what the library did with each ([the record of that run](https://github.com/tonguetoquill/quillify/tree/84619f7/prose/research)). `npm run corpus` does not read it. The gate holds its totals (`af-epubs.test.ts`).
+`af-epubs.manifest.json` is a second list: 1,354 PDFs pulled from the Air Force's form lists on 10 October 2026 ([how](https://github.com/tonguetoquill/quillify/tree/84619f7/prose/research)), with what the library at `4706c2b` did with each. `npm run corpus` does not read it. The gate holds its totals (`af-epubs.test.ts`).

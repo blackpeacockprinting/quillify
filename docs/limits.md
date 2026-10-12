@@ -2,10 +2,10 @@
 
 ## Measured
 
-| Set                        | Converts | The rest                                                                                   |
-| -------------------------- | -------- | ------------------------------------------------------------------------------------------ |
-| 59 published federal forms | 57       | no field (1), a portfolio (1)                                                              |
-| 1,354 Air Force forms      | 1,143    | no field (160), over 1,000 fields (17), not drawable (16), read-only (14), a portfolio (4) |
+| Set                        | Converts | The rest                                                                                                            |
+| -------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------- |
+| 59 published federal forms | 57       | no field (1), a portfolio (1)                                                                                       |
+| 1,354 Air Force forms      | 1,147    | no field (161), over 1,000 fields (16), read-only (14), a field off its page (7), not drawable (5), a portfolio (4) |
 
 Each converted form was rendered by the engine and every kept field read back at its place. `npm run corpus` reruns the first set. No page has been compared with Acrobat by eye ([#17](https://github.com/tonguetoquill/quillify/issues/17)).
 
