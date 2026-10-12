@@ -216,6 +216,9 @@ function dashes(width: number, length: number): [number, number] | undefined {
 	return [dash, narrow <= 0 || Math.abs(wide - gap) < Math.abs(narrow - gap) ? wide : narrow];
 }
 
+/** The standard fonts that hold what the text fonts lack, in the order a character is looked for. */
+const SYMBOLS = [StandardFonts.Symbol, StandardFonts.ZapfDingbats];
+
 async function drawRun(
 	page: PDFPage,
 	pageNumber: number,
@@ -224,26 +227,36 @@ async function drawRun(
 	get: (name: StandardFonts) => Promise<PDFFont>
 ): Promise<void> {
 	const font = await get(standard14(run));
-	// The standard-14 fonts encode WinAnsi alone. Dropping the run would lose a
-	// line of the form without anything reporting it.
-	const encodable = font.getCharacterSet();
-	if ([...run.text].some((char) => !encodable.includes(char.codePointAt(0)!)))
-		throw new Refused({
-			code: 'unpaintable',
-			page: pageNumber - 1,
-			construct: 'glyph',
-			detail: run.text.slice(0, 40)
-		});
+	// The standard-14 text fonts encode WinAnsi alone. U+2010 is drawn as its
+	// hyphen, and any other character outside it in the first of SYMBOLS that
+	// holds it. Dropping the run would lose a line of the form without anything
+	// reporting it.
+	// pdf-lib kerns the width it measures and writes no kerning, so the width
+	// it draws a run at is the sum of the widths of its characters.
+	const parts: { font: PDFFont; text: string; at: number }[] = [];
+	let natural = 0;
+	for (const char of run.text.replaceAll('\u2010', '-')) {
+		const code = char.codePointAt(0)!;
+		let face = font;
+		for (const name of SYMBOLS) if (!face.getCharacterSet().includes(code)) face = await get(name);
+		if (!face.getCharacterSet().includes(code))
+			throw new Refused({
+				code: 'unpaintable',
+				page: pageNumber - 1,
+				construct: 'glyph',
+				detail: run.text.slice(0, 40)
+			});
+		const last = parts.at(-1);
+		if (last?.font === face) last.text += char;
+		else parts.push({ font: face, text: char, at: natural });
+		natural += face.widthOfTextAtSize(char, run.size) + run.letterSpacing;
+	}
 	// The standard-14 substitute's advances differ from the embedded face's.
 	// Letter spacing goes in first, since it is a real property of the run;
 	// horizontal scaling then pins the whole run to the width the browser
 	// measured, so the error stays inside the run instead of drifting across
 	// the line.
-	// pdf-lib kerns the width it measures and writes no kerning, so the width
-	// it draws a run at is the sum of the widths of its characters.
-	let natural = 0;
-	for (const char of run.text) natural += font.widthOfTextAtSize(char, run.size);
-	const spaced = natural + run.letterSpacing * Math.max(0, run.text.length - 1);
+	const spaced = natural - run.letterSpacing;
 	const scale =
 		spaced > 0 && run.width > 0 ? Math.max(50, Math.min(200, (100 * run.width) / spaced)) : 100;
 	const scaled = Math.abs(scale - 100) > 3;
@@ -257,14 +270,18 @@ async function drawRun(
 		page.pushOperators(
 			PDFOperator.of(PDFOperatorNames.SetTextHorizontalScaling, [String(+scale.toFixed(3))])
 		);
-	page.drawText(run.text, {
-		x: run.x,
-		y: H - run.baseline,
-		size: run.size,
-		font,
-		color: rgb(...run.colour),
-		rotate: degrees(90 * (run.turn ?? 0))
-	});
+	const angle = (Math.PI / 2) * (run.turn ?? 0);
+	for (const part of parts) {
+		const along = scaled ? (part.at * scale) / 100 : part.at;
+		page.drawText(part.text, {
+			x: run.x + along * Math.cos(angle),
+			y: H - run.baseline + along * Math.sin(angle),
+			size: run.size,
+			font: part.font,
+			color: rgb(...run.colour),
+			rotate: degrees(90 * (run.turn ?? 0))
+		});
+	}
 	if (scaled)
 		page.pushOperators(PDFOperator.of(PDFOperatorNames.SetTextHorizontalScaling, ['100']));
 	if (run.letterSpacing)
