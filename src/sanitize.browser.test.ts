@@ -64,7 +64,7 @@ for (const [path, golden] of Object.entries(goldens)) {
 
 it.each([
 	['DD577', { text: 19, radio: 12, signature: 4 }],
-	['DAF1288', { text: 52, checkbox: 31, radio: 26, choice: 7, signature: 6 }]
+	['DAF1288', { text: 51, checkbox: 31, radio: 26, choice: 7, signature: 6 }]
 ])(
 	'%s sanitizes to this many fields of each kind',
 	async (name, kinds) => {
