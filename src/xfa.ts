@@ -66,7 +66,8 @@ export async function xfaToAcroForm(bytes: Uint8Array, signal?: AbortSignal): Pr
 			for (const span of laid.layer.querySelectorAll('.xfaPageCount'))
 				span.textContent = String(pdf.numPages);
 			const list = displayList(laid, number);
-			for (const { image } of list.pictures) pixels += image.naturalWidth * image.naturalHeight;
+			for (const item of list.drawn)
+				if ('image' in item) pixels += item.image.naturalWidth * item.image.naturalHeight;
 			if (pixels > MAX_PICTURE_PIXELS)
 				throw new Refused({
 					code: 'unpaintable',
@@ -98,7 +99,36 @@ async function paint(
 	font: (name: StandardFonts) => Promise<PDFFont>
 ): Promise<void> {
 	const H = list.height;
-	for (let box of list.boxes) {
+	for (const item of list.drawn) {
+		if ('text' in item) {
+			await drawRun(page, pageNumber, item, H, font);
+			continue;
+		}
+		if ('image' in item) {
+			const { x, y, w, h, image } = item;
+			// The pixels are read off a canvas of the host page's. The frame's policy
+			// governs what its document loads, and the picture is of the page's origin.
+			const canvas = document.createElement('canvas');
+			canvas.width = image.naturalWidth;
+			canvas.height = image.naturalHeight;
+			canvas.getContext('2d')!.drawImage(image, 0, 0);
+			const png = canvas.toDataURL('image/png');
+			// What a canvas with a side the browser will not make gives.
+			if (png === 'data:,')
+				throw new Refused({ code: 'unpaintable', page: pageNumber - 1, construct: 'image' });
+			page.drawImage(await page.doc.embedPng(png), { x, y: H - y - h, width: w, height: h });
+			continue;
+		}
+		if ('x1' in item) {
+			page.drawLine({
+				start: { x: item.x1, y: H - item.y1 },
+				end: { x: item.x2, y: H - item.y2 },
+				thickness: item.width,
+				color: rgb(...item.colour)
+			});
+			continue;
+		}
+		let box = item;
 		if (box.radius) {
 			// An SVG rect's outline runs along the middle of its stroke, and each
 			// radius stops at half the side it lies along.
@@ -164,27 +194,6 @@ async function paint(
 				right
 			);
 	}
-	for (const { x, y, w, h, image } of list.pictures) {
-		// The pixels are read off a canvas of the host page's. The frame's policy
-		// governs what its document loads, and the picture is of the page's origin.
-		const canvas = document.createElement('canvas');
-		canvas.width = image.naturalWidth;
-		canvas.height = image.naturalHeight;
-		canvas.getContext('2d')!.drawImage(image, 0, 0);
-		const png = canvas.toDataURL('image/png');
-		// What a canvas with a side the browser will not make gives.
-		if (png === 'data:,')
-			throw new Refused({ code: 'unpaintable', page: pageNumber - 1, construct: 'image' });
-		page.drawImage(await page.doc.embedPng(png), { x, y: H - y - h, width: w, height: h });
-	}
-	for (const line of list.lines)
-		page.drawLine({
-			start: { x: line.x1, y: H - line.y1 },
-			end: { x: line.x2, y: H - line.y2 },
-			thickness: line.width,
-			color: rgb(...line.colour)
-		});
-	return drawRuns(page, pageNumber, list.runs, H, font);
 }
 
 /**
@@ -207,63 +216,59 @@ function dashes(width: number, length: number): [number, number] | undefined {
 	return [dash, narrow <= 0 || Math.abs(wide - gap) < Math.abs(narrow - gap) ? wide : narrow];
 }
 
-async function drawRuns(
+async function drawRun(
 	page: PDFPage,
 	pageNumber: number,
-	runs: Run[],
+	run: Run,
 	H: number,
 	get: (name: StandardFonts) => Promise<PDFFont>
 ): Promise<void> {
-	for (const run of runs) {
-		const font = await get(standard14(run));
-		// The standard-14 fonts encode WinAnsi alone. Dropping the run would lose a
-		// line of the form without anything reporting it.
-		const encodable = font.getCharacterSet();
-		if ([...run.text].some((char) => !encodable.includes(char.codePointAt(0)!)))
-			throw new Refused({
-				code: 'unpaintable',
-				page: pageNumber - 1,
-				construct: 'glyph',
-				detail: run.text.slice(0, 40)
-			});
-		// The standard-14 substitute's advances differ from the embedded face's.
-		// Letter spacing goes in first, since it is a real property of the run;
-		// horizontal scaling then pins the whole run to the width the browser
-		// measured, so the error stays inside the run instead of drifting across
-		// the line.
-		// pdf-lib kerns the width it measures and writes no kerning, so the width
-		// it draws a run at is the sum of the widths of its characters.
-		let natural = 0;
-		for (const char of run.text) natural += font.widthOfTextAtSize(char, run.size);
-		const spaced = natural + run.letterSpacing * Math.max(0, run.text.length - 1);
-		const scale =
-			spaced > 0 && run.width > 0 ? Math.max(50, Math.min(200, (100 * run.width) / spaced)) : 100;
-		const scaled = Math.abs(scale - 100) > 3;
-		// Both are text-state parameters, so they persist across drawText's own
-		// BT/ET and have to be put back.
-		if (run.letterSpacing)
-			page.pushOperators(
-				PDFOperator.of(PDFOperatorNames.SetCharacterSpacing, [
-					String(+run.letterSpacing.toFixed(4))
-				])
-			);
-		if (scaled)
-			page.pushOperators(
-				PDFOperator.of(PDFOperatorNames.SetTextHorizontalScaling, [String(+scale.toFixed(3))])
-			);
-		page.drawText(run.text, {
-			x: run.x,
-			y: H - run.baseline,
-			size: run.size,
-			font,
-			color: rgb(...run.colour),
-			rotate: degrees(90 * (run.turn ?? 0))
+	const font = await get(standard14(run));
+	// The standard-14 fonts encode WinAnsi alone. Dropping the run would lose a
+	// line of the form without anything reporting it.
+	const encodable = font.getCharacterSet();
+	if ([...run.text].some((char) => !encodable.includes(char.codePointAt(0)!)))
+		throw new Refused({
+			code: 'unpaintable',
+			page: pageNumber - 1,
+			construct: 'glyph',
+			detail: run.text.slice(0, 40)
 		});
-		if (scaled)
-			page.pushOperators(PDFOperator.of(PDFOperatorNames.SetTextHorizontalScaling, ['100']));
-		if (run.letterSpacing)
-			page.pushOperators(PDFOperator.of(PDFOperatorNames.SetCharacterSpacing, ['0']));
-	}
+	// The standard-14 substitute's advances differ from the embedded face's.
+	// Letter spacing goes in first, since it is a real property of the run;
+	// horizontal scaling then pins the whole run to the width the browser
+	// measured, so the error stays inside the run instead of drifting across
+	// the line.
+	// pdf-lib kerns the width it measures and writes no kerning, so the width
+	// it draws a run at is the sum of the widths of its characters.
+	let natural = 0;
+	for (const char of run.text) natural += font.widthOfTextAtSize(char, run.size);
+	const spaced = natural + run.letterSpacing * Math.max(0, run.text.length - 1);
+	const scale =
+		spaced > 0 && run.width > 0 ? Math.max(50, Math.min(200, (100 * run.width) / spaced)) : 100;
+	const scaled = Math.abs(scale - 100) > 3;
+	// Both are text-state parameters, so they persist across drawText's own
+	// BT/ET and have to be put back.
+	if (run.letterSpacing)
+		page.pushOperators(
+			PDFOperator.of(PDFOperatorNames.SetCharacterSpacing, [String(+run.letterSpacing.toFixed(4))])
+		);
+	if (scaled)
+		page.pushOperators(
+			PDFOperator.of(PDFOperatorNames.SetTextHorizontalScaling, [String(+scale.toFixed(3))])
+		);
+	page.drawText(run.text, {
+		x: run.x,
+		y: H - run.baseline,
+		size: run.size,
+		font,
+		color: rgb(...run.colour),
+		rotate: degrees(90 * (run.turn ?? 0))
+	});
+	if (scaled)
+		page.pushOperators(PDFOperator.of(PDFOperatorNames.SetTextHorizontalScaling, ['100']));
+	if (run.letterSpacing)
+		page.pushOperators(PDFOperator.of(PDFOperatorNames.SetCharacterSpacing, ['0']));
 }
 
 function standard14(run: Run): StandardFonts {
