@@ -130,6 +130,24 @@ describe('a dynamic form, laid out and written back as an AcroForm', () => {
 		expect(request!.places[0].rect.h).toBeCloseTo(16.31, 1);
 	}, 300_000);
 
+	it('DD 2875 prints its last page number, on one line', async () => {
+		// The footer of page 3 embeds two hidden fields that a script fills when the
+		// layout is ready. The footers of pages 1 and 2 are text.
+		const { pdf, close } = await openPdf(await convert(saarUrl));
+		try {
+			const footers = [];
+			for (let n = 1; n <= pdf.numPages; n++) {
+				const { items } = await (await pdf.getPage(n)).getTextContent();
+				footers.push(
+					items.flatMap((item) => ('str' in item && /^Page\b/.test(item.str) ? [item.str] : []))
+				);
+			}
+			expect(footers).toEqual([['Page 1 of 3'], ['Page 2 of 3'], ['Page 3 of 3']]);
+		} finally {
+			await close();
+		}
+	}, 300_000);
+
 	it('stamps no chrome over the page it just drew', async () => {
 		// For a text field, a checkbox and a dropdown pdf-lib asks whether the key
 		// is `in` the options, and defaults a missing background to white and a
