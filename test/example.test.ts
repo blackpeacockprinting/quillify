@@ -7,13 +7,9 @@ import { chromium } from 'playwright';
 import { build, preview } from 'vite';
 import { expect, it, onTestFinished } from 'vitest';
 
-/**
- * `style-src` is for the page's own stylesheet. `img-src data:` is for the
- * background the layout frame's stylesheet gives a field: without it a dynamic
- * form reads the same, and the browser logs what it refused.
- */
+/** `style-src` is for the page's own stylesheet. The package asks for the rest. */
 const POLICY =
-	"default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src data:; worker-src 'self'; connect-src 'self'";
+	"default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; worker-src 'self'; connect-src 'self'";
 
 it('builds the example from the packed tarball with no configuration, and fills DAF 1288 in it under a policy that refuses nothing', async () => {
 	// A consumer's project: the app, the tarball where an install unpacks it,
