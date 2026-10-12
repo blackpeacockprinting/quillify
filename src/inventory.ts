@@ -10,7 +10,7 @@ import {
 import { toTopLeftRect } from './coords.js';
 import { openPdf } from './pdfjs.js';
 import { Refused } from './refusal.js';
-import { MAX_PAGES, MAX_WIDGETS, WIDGET_KINDS } from './types.js';
+import { MAX_PAGES, MAX_SIDE, MAX_WIDGETS, WIDGET_KINDS } from './types.js';
 import type { FieldInventory, InventoryWidget, View, WidgetKind } from './types.js';
 
 interface Annotation {
@@ -87,7 +87,10 @@ export async function inventoryPdf(
 			if (page.rotate % 360 !== 0) throw new Refused({ code: 'rotated', page: index });
 			const view = page.view as View['box'];
 			views.push({ ref: page.ref, box: view });
-			dims.push({ width: view[2] - view[0], height: view[3] - view[1] });
+			const size = { width: view[2] - view[0], height: view[3] - view[1] };
+			if (Math.max(size.width, size.height, ...view.map(Math.abs)) > MAX_SIDE)
+				throw new Refused({ code: 'damaged' });
+			dims.push(size);
 
 			const annotations = (await within(page.getAnnotations())) as Annotation[];
 			for (const a of annotations) {

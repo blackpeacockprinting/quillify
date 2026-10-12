@@ -4,6 +4,7 @@ What a consumer can observe, by release.
 
 ## Unreleased
 
+- A page over 14,400 pt on a side, or with a box that far from the origin, is refused as `damaged`. No published form measured has one.
 - `limits` is exported: `{ bytes, pages, fields }`, the largest file, the most pages and the most fields `sanitize` takes.
 
 ## v0.3.0 - 2026-10-12
