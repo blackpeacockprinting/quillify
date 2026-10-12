@@ -30,6 +30,18 @@ it('packs the build, the assets and their notices, and nothing else', () => {
 			'NOTICE',
 			'licenses/pdf.js-LICENSE',
 			'licenses/LiberationSans-LICENSE',
+			...[
+				'qpdf-LICENSE',
+				'qpdf-NOTICE',
+				'zlib-README',
+				'libjpeg-turbo-LICENSE',
+				'libjpeg-turbo-README.ijg',
+				'emscripten-LICENSE',
+				'musl-COPYRIGHT',
+				'libcxx-LICENSE',
+				'libcxxabi-LICENSE',
+				'compiler-rt-LICENSE'
+			].map((name) => `licenses/${name}`),
 			'assets/pdf.worker.js',
 			'assets/qpdf.wasm',
 			...['Regular', 'Bold', 'Italic', 'BoldItalic'].map(
