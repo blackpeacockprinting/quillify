@@ -371,9 +371,6 @@ const SIDE = { Width: 4096, Height: 4096 };
 const GRAY = { ColorSpace: 'DeviceGray', BitsPerComponent: 8 };
 
 it.each<[string, Declared]>([
-	['three bytes in DeviceRGB', { ColorSpace: 'DeviceRGB' }],
-	['three bytes in Lab', { ColorSpace: ['Lab', {}] }],
-	['two bytes at sixteen bits', { BitsPerComponent: 16 }],
 	['a byte in Indexed', { ColorSpace: ['Indexed', 'DeviceRGB', 0, PDFHexString.of('000000')] }],
 	['a byte in Separation', { ColorSpace: ['Separation', 'Spot', 'DeviceCMYK', {}] }],
 	// Sixteen times the pixels at a bit each: 32 MiB.
@@ -385,6 +382,75 @@ it.each<[string, Declared]>([
 	},
 	60_000
 );
+
+/**
+ * Each is 4,096 wide, at a height that comes to 60 MiB and at one that comes
+ * to 66 MiB. A count of a byte fewer to the pixel reads the second, and one of
+ * a byte more refuses the first. JPEG 2000 says its own color space and bits,
+ * so an image under it may leave either out, and counts at four components
+ * for the one and eight bits for the other: what a painter makes of a pixel.
+ */
+it.each<[string, Filter, Declared, number, number]>([
+	['three bytes in DeviceRGB', 'DCTDecode', { ColorSpace: 'DeviceRGB' }, 5120, 5632],
+	['three bytes in Lab', 'DCTDecode', { ColorSpace: ['Lab', {}] }, 5120, 5632],
+	['two bytes at sixteen bits', 'DCTDecode', { BitsPerComponent: 16 }, 7680, 8448],
+	['four bytes under JPX with no color space', 'JPXDecode', { ColorSpace: undefined }, 3840, 4224],
+	[
+		'one byte under JPX with no bits to a component',
+		'JPXDecode',
+		{ BitsPerComponent: undefined },
+		15360,
+		16896
+	],
+	[
+		'four bytes under JPX with neither',
+		'JPXDecode',
+		{ ColorSpace: undefined, BitsPerComponent: undefined },
+		3840,
+		4224
+	]
+])(
+	'counts an image at %s',
+	async (_, filter, declared, under, over) => {
+		await reads(await image(filter, JPEG, { Width: 4096, Height: under, ...declared }));
+		const pdf = await image(filter, JPEG, { Width: 4096, Height: over, ...declared });
+		expect(await tooLarge(pdf)).toBeLessThan(BOUND + 3 * MiB);
+	},
+	60_000
+);
+
+const FAX = { K: -1, Columns: 1_000_000, Rows: 1_000_000 };
+
+it.each<[string, Filter, boolean, Declared]>([
+	['a dictionary', 'CCITTFaxDecode', false, { DecodeParms: FAX }],
+	['an array', ['CCITTFaxDecode'], false, { DecodeParms: [FAX] }],
+	['an array, after Flate', ['FlateDecode', 'CCITTFaxDecode'], true, { DecodeParms: [null, FAX] }]
+])(
+	'refuses a CCITT image of 1 by 1 whose /DecodeParms say a million columns and rows, in %s',
+	async (_, filter, packed, declared) => {
+		const pdf = await image(filter, packed ? await deflated(JPEG) : JPEG, declared);
+		expect(await tooLarge(pdf)).toBeGreaterThan(1e11);
+	},
+	60_000
+);
+
+it('counts a CCITT image for its own width and height when they are the larger', async () => {
+	const bit = { BitsPerComponent: 1, Width: 16_384 };
+	// 32 MiB, with the columns and rows a real one says: its own.
+	await reads(
+		await image('CCITTFaxDecode', JPEG, {
+			...bit,
+			Height: 16_384,
+			DecodeParms: { K: -1, Columns: 16_384, Rows: 16_384 }
+		})
+	);
+	const pdf = await image('CCITTFaxDecode', JPEG, {
+		...bit,
+		Height: 34_816,
+		DecodeParms: { K: -1, Columns: 1, Rows: 0 }
+	});
+	expect(await tooLarge(pdf)).toBeLessThan(BOUND + 5 * MiB);
+}, 60_000);
 
 it.each<[string, Declared]>([
 	['DeviceCMYK', { ColorSpace: 'DeviceCMYK' }],
