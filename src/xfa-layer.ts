@@ -133,6 +133,13 @@ export class XfaStage {
 			intent: 'display'
 		});
 		await frameDocument.fonts.ready;
+		// A picture has a size once it has loaded, and one that fails to has none.
+		await Promise.all(
+			Array.from(
+				layer.querySelectorAll('img'),
+				(img) => img.complete || new Promise((done) => (img.onload = img.onerror = done))
+			)
+		);
 
 		// A frame the host page hid or took out gives the wrapper no box.
 		if (!host.getClientRects().length)
