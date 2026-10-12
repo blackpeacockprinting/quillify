@@ -50,10 +50,9 @@ it('describes the nine published fixtures as their own manifest does', () => {
 	expect(published.map((fixture) => named.get(fixture.sha256))).toEqual(published);
 });
 
-it('expects 49 forms to convert and 10 to be refused', () => {
+it('expects 57 forms to convert and 2 to be refused', () => {
 	expect(count('outcome')).toEqual({
-		converted: 49,
-		too_many_fields: 8,
+		converted: 57,
 		no_fields: 1,
 		portfolio: 1
 	});
@@ -61,7 +60,7 @@ it('expects 49 forms to convert and 10 to be refused', () => {
 
 it('holds the other totals the two READMEs quote', () => {
 	expect(count('kind')).toEqual({ plain: 14, hybrid: 26, dynamic: 17, none: 2 });
-	expect(count('kind', converted)).toEqual({ plain: 12, hybrid: 21, dynamic: 16 });
+	expect(count('kind', converted)).toEqual({ plain: 14, hybrid: 26, dynamic: 17 });
 	expect(count('encryption')).toEqual({
 		none: 21,
 		'AESv2, R4, empty user password': 35,
@@ -74,5 +73,5 @@ it('holds the other totals the two READMEs quote', () => {
 		fields: sum('fields'),
 		places: sum('places'),
 		withUrl: manifest.filter((form) => form.url).length
-	}).toEqual({ megabytes: 24, pages: 143, fields: 3727, places: 3670, withUrl: 17 });
+	}).toEqual({ megabytes: 24, pages: 197, fields: 6605, places: 6508, withUrl: 17 });
 });

@@ -16,9 +16,8 @@ The run needs the files, so it is no part of the gate and never runs in CI. The 
 
 ## What it measures
 
-49 convert: 12 of the 14 plain forms, 21 of the 26 hybrid and 16 of the 17 dynamic, 3,727 fields on 143 pages. A read-only field is not placed, and a field the form shows in more than one box is placed in each, so `form.json` gives 3,670 places. The engine stamps a field at every one, within a hundredth of a point of its rect. Ten are refused:
+57 convert, every form that has a field: 14 plain, 26 hybrid and 17 dynamic, 6,605 fields on 197 pages. A read-only field is not placed, and a field the form shows in more than one box is placed in each, so `form.json` gives 6,508 places. The engine stamps a field at every one, within a hundredth of a point of its rect. Two are refused:
 
-- Eight hold more than 200 fields: AF 1466, DD 448, DD 1966, N-400, OF 178, OF 1164, SF 75 and VA 21-526EZ. The cap is [#40](https://github.com/tonguetoquill/quillify/issues/40).
 - SF 85 has no field.
 - AF 3070A is a portfolio: a cover page around an attachment named `MicrosoftIRMServices Protected PDF.pdf`.
 
