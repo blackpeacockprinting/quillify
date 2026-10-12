@@ -100,6 +100,12 @@ export const MAX_WIDGETS = 1000;
 /** The limits a consumer prints, each under the name its refusal counts by. */
 export const limits = Object.freeze({ bytes: MAX_BYTES, pages: MAX_PAGES, fields: MAX_WIDGETS });
 /**
+ * The longest side a page has and is taken, in points, and the farthest its
+ * box reaches from the origin: the PDF specification's limit for a side (ISO
+ * 32000-1, Annex C). Of 2,127 published pages the longest is 3,456 (AFMC 1656).
+ */
+export const MAX_SIDE = 14_400;
+/**
  * The most pixels the pictures of a dynamic form come to, each use counted.
  * At four bytes a pixel that is 32 MB on a canvas, and as much in the
  * background when the pictures are noise with an alpha channel. Of the 65 Air

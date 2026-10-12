@@ -26,21 +26,21 @@ A `Form` is `{ pdf, pages, fields }`: the background PDF, each page's size in po
 
 ### Refusals
 
-| `code`            | Carries                       | The file                                 | A person can           |
-| ----------------- | ----------------------------- | ---------------------------------------- | ---------------------- |
-| `too_large`       | `bytes`, `limit`              | is over 8 MiB, or 64 MiB decoded         | nothing                |
-| `too_slow`        | `limit`                       | has a worker busy after 60 s             | try again              |
-| `not_pdf`         |                               | is not a PDF                             | choose the right file  |
-| `password`        |                               | needs a password                         | save a copy without it |
-| `encryption`      |                               | is encrypted to a certificate            | nothing                |
-| `damaged`         |                               | cannot be rewritten, or reads two ways   | download it again      |
-| `portfolio`       | `attachment`                  | is a portfolio                           | save the attachment    |
-| `too_many_pages`  | `pages`, `limit`              | has over 25 pages                        | nothing                |
-| `too_many_fields` | `fields`, `limit`             | has over 1,000 fields                    | nothing                |
-| `layout`          | `detail`                      | is a dynamic form pdf.js cannot lay out  | nothing                |
-| `no_fields`       | `xfa`                         | has no field                             | nothing                |
-| `rotated`         | `page`                        | has a page still rotated                 | nothing                |
-| `unpaintable`     | `page`, `construct`, `detail` | holds something the redraw does not draw | nothing                |
+| `code`            | Carries                       | The file                                                          | A person can           |
+| ----------------- | ----------------------------- | ----------------------------------------------------------------- | ---------------------- |
+| `too_large`       | `bytes`, `limit`              | is over 8 MiB, or 64 MiB decoded                                  | nothing                |
+| `too_slow`        | `limit`                       | has a worker busy after 60 s                                      | try again              |
+| `not_pdf`         |                               | is not a PDF                                                      | choose the right file  |
+| `password`        |                               | needs a password                                                  | save a copy without it |
+| `encryption`      |                               | is encrypted to a certificate                                     | nothing                |
+| `damaged`         |                               | cannot be rewritten, reads two ways, or has a page past 14,400 pt | download it again      |
+| `portfolio`       | `attachment`                  | is a portfolio                                                    | save the attachment    |
+| `too_many_pages`  | `pages`, `limit`              | has over 25 pages                                                 | nothing                |
+| `too_many_fields` | `fields`, `limit`             | has over 1,000 fields                                             | nothing                |
+| `layout`          | `detail`                      | is a dynamic form pdf.js cannot lay out                           | nothing                |
+| `no_fields`       | `xfa`                         | has no field                                                      | nothing                |
+| `rotated`         | `page`                        | has a page still rotated                                          | nothing                |
+| `unpaintable`     | `page`, `construct`, `detail` | holds something the redraw does not draw                          | nothing                |
 
 `construct` is `image`, `background_image`, `svg`, `border`, `transform`, `glyph`, `barcode` or `password`.
 

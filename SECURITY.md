@@ -31,6 +31,7 @@ Reasons: [the decision log and research notes written before v0.3.0](https://git
 - `MAX_INFLATED_BYTES` (qpdf's output plus decoded streams): 64 MiB, `too_large`
 - `MAX_PAGES`: 25, `too_many_pages`
 - `MAX_WIDGETS` (fields): 1,000, `too_many_fields`
+- `MAX_SIDE` (a page's side, and its box's reach from the origin): 14,400 pt, `damaged`
 - `MAX_PICTURE_PIXELS` (a dynamic form's pictures): 8,000,000, `unpaintable`
 - `MAX_SECONDS` (a worker wait): 60 s, `too_slow`
 

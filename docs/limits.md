@@ -11,7 +11,7 @@ Each converted form was rendered by the engine and every kept field read back at
 
 ## Bounds
 
-8 MiB a file, 64 MiB decoded, 25 pages, 1,000 fields, 60 s, and in a dynamic form 8,000,000 pixels of pictures. Past one, the file is refused.
+8 MiB a file, 64 MiB decoded, 25 pages, 1,000 fields, 14,400 pt a side of a page, 60 s, and in a dynamic form 8,000,000 pixels of pictures. Past one, the file is refused.
 
 ## A dynamic form is redrawn
 
