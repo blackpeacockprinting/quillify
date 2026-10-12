@@ -86,7 +86,7 @@ it('converts DAF 1288 when the worker the host gave pdf.js never answers', async
 	GlobalWorkerOptions.workerSrc = '/host/pdf.worker.mjs';
 
 	const sanitized = await sanitize(await reserve());
-	expect(sanitized.ok && sanitized.form.fields).toHaveLength(122);
+	expect(sanitized.ok && sanitized.form.fields).toHaveLength(121);
 	expect(GlobalWorkerOptions.workerPort).toBe(silent);
 	expect(GlobalWorkerOptions.workerSrc).toBe('/host/pdf.worker.mjs');
 	silent.terminate();

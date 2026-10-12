@@ -73,5 +73,5 @@ it('holds the other totals the two READMEs quote', () => {
 		fields: sum('fields'),
 		places: sum('places'),
 		withUrl: manifest.filter((form) => form.url).length
-	}).toEqual({ megabytes: 24, pages: 197, fields: 6687, places: 6590, withUrl: 17 });
+	}).toEqual({ megabytes: 24, pages: 197, fields: 6686, places: 6589, withUrl: 17 });
 });

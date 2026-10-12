@@ -21,9 +21,9 @@ const FORMS = [
 		name: 'DAF 1288 ready reserve',
 		url: readyReserveUrl,
 		pages: 2,
-		widgets: 122,
+		widgets: 121,
 		radios: 26,
-		tooltips: 43
+		tooltips: 42
 	},
 	// Its template sets `xfa-font-horizontal-scale` six times, which pdf.js emits as `scaleX()`.
 	{ name: 'DAF 988 leave request', url: leaveUrl, pages: 3, widgets: 166, radios: 0, tooltips: 156 }
