@@ -131,7 +131,7 @@ it("draws a field's caption with a tab where the layout put each part", async ()
 }, 120_000);
 
 it('still refuses a character the standard fonts cannot encode, by the part that holds it', async () => {
-	await expect(xfaToAcroForm(await printed('Sample&#9;Ω'))).rejects.toMatchObject({
-		refusal: { code: 'unpaintable', page: 0, construct: 'glyph', detail: 'Ω' }
+	await expect(xfaToAcroForm(await printed('Sample&#9;\u20dd'))).rejects.toMatchObject({
+		refusal: { code: 'unpaintable', page: 0, construct: 'glyph', detail: '\u20dd' }
 	});
 }, 120_000);
