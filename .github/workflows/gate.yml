@@ -2,9 +2,11 @@ name: Gate
 
 on:
   pull_request:
+  # The release's pull request is opened by a workflow, which starts no run.
+  workflow_dispatch:
 
 concurrency:
-  group: gate-${{ github.head_ref }}
+  group: gate-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 permissions:

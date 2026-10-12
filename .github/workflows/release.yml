@@ -1,0 +1,101 @@
+# Publishes the package when the pull request of a branch release/vX.Y.Z merges.
+# The branch name says what is released, and package.json is what proves it.
+# Everything that can fail runs before the tag: a tag can be deleted, and a
+# published version is permanent.
+name: Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+concurrency:
+  group: release-${{ github.event.pull_request.head.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'release/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: release
+    permissions:
+      # npm trusted publishing exchanges this for a publish credential; no token is stored.
+      id-token: write
+      # The tag and the GitHub release.
+      contents: write
+    env:
+      BRANCH: ${{ github.event.pull_request.head.ref }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          # The merge commit this event names, not whatever main is by now:
+          # one commit is gated, tagged, packed and published.
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - name: Read the release from the branch name
+        run: |
+          VERSION="${BRANCH#release/v}"
+          ACTUAL=$(node -p "require('./package.json').version")
+          if [ "$ACTUAL" != "$VERSION" ]; then
+            echo "::error::the branch says v$VERSION and package.json says v$ACTUAL"
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "NAME=$(node -p "require('./package.json').name")" >> "$GITHUB_ENV"
+
+      - run: npm ci
+      - run: npx playwright install --with-deps --only-shell chromium
+      - run: npm run gate
+
+      # Packed once: what is checksummed, attached and published is one file.
+      - name: Pack
+        run: |
+          mkdir -p "$RUNNER_TEMP/pack"
+          npm pack --pack-destination "$RUNNER_TEMP/pack" > /dev/null
+          TGZ=$(echo "$RUNNER_TEMP"/pack/*.tgz)
+          npm sbom --sbom-format cyclonedx --omit dev > "${TGZ%.tgz}.sbom.json"
+          (cd "$RUNNER_TEMP/pack" && shasum -a 256 *.tgz *.sbom.json > SHA256SUMS)
+          echo "TGZ=$TGZ" >> "$GITHUB_ENV"
+
+      - name: Tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VERSION" -m "$NAME $VERSION"
+          git push origin "v$VERSION"
+
+      # Trusted publishing needs npm 11.5.1 or later.
+      - run: npm install -g npm@latest
+
+      # A version the registry already has is skipped, so the job can be run
+      # again, and so the first version of all, which is published by hand
+      # because a package with no version has no trusted publisher, passes.
+      - name: Publish
+        run: |
+          if [ "$(npm view "$NAME@$VERSION" version 2> /dev/null)" = "$VERSION" ]; then
+            echo "$NAME@$VERSION is already on the registry."
+            exit 0
+          fi
+          npm publish "$TGZ" --provenance --access public
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # The version's own section of the changelog, as it is written.
+          awk -v v="## v$VERSION - " \
+            'index($0, v) == 1 {f=1; next} /^## / && f {exit} f {print}' \
+            CHANGELOG.md > notes.md
+          grep -q '[^[:space:]]' notes.md || echo "$NAME $VERSION" > notes.md
+          gh release create "v$VERSION" --title "v$VERSION" --notes-file notes.md \
+            "$TGZ" "${TGZ%.tgz}.sbom.json" "$RUNNER_TEMP/pack/SHA256SUMS"

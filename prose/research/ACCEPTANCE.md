@@ -11,7 +11,7 @@ The importer was carried from `tonguetoquill/web-app-afa-demo@842ef4207cb5`. Tha
 In a scratch clone of the fork:
 
 - The package and its engine were installed: the tarball that `npm run build && npm pack` writes at `98aba25` (963,424 bytes, SHA-256 `39cdb0dc851cddd555508488a511bd018ab36a8320415c7faf8fe315df7bebc7`), and `@quillmark/wasm` at 0.124.0, the floor of the package's peer range. The fork pins 0.122.0.
-- One source file was edited, `src/lib/components/PdfImportWizard/wizard.svelte.ts`, by 128 lines added and 41 removed: [`exit-test.diff`](exit-test.diff). The wizard calls `sanitize` where it called the fork's `normalizePdf`, `xfaToAcroForm`, `inventoryPdf` and `stripAcroForm`, `quillify` where it called `assembleQuill`, and `check` for the reason its fields step cannot continue. It keeps the app's sentence for ten of the eleven refusal codes. `unpaintable` has one sentence where the app had six, and the app's refusal of pages that raster too large has no code, since the package makes no raster. The 59 forms show three of the eleven: too many fields, a portfolio and no field.
+- One source file was edited, `src/lib/components/PdfImportWizard/wizard.svelte.ts`, by 128 lines added and 41 removed. The diff is not in this repository, since the app is not public. The wizard calls `sanitize` where it called the fork's `normalizePdf`, `xfaToAcroForm`, `inventoryPdf` and `stripAcroForm`, `quillify` where it called `assembleQuill`, and `check` for the reason its fields step cannot continue. It keeps the app's sentence for ten of the eleven refusal codes. `unpaintable` has one sentence where the app had six, and the app's refusal of pages that raster too large has no code, since the package makes no raster. The 59 forms show three of the eleven: too many fields, a portfolio and no field.
 
 Nothing else changed: no Vite setting, no plugin, no copy step. The build copies the package's worker and `qpdf.wasm` byte for byte, and `svelte-check` passes with the change in place (5,644 files, no error, no warning).
 
@@ -80,7 +80,7 @@ npm run build
 ANTHROPIC_API_KEY= OPENAI_API_KEY= npm run preview &         # on 4173
 node scripts/measure-forms.mjs before.json <corpus>
 
-git apply <quillify>/prose/research/exit-test.diff
+git apply exit-test.diff                                     # the edit described above
 npm install --save-exact --min-release-age=0 @quillmark/wasm@0.124.0 <quillify>/quillify-0.0.0.tgz
 npm run build                                                # then the preview again
 node scripts/measure-forms.mjs after.json <corpus>
