@@ -132,6 +132,21 @@ it('converts a page whose box reaches 14,400 pt from the origin and refuses one 
 		expect(await sanitize(await far(x, y))).toEqual({ ok: false, refusal: { code: 'damaged' } });
 }, 60_000);
 
+it('converts a page 14,400 pt wide about the origin and refuses one of 14,600, no corner of either past 14,400 pt', async () => {
+	const about = async (half: number) => {
+		const doc = await PDFDocument.create();
+		const page = doc.addPage();
+		page.setMediaBox(-half, 0, 2 * half, 792);
+		doc.getForm().createTextField('field').addToPage(page, { x: 20, y: 20, width: 10, height: 8 });
+		return doc.save();
+	};
+	expect(await sanitize(await about(7200))).toMatchObject({
+		ok: true,
+		form: { pages: [{ width: 14400, height: 792 }] }
+	});
+	expect(await sanitize(await about(7300))).toEqual({ ok: false, refusal: { code: 'damaged' } });
+}, 60_000);
+
 it("converts a dynamic form's page 14,400 pt long and refuses one of 14,401", async () => {
 	const long = (height: number) =>
 		templateForm(

@@ -95,10 +95,10 @@ it.each([
 	60_000
 );
 
-/** A one-page dynamic form with one text field, `x` points from the left of its 612 pt page. */
-const fieldAt = (x: number) =>
+/** A one-page dynamic form with one text field of 200 by 20 pt, `x` points from the left and `y` from the top of its 612 by 792 pt page. */
+const fieldAt = (x: number, y = 72) =>
 	dynamicForm(
-		`<field name="f" x="${x}pt" y="72pt" w="200pt" h="20pt"><ui><textEdit/></ui></field>`
+		`<field name="f" x="${x}pt" y="${y}pt" w="200pt" h="20pt"><ui><textEdit/></ui></field>`
 	);
 
 // pdf.js gives a field the place its layout comes to, on the page or not, and
@@ -110,6 +110,24 @@ it('refuses a field laid out off its page as layout, and keeps one that crosses 
 	const read = await sanitize(await fieldAt(500));
 	expect(read.ok && read.form.fields.map(({ places }) => places[0].rect.x)).toEqual([500]);
 }, 60_000);
+
+it.each([
+	['below the page', [72, 792], [72, 780]],
+	['left of the page', [-200, 72], [-190, 72]],
+	['above the page', [72, -20], [72, -10]]
+])(
+	'refuses a field laid out %s as layout, and keeps one that crosses that edge',
+	async (_, off, across) => {
+		expect(await sanitize(await fieldAt(off[0], off[1]))).toMatchObject({
+			refusal: { code: 'layout', detail: 'a field is off its page' }
+		});
+		const read = await sanitize(await fieldAt(across[0], across[1]));
+		expect(read.ok && read.form.fields.map(({ places: [{ rect }] }) => [rect.x, rect.y])).toEqual([
+			across
+		]);
+	},
+	60_000
+);
 
 it('leaves no worker and no frame when it refuses a layout', async () => {
 	const count = { started: 0, live: new Set<Worker>() };
