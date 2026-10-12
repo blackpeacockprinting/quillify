@@ -24,9 +24,14 @@ const GUARDS = [
 	},
 	{
 		sites: 1,
+		line: 'if (!this.ui) {',
+		guarded: 'if (!this.ui || this.ui.defaultUi || !this.ui[$getExtra]()) {'
+	},
+	{
+		sites: 1,
 		line: 'const ui = this.ui[$toHTML]().html;',
 		guarded:
-			'const ui = this.ui[$toHTML]().html ?? (this.ui.signature ? { name: "label", attributes: { class: ["xfaLabel"] }, children: [{ name: "div", attributes: { class: ["xfaSignature"], style: { width: "100%" } }, children: [] }] } : null);'
+			'const ui = this.ui[$toHTML]().html ?? { name: "label", attributes: { class: ["xfaLabel"] }, children: [{ name: "div", attributes: { class: [this.ui.signature ? "xfaSignature" : this.ui.barcode ? "xfaBarcode" : this.ui.passwordEdit ? "xfaPasswordEdit" : "xfaImageEdit"], style: { width: "100%" } }, children: [] }] };'
 	},
 	{
 		sites: 1,
@@ -74,7 +79,7 @@ mkdirSync('assets');
 for (const [name, content] of [
 	[
 		'pdf.worker.js',
-		`/* The worker of pdfjs-dist ${version} (build/pdf.worker.mjs), changed: a null guard added at two sites, a page's first unsplittable node no longer taken from an overflow leader or trailer, a page set made to clear its page areas' counts when it starts another pass, a signature field given a box for its control so that its caption is laid out, an exception of the XFA layout thrown on after it is logged, and the last line, which named a source map, removed. */\n` +
+		`/* The worker of pdfjs-dist ${version} (build/pdf.worker.mjs), changed: a null guard added at two sites, a page's first unsplittable node no longer taken from an overflow leader or trailer, a page set made to clear its page areas' counts when it starts another pass, a field with no control or a default one given a text control, a field whose control has no HTML given a box for it so that its caption is laid out, an exception of the XFA layout thrown on after it is logged, and the last line, which named a source map, removed. */\n` +
 			worker
 	],
 	[
