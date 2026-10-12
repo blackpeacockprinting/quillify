@@ -9,9 +9,12 @@ import {
 	type PDFRef
 } from 'pdf-lib';
 import { expect, it } from 'vitest';
+import { dynamicForm } from '../test/dynamic-form.js';
 import saarUrl from '../test/fixtures/DD2875_System_Authorization_Access_Request.pdf?url';
 import { normalizePdf } from './normalize.js';
+import { openPdf } from './pdfjs.js';
 import { xfaToAcroForm } from './xfa.js';
+import { XfaStage } from './xfa-layer.js';
 
 /** DD 2875 with one caption of its XFA template reworded. */
 async function recaptioned(from: string, to: string): Promise<Uint8Array> {
@@ -36,14 +39,111 @@ async function recaptioned(from: string, to: string): Promise<Uint8Array> {
 	return doc.save();
 }
 
-it('refuses a dynamic form by the page and the run that hold a character the standard fonts cannot encode', async () => {
-	const bytes = await recaptioned('21. OPTIONAL INFORMATION', '21. OPTIONAL INFORMATION Ω');
+/** A one-page dynamic form that prints `text` on one line, turned by `rotate` degrees. */
+const printed = (text: string, rotate = 0) =>
+	dynamicForm(
+		`<draw x="100pt" y="300pt" w="200pt" h="60pt" rotate="${rotate}"><value><text>${text}</text></value></draw>`
+	);
+
+/** The box the layout gives the first `char` of the form's text, in points from the page's top left. */
+async function laidOut(bytes: Uint8Array, char: string) {
+	const stage = new XfaStage();
+	const opened = await openPdf(bytes, { enableXfa: true, ownerDocument: await stage.ready });
+	try {
+		const laid = await stage.lay(await opened.pdf.getPage(1));
+		const owner = laid.layer.ownerDocument;
+		const node = owner.createTreeWalker(laid.layer, NodeFilter.SHOW_TEXT).nextNode()!;
+		const range = owner.createRange();
+		range.setStart(node, node.nodeValue!.indexOf(char));
+		range.setEnd(node, node.nodeValue!.indexOf(char) + 1);
+		const { left, bottom, width } = range.getBoundingClientRect();
+		return { left: left - laid.origin.left, bottom: bottom - laid.origin.top, width };
+	} finally {
+		stage.close();
+		await opened.close();
+	}
+}
+
+/** The pieces of text pdf.js reads off the redrawn page, each with where it starts and its width, and the page's fonts. */
+async function redrawn(bytes: Uint8Array) {
+	const converted = await xfaToAcroForm(bytes);
+	const doc = await PDFDocument.load(converted);
+	const named = doc.getPage(0).node.Resources()!.lookup(PDFName.of('Font'), PDFDict).values();
+	const fonts = [
+		...new Set(
+			named.map((font) => doc.context.lookup(font, PDFDict).get(PDFName.of('BaseFont'))!.toString())
+		)
+	];
+	const { pdf, close } = await openPdf(converted);
+	try {
+		const { items } = await (await pdf.getPage(1)).getTextContent();
+		const pieces = items.flatMap((item) =>
+			'str' in item && item.str.trim()
+				? [{ text: item.str.trim(), x: item.transform[4], y: item.transform[5], width: item.width }]
+				: []
+		);
+		return { fonts, pieces };
+	} finally {
+		await close();
+	}
+}
+
+// pdf.js reads a piece in ZapfDingbats as its codes: `s` is the triangle that
+// points up and `t` the one that points down.
+const MARKS = [
+	['U+25B2', '▲', 's', '/ZapfDingbats'],
+	['U+25BC', '▼', 't', '/ZapfDingbats'],
+	['U+03BC', 'μ', 'μ', '/Symbol'],
+	['U+2191', '↑', '↑', '/Symbol'],
+	['U+2192', '→', '→', '/Symbol']
+];
+
+it.each(MARKS)(
+	'draws %s, which the text fonts lack, where the layout has it',
+	async (_, char, read, face) => {
+		const bytes = await printed(`Before ${char} after`);
+		const { fonts, pieces } = await redrawn(bytes);
+		expect(pieces.map(({ text }) => text)).toEqual(['Before', read, 'after']);
+		expect(fonts).toEqual(['/Times-Roman', face]);
+		const [, mark, after] = pieces;
+		const layout = await laidOut(bytes, char);
+		expect(Math.abs(mark.x - layout.left)).toBeLessThan(0.05);
+		// The mark has the advance of the face it is drawn in, and what follows it
+		// starts that far from where the layout has it: 1.1 pt at most in 10 pt text.
+		expect(Math.abs(mark.width - layout.width)).toBeLessThan(1.1);
+		expect(Math.abs(after.x - (await laidOut(bytes, 'a')).left)).toBeLessThan(1.1);
+	},
+	120_000
+);
+
+it('draws a mark in a turned run along the way the run reads', async () => {
+	const bytes = await printed('Before ▲ after', 90);
+	const { pieces } = await redrawn(bytes);
+	expect(pieces.map(({ text }) => text)).toEqual(['Before', 's', 'after']);
+	const [before, mark, after] = pieces;
+	const layout = await laidOut(bytes, '▲');
+	expect(mark.x).toBeCloseTo(before.x, 2);
+	expect(after.x).toBeCloseTo(before.x, 2);
+	expect(Math.abs(792 - mark.y - layout.bottom)).toBeLessThan(0.05);
+	expect(Math.abs(792 - after.y - (await laidOut(bytes, 'a')).bottom)).toBeLessThan(1.1);
+}, 120_000);
+
+it('draws U+2010 as the hyphen of the face its run is in', async () => {
+	const bytes = await printed('Before\u2010after');
+	const { fonts, pieces } = await redrawn(bytes);
+	expect(pieces.map(({ text }) => text)).toEqual(['Before-after']);
+	expect(fonts).toEqual(['/Times-Roman']);
+	expect(Math.abs(pieces[0].x - (await laidOut(bytes, 'B')).left)).toBeLessThan(0.05);
+}, 120_000);
+
+it('refuses a dynamic form by the page and the run that hold a character no standard font can encode', async () => {
+	const bytes = await recaptioned('21. OPTIONAL INFORMATION', '21. OPTIONAL INFORMATION \u20dd');
 	await expect(xfaToAcroForm(await normalizePdf(bytes))).rejects.toMatchObject({
 		refusal: {
 			code: 'unpaintable',
 			page: 1,
 			construct: 'glyph',
-			detail: '21. OPTIONAL INFORMATION Ω'
+			detail: '21. OPTIONAL INFORMATION \u20dd'
 		}
 	});
 }, 120_000);
