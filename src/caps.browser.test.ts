@@ -6,7 +6,7 @@
 
 import { PDFDocument } from 'pdf-lib';
 import { expect, it } from 'vitest';
-import { dynamicForm } from '../test/dynamic-form.js';
+import { dynamicForm, templateForm } from '../test/dynamic-form.js';
 import { fromTree, render } from '../test/engine.js';
 import { limits, quillify, sanitize, suggest } from './index.js';
 
@@ -88,4 +88,58 @@ it('exports the three limits, each the one its refusal carries', async () => {
 		ok: false,
 		refusal: { code: 'too_many_fields', fields: limits.fields + 1, limit: limits.fields }
 	});
+}, 60_000);
+
+it('converts a page 14,400 pt wide and refuses one of 14,401', async () => {
+	const wide = async (width: number) => {
+		const doc = await PDFDocument.create();
+		const page = doc.addPage([width, 792]);
+		doc.getForm().createTextField('field').addToPage(page, { x: 20, y: 20, width: 10, height: 8 });
+		return doc.save();
+	};
+	expect(await sanitize(await wide(14400))).toMatchObject({
+		ok: true,
+		form: { pages: [{ width: 14400, height: 792 }] }
+	});
+	expect(await sanitize(await wide(14401))).toEqual({ ok: false, refusal: { code: 'damaged' } });
+}, 60_000);
+
+it('converts a page whose box reaches 14,400 pt from the origin and refuses one that reaches 14,401', async () => {
+	const far = async (x: number, y: number) => {
+		const doc = await PDFDocument.create();
+		const page = doc.addPage();
+		page.setMediaBox(x, y, 612, 792);
+		doc
+			.getForm()
+			.createTextField('field')
+			.addToPage(page, { x: x + 20, y: y + 20, width: 10, height: 8 });
+		return doc.save();
+	};
+	for (const [x, y] of [
+		[13788, 13608],
+		[-14400, -14400]
+	])
+		expect(await sanitize(await far(x, y))).toMatchObject({
+			ok: true,
+			form: { pages: [{ width: 612, height: 792 }] }
+		});
+	for (const [x, y] of [
+		[13789, 0],
+		[0, 13609],
+		[-14401, 0],
+		[0, -14401]
+	])
+		expect(await sanitize(await far(x, y))).toEqual({ ok: false, refusal: { code: 'damaged' } });
+}, 60_000);
+
+it("converts a dynamic form's page 14,400 pt long and refuses one of 14,401", async () => {
+	const long = (height: number) =>
+		templateForm(
+			`<template xmlns="http://www.xfa.org/schema/xfa-template/3.3/"><subform name="form1" layout="tb"><pageSet><pageArea name="Page1"><contentArea w="612pt" h="${height}pt"/><medium short="612pt" long="${height}pt"/></pageArea></pageSet><subform layout="position" w="612pt" h="792pt"><field name="field" x="20pt" y="20pt" w="10pt" h="8pt"><ui><textEdit/></ui></field></subform></subform></template>`
+		);
+	expect(await sanitize(await long(14400))).toMatchObject({
+		ok: true,
+		form: { pages: [{ width: 612, height: 14400 }] }
+	});
+	expect(await sanitize(await long(14401))).toEqual({ ok: false, refusal: { code: 'damaged' } });
 }, 60_000);
