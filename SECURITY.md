@@ -20,7 +20,7 @@ A way past any of these is a vulnerability.
 - The form layer, scripts, attachments, metadata and bookmarks are gone.
 - Only links to `http://`, `https://` or a destination in the file stay.
 - A dynamic (XFA) form is laid out in a sandboxed `<iframe>` that runs no script.
-- A file that reads two ways is refused as `damaged`.
+- A file that reads two ways is refused as `damaged`. One known way is not: see Not handled (#265).
 - `quillify` writes every string into the quill's files as an escaped JSON string literal.
 
 Reasons: [the decision log and research notes written before v0.3.0](https://github.com/tonguetoquill/quillify/tree/84619f7/prose).
@@ -43,6 +43,7 @@ Known limits, and no vulnerability to report.
 - Tag strings no page shows (`/Alt`, `/ActualText`, `/E`, `/T`, `/ID`, `/Lang`) stay, and filled fields are untagged (#192).
 - Content in a layer that is off stays (decided in #32).
 - A dictionary by name (`/Resources` maps, `/RoleMap`, `/ClassMap`) keeps values under names the file chose.
+- pdf.js can read a file qpdf wrote as another document than qpdf and pdf-lib read. Measured: with a forged trailer that holds `/Encrypt`, a file that is not encrypted is refused as `password` or `encryption`. Not tried, so not ruled out: a forged trailer with no `/Encrypt`, whose objects pdf.js would read in place of the file's own, and whether objects spelled in a stream's data can make pdf.js inflate what the 64 MiB bound never counted (#265).
 - qpdf's memory before a refusal is unbounded.
 - An image counts for the most its dictionary, its JPEG or JPEG 2000 header, or a CCITT image's `/DecodeParms` says. Not read: a JBIG2 stream's own size, which lies behind segments of varying length, and an image inside a content stream, whose end only a content-stream parser finds.
 - The bound counts bytes, not pixels: an image of 22,000 by 22,000 at a bit a pixel counts 60 MB, and the engine at 0.124.0 traps after 8 s painting its page to a canvas (#259).
