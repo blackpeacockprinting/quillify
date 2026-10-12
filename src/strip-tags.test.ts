@@ -271,30 +271,6 @@ it('keeps of an /IDTree its nodes and the elements it names, and no other object
 	expect(text).not.toContain('PRIVATE');
 });
 
-it('keeps nothing of a widget and a page outside the page tree that the tags name as elements, and no entry for either', async () => {
-	const { keys, parts, text } = await background(({ made }) => {
-		const widget = made({
-			Type: 'Annot',
-			Subtype: 'Widget',
-			FT: 'Tx',
-			Rect: [0, 0, 1, 1],
-			AP: { N: made({ Subtype: 'Form', BBox: [0, 0, 1, 1] }, 'PRIVATE') },
-			A: { S: 'JavaScript', JS: PDFString.of('PRIVATE') },
-			Kids: [made({ Subtype: 'Widget', V: PDFString.of('PRIVATE') })]
-		});
-		const orphan = made({
-			Type: 'Page',
-			Contents: made({}, 'PRIVATE'),
-			AA: { O: { S: 'JavaScript', JS: PDFString.of('PRIVATE') } }
-		});
-		return { tags: { K: [widget, orphan] } };
-	});
-	expect(keys(...TAGS)).toEqual(['K', 'Type']);
-	expect(parts(...TAGS, 'K')).toEqual([]);
-	expect(text).not.toContain('PRIVATE');
-	expect(text).not.toContain('/Widget');
-});
-
 /** A text field's widget that the page lists, with a value, an appearance and a parent. */
 const widget = ({ made, page, context }: Planted) => {
 	const field = made({
@@ -323,12 +299,9 @@ it.each<[key: string, plant: Plant]>([
 		}
 	]
 ])(
-	'keeps nothing of a widget that /%s names as a dictionary by name, and not the key',
+	'refuses as damaged a file in which /%s names a widget as a dictionary by name',
 	async (_, plant) => {
-		const { keys, text } = await background(plant);
-		expect(keys(...TAGS)).toEqual(['Type']);
-		expect(text).not.toMatch(/\/(RoleMap|ClassMap|Font|Widget|FT|V|T|Rect|AP)\b/);
-		expect(text).not.toContain('PRIVATE');
+		await expect(stripped(plant)).rejects.toMatchObject({ refusal: { code: 'damaged' } });
 	}
 );
 
@@ -341,7 +314,13 @@ it.each<[name: string, plant: Plant]>([
 			page.set(PDFName.of('Annots'), context.obj([link]));
 			return { tags: { K: [link] } };
 		}
-	]
+	],
+	['a widget its page lists', (planted) => ({ tags: { K: [widget(planted)] } })],
+	[
+		'a widget no page lists',
+		({ made }) => ({ tags: { K: [made({ Subtype: 'Widget', V: PDFString.of('PRIVATE') })] } })
+	],
+	['a page outside the page tree', ({ made }) => ({ tags: { K: [made({ Type: 'Page' })] } })]
 ])('refuses as damaged a file whose tags name %s as an element', async (_, plant) => {
 	await expect(stripped(plant)).rejects.toMatchObject({ refusal: { code: 'damaged' } });
 });

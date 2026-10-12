@@ -6,7 +6,8 @@
  * lists. A few objects are shared, so two keys reach one of them and an object
  * can hold itself. Each file is refused, or its background is read back by the
  * table: every key of a dictionary is one its row lists, with what the row
- * says it leads to, and the file holds no object that reading does not reach.
+ * says it leads to, the file holds no object that reading does not reach, and
+ * none but a link says `/Type /Annot` or `/Subtype /Widget`.
  * A failure prints the smallest file that makes it.
  */
 
@@ -143,12 +144,11 @@ async function generated(g: fc.GeneratorValue): Promise<Uint8Array> {
 			: put(context.obj(dict));
 	};
 
-	// The envelope keeps its own keys. The catalog gets no /Rect and no /Subtype
-	// either: one that reads as an annotation is outside what this holds.
+	// The envelope keeps its own keys.
 	const holders: [holder: PDFDict, kind: string, own: string[]][] = [
 		[page.node, 'page', ['Type', 'Parent', 'MediaBox']],
 		[catalog.Pages(), 'tree', ['Type', 'Kids', 'Count']],
-		[catalog, 'catalog', ['Type', 'Pages', 'Rect', 'Subtype']]
+		[catalog, 'catalog', ['Type', 'Pages']]
 	];
 	for (const [holder, kind, own] of holders)
 		for (const [key, part] of keys(ROWS.get(kind)!, 0))
@@ -249,8 +249,14 @@ function read({ context }: PDFDocument) {
 		};
 		stays(part);
 	}
-	for (const [ref] of context.enumerateIndirectObjects())
+	for (const [ref, object] of context.enumerateIndirectObjects()) {
 		expect(reached.has(ref), `${ref} is reached`).toBe(true);
+		if (!(object instanceof PDFDict) || reached.get(ref) === 'link') continue;
+		expect(object.lookup(PDFName.of('Type')), `${ref} says its type`).not.toBe(PDFName.of('Annot'));
+		expect(object.lookup(PDFName.of('Subtype')), `${ref} says its subtype`).not.toBe(
+			PDFName.of('Widget')
+		);
+	}
 }
 
 it(`refuses, or strips to the table, each of ${RUNS} generated files of seed ${SEED}`, async () => {
