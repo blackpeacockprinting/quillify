@@ -1,38 +1,56 @@
 # Contributing
 
-## A change
+Every `#N` here is an issue or a pull request of this repository. A contribution comes under the package's license, Apache 2.0 (inbound equals outbound, section 5). There is no agreement to sign.
 
-- Branch from `main`: `port/`, `feat/`, `fix/`, `docs/`, `chore/`, `test/` or `release/vX.Y.Z`. `main` moves only by a merge commit from a pull request. The branch is not protected, so nothing but this rule stops a direct push.
-- One concern per pull request, small enough to read in one sitting. A bug fix and a feature are two pull requests.
-- A branch merges only when it contains `main`. CI checks the pull request's tree, and nothing runs after the merge.
-- A commit subject is a plain sentence saying what now holds, 72 characters at most, with no prefix. The body gives the reason and what was deleted, wrapped at 72. A change to code ends with `Check:`, the command and what it returned. `Refs #N` names the issue the commit serves.
-- A fix or a feature is two commits: the test that fails, then the change that passes it without touching the test.
-- The repository merges with the pull request's title as the subject and its body as the message, so both are written to be read in `git log`.
+## Set up
+
+Node 24 (`.nvmrc`), in a clone or in your fork:
+
+```
+npm ci
+npx playwright install --only-shell chromium
+npm run gate
+```
+
+The second line downloads the headless Chromium shell the browser tests drive.
 
 ## The gate
 
-`npm run gate` is the one verb: `npm run build`, Prettier, `tsc`, then Vitest's two projects. A test file's name picks its runner: `*.browser.test.ts` runs in headless Chromium and every other test file in node. `npm run format` rewrites what `npm run lint` flags.
+`npm run gate` is the one verb: `npm run build`, Prettier, `tsc`, then Vitest's two projects. A `*.browser.test.ts` file runs in headless Chromium and every other test file in node. `npm run format` fixes what Prettier flags. CI runs the gate once on every pull request and allows it ten minutes.
 
-Tools are pinned exactly and installed with `npm ci`. `npm run assets` writes `assets/`: from `node_modules` the pdf.js worker, with two lines guarded so that DAF 1288 loads, a third so that AF 715, AF 716 and DAF 357 get their second page, two more so that DAF 1024's layout ends, two more so that a field whose control pdf.js writes no HTML for is laid out with its caption, an eighth changed so that the reason a layout failed reaches the page, a ninth so that DAF 1288's grade boxes keep their options and three more so that DD 2875's last page prints its number, and `qpdf.wasm`, and the qpdf worker, which is qpdf-wasm's own script with `src/qpdf-handler.js` after it, from `src/faces/` the four faces of Liberation Sans as they are, each held to a recorded hash, and from `src/xfa-layer.css` the stage's stylesheet as a module. `npm run build` runs it and then compiles `src/` to `dist/`, which the package's entry point names and a tarball carries. `npx playwright install --only-shell chromium` fetches the browser the Chromium project drives.
+`npm run corpus` is no part of the gate: it needs published forms the repository does not hold ([`corpus/README.md`](corpus/README.md)).
 
-## Carried code
+## A change
 
-Code from the fork arrives one module per commit, with a diff against its source that touches imports and nothing else, and a trailer naming the source:
+- Branch from `main`: `port/`, `feat/`, `fix/`, `docs/`, `chore/`, `test/` or `release/vX.Y.Z`. `main` moves only by a merge commit from a pull request.
+- One concern per pull request, small enough to read in one sitting. A bug fix and a feature are two pull requests.
+- A branch merges only when it contains `main`. CI checks the pull request's tree, and nothing runs after the merge.
+- A fix or a feature is two commits: the test that fails, then the change that passes it without touching the test:
 
-```
-Source: tonguetoquill/web-app-afa-demo@842ef4207cb5 src/lib/services/pdf-import/strip.ts
-```
+  ```
+  Tests hold a turned caption's borders and text to its layout
+  A caption a dynamic form turns by quarters is redrawn turned
+  ```
 
-It is reviewed with `git show 842ef4207cb5:<path> | diff - <file>` in a clone of the fork, which is a faster and surer read than the code itself. A port commit that also fixes what it carries cannot be reviewed that way, so a carried module changes only later, in a pull request that says why.
+- A commit subject is a plain sentence saying what now holds, 72 characters at most, with no prefix. The body gives the reason and what was deleted, wrapped at 72. A change to code ends with `Check:`, the command and what it returned. `Refs #N` names the issue the commit serves.
+- The pull request's title is the merge commit's subject and its body the message, so write both for `git log`. The body's headings: **Before**, **After**, **How**, **Not in this pull request**, **Trade-off to confirm**, **Commands run**, then `Closes #N`.
 
 ## Tests
 
-A carried test changes only by an entry in [`prose/DECISIONS.md`](prose/DECISIONS.md), written before the edit. A hostile input is built in its test, from bytes, so the repository holds no dangerous file.
+A hostile input is built in its test, from bytes, so the repository holds no dangerous file.
 
-A published fixture is a blank form, byte for byte as published, and test values are notional. Nothing a person entered into a form goes into a fixture, a test, an issue or a pull request, and neither does a name or identifier that we add. What a publisher left in its own file's metadata stays: removing it would end the identity with the published file.
+A published fixture is a blank form, byte for byte as published, and test values are notional. Nothing a person entered into a form goes into a fixture, a test, an issue or a pull request, and neither does a name or identifier that we add. What a publisher left in its own file's metadata stays.
 
-## Comments and prose
+## Carried code, decisions
 
-Comments default to none, and one earns its place only where the code cannot carry the fact itself. What survives states what is: present tense, unsold, no history. A decision and its reason go in `prose/DECISIONS.md`.
+The first modules and tests came from a private repository, in commits with a `Source:` trailer (`git log --grep='^Source: '`). A review needs only this repository. A carried module changes in a pull request that says why, and a carried test only by an entry in [`prose/DECISIONS.md`](prose/DECISIONS.md), written before the edit. A decision goes there too: its context, the decision and what would unlock another.
 
-A Markdown paragraph is one line.
+## Prose
+
+Comments default to none, and one earns its place only where the code cannot carry the fact itself. What survives states what is: present tense, unsold, no history. A Markdown paragraph is one line.
+
+## A release
+
+A release is a pull request from `release/vX.Y.Z` that sets the version in `package.json` and the lockfile and heads the changelog's `## Unreleased` entries with it. Merging it runs `release.yml`: the gate, `npm pack`, the tag, `npm publish` of that tarball with provenance, and a GitHub release. A published version is permanent, so everything that can fail runs before the tag.
+
+Before 1.0 a minor release may change what a consumer's code must do, and the changelog says how to move. A patch release does not, and adds no refusal code.
