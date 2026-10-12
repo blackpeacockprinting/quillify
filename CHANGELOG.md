@@ -4,6 +4,7 @@ What a consumer can observe, in the latest release and since. Earlier releases a
 
 ## Unreleased
 
+- A dynamic form no longer needs `img-src data:` from a host's content security policy. Without it the browser logged an error for each field, and the form converted all the same.
 - In a dynamic form's text a soft hyphen (U+00AD) inside a line is no longer drawn as a hyphen, and a non-breaking hyphen (U+2011) is drawn as one. A form with U+2011 was `unpaintable` with `construct: 'glyph'`.
 - A file qpdf cannot rewrite is refused without pdf.js opening it, which held 1.5 GiB for one file of 0.5 MB. A PDF cut off mid-file is now `damaged`, not `not_pdf`, and a malformed encryption dictionary is refused where `sanitize` threw.
 - A CCITT image counts toward the 64 MiB bound for the `/Columns` and `/Rows` of its `/DecodeParms` where they are more than its own width and height. A JPEG 2000 image that leaves out its color space or its bits is not `damaged`: it counts at four components or eight bits.

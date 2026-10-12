@@ -76,6 +76,10 @@ export class XfaStage {
 			const view = frameDocument.defaultView!;
 			const sheet = new view.CSSStyleSheet();
 			sheet.replaceSync(css);
+			// pdf.js's sheet gives a field out of focus a background from a data: URL,
+			// which nothing here reads and a host's policy may refuse, a logged error
+			// for each field.
+			sheet.insertRule(':root { --xfa-unfocused-field-background: none; }', sheet.cssRules.length);
 			frameDocument.adoptedStyleSheets = [sheet];
 
 			// A sheet that did not apply leaves every field at its content size,
