@@ -28,11 +28,11 @@ it('requests the qpdf worker and qpdf.wasm once for each file, and nothing else'
 	await normalizePdf(bytes);
 	const requested = (await commands.heard()).map((url) => new URL(url));
 
-	expect(requested.map((url) => url.origin)).toEqual(Array(4).fill(location.origin));
 	expect(requested.map((url) => url.pathname)).toEqual([
 		'/assets/qpdf.worker.js',
 		'/assets/qpdf.wasm',
 		'/assets/qpdf.worker.js',
 		'/assets/qpdf.wasm'
 	]);
+	expect(requested.map((url) => url.origin)).toEqual(Array(4).fill(location.origin));
 }, 60_000);
