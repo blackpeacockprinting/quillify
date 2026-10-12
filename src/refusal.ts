@@ -15,7 +15,15 @@ export type Refusal =
 	| {
 			code: 'unpaintable';
 			page: number;
-			construct: 'image' | 'background_image' | 'svg' | 'border' | 'transform' | 'glyph';
+			construct:
+				| 'image'
+				| 'background_image'
+				| 'svg'
+				| 'border'
+				| 'transform'
+				| 'glyph'
+				| 'barcode'
+				| 'password';
 			detail?: string;
 	  };
 

@@ -832,3 +832,36 @@ Measured outside the gate, with the build before and after, on the tree this was
 Two things are not done. A signature field's box is what pdf.js leaves the control, and pdf.js gives a caption that reserves room and holds no text none of that room. DAF 988's seven signature fields have such a caption, so each box starts where the caption's room starts, and four of the seven lie over the text field beside them by 43 to 68 points. And what a published form says signing a field locks is not carried, as for a static form (#124).
 
 **Unlock.** A pdf.js release that writes HTML for a signature control: the line and its sentence in the worker's notice are deleted in the change that takes it, and the harvest reads what pdf.js writes. For the box, a consumer that places a signature by the widget's rect on a form whose caption reserves room with no text.
+
+## 11 Oct 2026: Each control of a dynamic form is a field, is left out by a rule, or is refused
+
+Adds to "A dynamic form keeps its signature fields and the captions printed in them", whose guarded line it widens, and to "A refusal is a code with its data".
+
+**Context.** A field whose control is a barcode, a password edit, an image edit, a `defaultUi` or an empty `<ui/>` left the conversion with no widget and without the caption printed in it, and nothing was refused (#114). It goes the way a signature field went: pdf.js writes no HTML for the control and returns the field's bare box. The templates of the 946 dynamic Air Force forms show 81 fields with an empty `<ui/>` in 11 forms and 8 with an `imageEdit` in 5, and none with a barcode, a password edit or a `defaultUi`. `form.json` has four kinds, text, checkbox, choice and signature.
+
+**Decision.** What each control of a dynamic form becomes:
+
+| Control | In the Form | Its caption |
+| --- | --- | --- |
+| `textEdit`, `dateTimeEdit`, `numericEdit`, or no `<ui>` | text | printed |
+| `checkButton` | checkbox, or radio in an exclusion group | printed |
+| `choiceList` | choice | printed |
+| `signature` | signature | printed |
+| An empty `<ui/>`, one holding only `extras` or a `picture`, a `defaultUi` | what no `<ui>` gives: text, with one list of items checkbox, with two choice | printed |
+| `button` | no field | printed |
+| `imageEdit` | no field | printed |
+| `barcode` | the page is refused as `unpaintable`, `barcode` | |
+| `passwordEdit` | the page is refused as `unpaintable`, `password` | |
+
+The first four rows and the button are as they were. The others are decided here.
+
+- A field with no control of its own is a field a person fills: pdf.js has the rule for a field with no `<ui>` and did not apply it to one that is there and empty. `npm run assets` changes a seventh line of the worker, at one site, so that it does. Whether Acrobat shows a text control for such a field was not looked at, and the XFA specification was not read.
+- An image field has no kind in `form.json`. A static form's image field is a push button, which the inventory leaves out, and a dynamic form's goes the same way with its caption printed, which is the instruction a person follows on paper. One that holds an image is refused as `image`, by the rule the redraw already has.
+- A barcode is print computed from what was entered, which the redraw cannot draw, and a password field as a text field would show and store what the form hides. Neither is in a published form measured here, so the refusal costs no form. One the form does not show refuses the page too: the check does not ask whether the control is visible.
+- The line guarded for a signature now gives every control with no HTML a box, of class `xfaSignature`, `xfaBarcode`, `xfaPasswordEdit` or `xfaImageEdit`. `harvestWidgets` refuses the page for the second and third, and reads no field for the fourth. The worker differs from the installed one at seven lines, eight sites.
+
+No carried test and no golden changes. `test/assets.test.ts` lists the worker's two lines, `corpus/manifest.json` changes in one row, DAF 707 from 70 fields to 79, and `corpus/manifest.test.ts` holds the new totals, 6,687 fields at 6,590 places.
+
+Measured outside the gate, with the build before and after, on the tree this was written on, where the caps were 20 pages and 200 fields. The 59 forms through `sanitize`: each has the same outcome, 49 forms and 10 refused, DAF 707 gains nine text fields, and no field of the 49 is lost or has another id, kind, page or rect. Every tenth file of each of the Air Force's lists, 143 files: each has the same outcome, and the 93 forms have the same 5,732 fields, none gained, lost or moved. One refusal names another construct: DAF 465 was `unpaintable` for a `glyph` and is now `unpaintable` for the `image` one of its image fields holds.
+
+**Unlock.** A published form with a barcode or a password field: the control then gets a kind, here or in the engine's form schema. A consumer that fills an image field. Acrobat showing another control than text for an empty `<ui/>`.
