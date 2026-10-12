@@ -11,6 +11,7 @@ What a consumer of the package can observe, by release.
 - A dynamic form's rectangle keeps its rounded corners, where the redraw drew them square. One published Air Force form on hand has such a rectangle, DAF 1971 on its page 6.
 - A dynamic form keeps its signature fields: each is a field of kind `signature` at its box, a quill carries it as an unbound `signature` widget, and the caption printed in it is on the page. DD 2875 gains 7 fields and five captions, DAF 988 7 fields and DAF 1288 6 fields and four captions, and no other field of theirs changes. The pdf.js worker the package ships is changed at one more line for it.
 - A dynamic form's field with a `defaultUi`, or with a `<ui>` that names no control, is a text field with its caption printed, or a checkbox or a choice when it has one or two lists of items: DAF 707 gains nine fields. An image field's caption is printed and the field is left out. A form with a barcode or a password field is refused as `unpaintable`, and `construct` can now be `barcode` or `password`. The pdf.js worker the package ships is changed at one more line for it.
+- A dropdown of a dynamic form whose list is bound to data the file does not hold keeps the options its template lists. DAF 1288's two grade boxes are dropdowns of twenty grades, `E-1` to `CW5`, where each had one empty option. Nothing is refused for a script or a data binding: the form is carried as pdf.js lays it out. The pdf.js worker the package ships is changed at a seventh line for it.
 
 ## 0.2.0
 
