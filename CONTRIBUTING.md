@@ -12,7 +12,7 @@ npx playwright install --only-shell chromium
 npm run gate
 ```
 
-The second line downloads the headless Chromium shell. The gate is the build, Prettier, `tsc` and the tests, in node and in headless Chromium. CI runs it on every pull request and allows it ten minutes.
+The second line downloads the headless Chromium shell. The gate is the build, Prettier, `tsc` and the tests, in node and in headless Chromium. CI runs it on every pull request and allows it ten minutes. A daily run holds it to the newest release of `@quillmark/wasm` and opens an issue when the gate is red on it.
 
 ## Changes
 

@@ -1,0 +1,88 @@
+# Holds the gate to the engine's newest release once a day. The pin in
+# package.json moves only in a pull request, and the peer range admits every
+# later release, so this run is where a break in one is learned of first.
+name: Engine
+
+on:
+  schedule:
+    - cron: '23 7 * * *'
+  workflow_dispatch:
+
+concurrency: engine
+
+permissions:
+  contents: read
+  # The issue a red run opens or adds to.
+  issues: write
+
+jobs:
+  engine:
+    if: github.repository == 'tonguetoquill/quillify'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # No cache: this job runs a release nobody has reviewed, and the job that
+      # publishes would restore what it saved.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      # The version is the registry's word, so it is held to the shape of a
+      # version before any later step reads it.
+      - name: Read the newest release and the pin
+        id: engine
+        run: |
+          NEWEST=$(npm view @quillmark/wasm version)
+          PIN=$(node -p "require('./package.json').devDependencies['@quillmark/wasm']")
+          if ! [[ "$NEWEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::the registry's newest @quillmark/wasm is not a version"
+            exit 1
+          fi
+          # The pin, or an older line's patch that took the registry's tag.
+          if [ "$(printf '%s\n' "$PIN" "$NEWEST" | sort -V | tail -n 1)" = "$PIN" ]; then
+            echo "The registry's newest @quillmark/wasm is $NEWEST. The pin is $PIN, which every pull request is gated on." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "NEWEST=$NEWEST" >> "$GITHUB_ENV"
+          echo "PIN=$PIN" >> "$GITHUB_ENV"
+          echo "newer=true" >> "$GITHUB_OUTPUT"
+
+      - if: steps.engine.outputs.newer
+        run: npm ci
+      - if: steps.engine.outputs.newer
+        run: npx playwright install --with-deps --only-shell chromium
+      # .npmrc holds an install to releases seven days old, and this one
+      # command is the exception. It writes neither package.json nor the
+      # lockfile, and ignore-scripts still holds.
+      - if: steps.engine.outputs.newer
+        id: install
+        run: npm install --no-save --min-release-age=0 "@quillmark/wasm@$NEWEST"
+      # A release that hangs the suite fails this step, where the job's own
+      # limit would cancel the run and open no issue.
+      - if: steps.engine.outputs.newer
+        id: gate
+        timeout-minutes: 10
+        run: npm run gate
+      - if: steps.engine.outputs.newer
+        run: echo "The gate passes on @quillmark/wasm $NEWEST. The pin is $PIN." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open an issue, or add to the one that is open
+        if: failure() && (steps.install.outcome == 'failure' || steps.gate.outcome == 'failure')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TITLE: The gate fails on the engine's newest release
+        run: |
+          BODY="The daily run is red on @quillmark/wasm $NEWEST, and the pin is $PIN: $RUN_URL
+
+          Move the pin to $NEWEST in a pull request and fix what is red."
+          OPEN=$(gh issue list --state open --limit 1000 --json number,title \
+            --jq 'map(select(.title == env.TITLE))[0].number // empty')
+          if [ -n "$OPEN" ]; then
+            gh issue comment "$OPEN" --body "$BODY"
+          else
+            gh issue create --title "$TITLE" --label dependencies --body "$BODY"
+          fi
