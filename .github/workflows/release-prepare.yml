@@ -45,12 +45,16 @@ jobs:
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
 
       # Unreleased stays at the top for the next cycle. Its entries do not
-      # move: the version's heading goes in between.
+      # move: the version's heading goes in between. The release before it
+      # goes: its notes are on the releases page.
       - name: Head the changelog's entries
         run: |
-          awk -v hdr="## v$VERSION - $(date +%Y-%m-%d)" \
-            '!done && $0 == "## Unreleased" { print; print ""; print hdr; done=1; next } { print }' \
-            CHANGELOG.md > CHANGELOG.new
+          awk -v hdr="## v$VERSION - $(date +%Y-%m-%d)" '
+            done && /^## v/ { exit }
+            /^$/ { blank++; next }
+            { for (; blank > 0; blank--) print ""; print }
+            !done && $0 == "## Unreleased" { print ""; print hdr; done = 1 }
+          ' CHANGELOG.md > CHANGELOG.new
           mv CHANGELOG.new CHANGELOG.md
 
       - name: Push the branch and open the pull request
