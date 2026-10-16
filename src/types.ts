@@ -82,7 +82,7 @@ export interface QualifiedForm {
 
 export const SNAKE_CASE = /^[a-z][a-z0-9_]*$/;
 
-/** A quill as files, the shape `Quill.fromTree` and a quiver both take. */
+/** A quill as files, the shape `Quill.fromTree` takes. */
 export type QuillTree = Map<string, Uint8Array>;
 
 /** The largest file `sanitize` opens. It bounds the compressed input. */

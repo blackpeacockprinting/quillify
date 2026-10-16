@@ -46,6 +46,7 @@ The second line downloads the headless Chromium shell. The gate is the build, Pr
 
 ## Releases
 
+- A release starts with the **Prepare release** workflow, dispatched with a bump: `patch`, `minor` or `major`. It opens the release's pull request, which merges before any other.
 - A pull request from `release/vX.Y.Z` sets the version and heads the changelog's `## Unreleased` entries. The release before leaves the changelog: its notes are on the releases page.
 - Merging it runs `release.yml`: the gate, the tag, `npm publish` with provenance.
 - Before 1.0 a minor release may break a consumer's code, and the changelog says how to move. A patch release does not, and adds no refusal code.
