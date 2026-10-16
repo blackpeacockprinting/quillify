@@ -337,7 +337,8 @@ function svgOnly(tag: string): boolean {
  * One run per visual line, with the box the browser measured it into. Splitting
  * where the rect top changes is what keeps a wrapped paragraph's second line at
  * its own baseline. A tab ends a run too and is in none: the text after it
- * starts a run at the box the layout moved it to.
+ * starts a run at the box the layout moved it to. A soft hyphen the layout
+ * breaks a line at is a hyphen in the run it ends, which is measured with it.
  */
 function collectText(
 	node: Node,
@@ -346,9 +347,9 @@ function collectText(
 	drawn: Drawn[],
 	turns: Map<Element, number>
 ): void {
-	const text = node.nodeValue;
+	let text = node.nodeValue ?? '';
 	const parent = node.parentElement;
-	if (!text || !text.trim() || !parent) return;
+	if (!text.trim() || !parent) return;
 	// A <select> is de-chromed above; only the option the form shows is drawn.
 	if (parent.tagName === 'OPTION' && !(parent as HTMLOptionElement).selected) return;
 	const owner = node.ownerDocument!;
@@ -415,9 +416,14 @@ function collectText(
 		}
 		range.setStart(node, i);
 		range.setEnd(node, i + 1);
-		const rect = range.getClientRects()[0];
+		// At a break the soft hyphen has an empty rect and then the box of the
+		// hyphen shown, and the letter after it has that box and then its own.
+		const rects = range.getClientRects();
+		const rect = rects[rects.length - 1];
 		if (!rect) continue;
 		const glyph = upright(rect);
+		if (text[i] === '\u00ad' && glyph.right > glyph.x)
+			text = `${text.slice(0, i)}-${text.slice(i + 1)}`;
 		if (top === null || Math.abs(glyph.top - top) < 0.6) {
 			top ??= glyph.top;
 			box = box
