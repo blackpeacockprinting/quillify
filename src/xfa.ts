@@ -230,7 +230,8 @@ async function drawRun(
 	// The standard-14 text fonts encode WinAnsi alone. U+2010 and U+2011 are
 	// drawn as its hyphen, and any other character outside it in the first of
 	// SYMBOLS that holds it. A soft hyphen is left out: WinAnsi has it as a
-	// hyphen, and the browser lays it out at no width and shows nothing.
+	// hyphen, and the browser lays it out at no width and shows nothing. The
+	// one it breaks a line at is a hyphen in the run already.
 	// Dropping the run would lose a line of the form without anything
 	// reporting it.
 	// pdf-lib kerns the width it measures and writes no kerning, so the width

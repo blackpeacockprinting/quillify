@@ -4,6 +4,8 @@ What a consumer can observe, in the latest release and since. Earlier releases a
 
 ## Unreleased
 
+- A line a dynamic form breaks at a soft hyphen is redrawn with the hyphen the layout shows at its end, and the next line starts with its own first letter.
+
 ## v0.3.1 - 2026-10-12
 
 Harder bounds on a hostile file, and more of a dynamic form's page redrawn.
