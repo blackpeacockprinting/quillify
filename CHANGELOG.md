@@ -5,6 +5,7 @@ What a consumer can observe, in the latest release and since. Earlier releases a
 ## Unreleased
 
 - A radio group's options are plain checkboxes, with no frame, in the naming's order. Engine 0.125 warned `quill::deprecated_groups` on the `ui.group` and `ui.groups` keys that framed them, and settled the options after every other field.
+- A line a dynamic form breaks at a soft hyphen is redrawn with the hyphen the layout shows at its end, and the next line starts with its own first letter.
 
 ## v0.3.1 - 2026-10-12
 
