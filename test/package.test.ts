@@ -66,7 +66,7 @@ it('is published as @quillmark/quillify, to anyone, under the Apache License 2.0
 	expect(read('LICENSE')).toContain(
 		'Apache License\n                           Version 2.0, January 2004'
 	);
-	expect(read('NOTICE').startsWith('quillify\nCopyright 2026 Nibs\n')).toBe(true);
+	expect(read('NOTICE').startsWith('quillify\nCopyright 2026 Enrique Oti\n')).toBe(true);
 });
 
 it('declares the packages the build imports as its dependencies, and no other', () => {
