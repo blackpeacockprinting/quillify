@@ -71,8 +71,6 @@ export interface QualifiedField {
 	keep: boolean;
 	/** `/Ff` bit 2: the form says this one has to be filled. */
 	required: boolean;
-	/** The radio group this option belongs to, when it is one. */
-	group?: string;
 }
 
 export interface QualifiedForm {

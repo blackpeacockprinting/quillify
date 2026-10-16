@@ -209,23 +209,6 @@ describe('assembleQuill', () => {
 		expect(obliged).not.toContain('default:');
 	});
 
-	it('groups a radio option with the rest of its group', () => {
-		const yaml = quillYaml(FORM, [{ ...FORM.fields[0], group: 'risk_level' }]);
-		expect(yaml).toContain('ui:');
-		expect(yaml).toContain('group: "risk_level"');
-	});
-
-	it('registers each group once, under a snake_case id', () => {
-		const yaml = quillYaml(FORM, [
-			{ ...FORM.fields[0], name: 'low', group: 'Risk Level.1' },
-			{ ...FORM.fields[0], name: 'high', group: 'Risk Level.1' },
-			{ ...FORM.fields[0], name: 'first', group: '2nd Reviewer' }
-		]);
-		expect(yaml).toContain('  ui:\n    groups: ["risk_level_1", "group_2nd_reviewer"]\n');
-		expect(yaml.match(/group: "risk_level_1"/g)).toHaveLength(2);
-		expect(yaml).toContain('group: "group_2nd_reviewer"');
-	});
-
 	it('writes no example.md when no kept field carries a sample', () => {
 		const form = { ...FORM, fields: FORM.fields.map((f) => ({ ...f, example: undefined })) };
 		const tree = assembleQuill(form, INVENTORY, new Uint8Array());

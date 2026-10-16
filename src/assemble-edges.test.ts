@@ -1,7 +1,7 @@
 /**
- * What `assembleQuill` writes where the carried test does not look: a group's
- * id, a signature's tooltip, an example on a field that shows none, and the
- * end of `form.json`.
+ * What `assembleQuill` writes where the carried test does not look: a
+ * signature's tooltip, an example on a field that shows none, and the end of
+ * `form.json`.
  */
 
 import { expect, it } from 'vitest';
@@ -26,13 +26,6 @@ const placed = (id: string, kind: 'Tx' | 'Btn' | 'Sig', tooltip?: string) => ({
 });
 const text = (tree: Map<string, Uint8Array>, name: string) =>
 	new TextDecoder().decode(tree.get(name));
-
-it('makes one underscore of each run a group id cannot hold, and none at either end', () => {
-	const yaml = quillYaml({ quill: QUILL, fields: [] }, [
-		{ ...FIELD, group: ' Type -- of Request! ' }
-	]);
-	expect(yaml).toContain('groups: ["type_of_request"]');
-});
 
 it('gives a signature its tooltip, and ends form.json with a line feed', () => {
 	const tree = assembleQuill(
