@@ -65,8 +65,7 @@ export async function quillify(form: Form, naming: Naming): Promise<Quillified> 
 					...typed(field, entry.text),
 					...(example === undefined ? {} : { example }),
 					keep: entry.keep && !field.readOnly,
-					required: field.required,
-					...(field.kind === 'radio' ? { group: field.group } : {})
+					required: field.required
 				};
 			})
 		},

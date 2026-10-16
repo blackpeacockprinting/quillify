@@ -22,15 +22,6 @@ const q = (s: string) =>
 		(c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`
 	);
 
-/** A group id is snake_case; a radio group's PDF name is whatever its author typed. */
-function groupId(name: string): string {
-	const id = name
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, '_')
-		.replace(/^_+|_+$/g, '');
-	return /^[a-z]/.test(id) ? id : `group_${id}`;
-}
-
 /**
  * A `default:` says nobody need answer the field. A required field declares
  * none, a boolean apart: it defaults to false either way.
@@ -38,7 +29,6 @@ function groupId(name: string): string {
 function fieldYaml(field: Named): string[] {
 	const lines = [`    ${q(field.name)}:`];
 	const ui: string[] = [];
-	if (field.group) ui.push(`        group: ${q(groupId(field.group))}`);
 	switch (field.type) {
 		case 'string':
 			lines.push('      type: string');
@@ -85,8 +75,6 @@ export function quillYaml(form: Qualified, fields: Named[]): string {
 		'  body:',
 		'    enabled: false'
 	];
-	const groups = [...new Set(fields.flatMap((f) => (f.group ? [groupId(f.group)] : [])))];
-	if (groups.length > 0) lines.push('  ui:', `    groups: [${groups.map(q).join(', ')}]`);
 	if (fields.length > 0) {
 		lines.push('  fields:');
 		for (const field of fields) for (const line of fieldYaml(field)) lines.push(line);
