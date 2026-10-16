@@ -201,6 +201,30 @@ it('draws no hyphen and leaves no room for a soft hyphen inside a line', async (
 	const [word, mark] = pieces;
 	expect(Math.abs(word.x - (await laidOut(bytes, 'c')).left)).toBeLessThan(0.05);
 	expect(Math.abs(mark.x - (await laidOut(bytes, '\u25b2')).left)).toBeLessThan(0.05);
+	// Turned, the soft hyphen's box is as wide as the line is tall.
+	const turned = await redrawn(await printed('co\u00adoperate', 90));
+	expect(turned.pieces.map(({ text }) => text)).toEqual(['cooperate']);
+}, 120_000);
+
+// The draw is 60 pt wide, and its layout breaks the word at the first soft
+// hyphen. The second is inside the lower line.
+it('draws a hyphen at the end of a line broken at a soft hyphen, and each letter on its line', async () => {
+	const bytes = await dynamicForm(
+		'<draw x="100pt" y="300pt" w="60pt" h="60pt"><value><text>aa coopera\u00adtional b\u00adb</text></value></draw>'
+	);
+	const hyphen = await laidOut(bytes, '\u00ad');
+	expect(hyphen.width).toBeGreaterThan(0);
+	const { fonts, pieces } = await redrawn(bytes);
+	expect(pieces.map(({ text }) => text)).toEqual(['aa coopera-', 'tional bb']);
+	expect(fonts).toEqual(['/Times-Roman']);
+	const [upper, lower] = pieces;
+	expect(lower.y).toBeLessThan(upper.y);
+	expect(Math.abs(lower.x - upper.x)).toBeLessThan(0.05);
+	// The upper piece ends right of the letter before the hyphen, which ends
+	// where the layout's hyphen starts, and where that hyphen ends: to 1.1 pt,
+	// since the piece has the advances of the face it is drawn in.
+	expect(upper.x + upper.width).toBeGreaterThan(hyphen.left + hyphen.width / 2);
+	expect(Math.abs(upper.x + upper.width - hyphen.left - hyphen.width)).toBeLessThan(1.1);
 }, 120_000);
 
 it('refuses a dynamic form by the page and the run that hold a character no standard font can encode', async () => {
