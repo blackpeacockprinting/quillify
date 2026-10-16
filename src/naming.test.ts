@@ -90,6 +90,12 @@ describe('check', () => {
 				(example) => naming({ ...entry, example } as never)
 			],
 			[
+				'fields[0].title',
+				'a string',
+				each(null, true, 7, ['a']),
+				(title) => naming({ ...entry, title } as never)
+			],
+			[
 				'fields[0].text',
 				"'line', 'paragraph' or 'lines'",
 				each(null, true, 7, 'banana'),

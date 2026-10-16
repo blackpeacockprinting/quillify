@@ -209,6 +209,17 @@ describe('assembleQuill', () => {
 		expect(obliged).not.toContain('default:');
 	});
 
+	it("writes a field's title first where it has one, and none where it has not", () => {
+		const yaml = quillYaml(FORM, [
+			{ ...FORM.fields[0], title: 'DAFSC/Duty Title' },
+			{ ...FORM.fields[0], name: 'untitled' }
+		]);
+		expect(yaml).toContain(
+			'    "full_name":\n      title: "DAFSC/Duty Title"\n      type: string\n'
+		);
+		expect(yaml.match(/title:/g)).toHaveLength(1);
+	});
+
 	it('writes no example.md when no kept field carries a sample', () => {
 		const form = { ...FORM, fields: FORM.fields.map((f) => ({ ...f, example: undefined })) };
 		const tree = assembleQuill(form, INVENTORY, new Uint8Array());

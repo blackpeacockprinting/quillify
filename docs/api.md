@@ -46,7 +46,7 @@ A `Form` is `{ pdf, pages, fields }`: the background PDF, each page's size in po
 
 ## suggest
 
-Returns an entry for each field, named from the form's own tooltips: `{ id, keep, name, description }`. A caller may add an `example` and, on a text field, `text` (`line`, `paragraph` or `lines`). Names are snake_case.
+Returns an entry for each field, named from the form's own tooltips: `{ id, keep, name, description }`. A caller may add a `title`, the label an editor shows for the field, an `example` and, on a text field, `text` (`line`, `paragraph` or `lines`). Names are snake_case.
 
 A naming is `{ name, description, fields }`, and those entries are its `fields`. A read-only field is left out whatever `keep` says.
 

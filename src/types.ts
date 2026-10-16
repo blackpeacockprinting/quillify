@@ -63,6 +63,7 @@ export interface QualifiedField {
 	/** snake_case schema field name */
 	name: string;
 	label: string;
+	title?: string;
 	description: string;
 	type: FieldType;
 	multiline: boolean;
