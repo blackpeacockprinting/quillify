@@ -97,7 +97,7 @@ describe('a form built by hand', () => {
 	// Not the order of the fields above.
 	const naming: FieldNaming[] = [
 		named('signed'),
-		named('last4', { example: ' 123456789 ' }),
+		named('last4', { example: ' 123456789 ', title: 'SSN (last 4)' }),
 		// Two characters outside the Basic Multilingual Plane: four UTF-16 units.
 		named('initial', { example: '\u{1D4D0}\u{1D4D1}' }),
 		named('grade', { example: 'O-1' }),
@@ -136,6 +136,7 @@ describe('a form built by hand', () => {
 				'    enabled: false',
 				'  fields:',
 				'    "last4":',
+				'      title: "SSN (last 4)"',
 				'      type: string',
 				'      default: ""',
 				'      description: ""',
