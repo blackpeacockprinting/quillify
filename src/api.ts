@@ -37,6 +37,7 @@ export interface FieldNaming {
 	/** A read-only field is left out whatever this says. */
 	keep: boolean;
 	name: string;
+	title?: string;
 	description: string;
 	example?: string;
 	text?: 'line' | 'paragraph' | 'lines';

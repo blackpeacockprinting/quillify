@@ -61,6 +61,7 @@ export async function quillify(form: Form, naming: Naming): Promise<Quillified> 
 				return {
 					widget: entry.id,
 					name: entry.name,
+					...(entry.title === undefined ? {} : { title: entry.title }),
 					description: entry.description,
 					...typed(field, entry.text),
 					...(example === undefined ? {} : { example }),

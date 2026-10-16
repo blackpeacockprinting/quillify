@@ -1,6 +1,6 @@
 import type { InventoryWidget, QualifiedField, QualifiedForm, QuillTree } from './types.js';
 
-/** What the assembly reads of a field, of the form and of a widget. Its tests hand it a title, which it does not read. */
+/** What the assembly reads of a field, of the form and of a widget. Its tests hand it a quill title, which it does not read. */
 type Named = Omit<QualifiedField, 'label'>;
 type Qualified = {
 	quill: Pick<QualifiedForm['quill'], 'name' | 'description'> & { title?: string };
@@ -28,6 +28,7 @@ const q = (s: string) =>
  */
 function fieldYaml(field: Named): string[] {
 	const lines = [`    ${q(field.name)}:`];
+	if (field.title !== undefined) lines.push(`      title: ${q(field.title)}`);
 	const ui: string[] = [];
 	switch (field.type) {
 		case 'string':

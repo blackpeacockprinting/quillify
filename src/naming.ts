@@ -78,6 +78,8 @@ function shaped({ name, description, fields }: Naming): void {
 		if (typeof entry.keep !== 'boolean') not(`${slot}.keep`, 'a boolean');
 		if (typeof entry.name !== 'string') not(`${slot}.name`, 'a string');
 		if (typeof entry.description !== 'string') not(`${slot}.description`, 'a string');
+		if (entry.title !== undefined && typeof entry.title !== 'string')
+			not(`${slot}.title`, 'a string');
 		if (entry.example !== undefined && typeof entry.example !== 'string')
 			not(`${slot}.example`, 'a string');
 		if (entry.text !== undefined && !TEXT.has(entry.text))
