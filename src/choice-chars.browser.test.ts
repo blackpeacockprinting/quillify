@@ -3,7 +3,7 @@
  * `quill::format_literal_reserved_char`. Measured over every code point of the
  * Basic Multilingual Plane in the middle of a value, and over printable ASCII
  * at the start, in the middle and at the end, no other character is refused for
- * that reason. A choice with such an option is written as a string field, so
+ * that reason. A choice with such an option is written as a text field, so
  * the form still builds.
  *
  * The first test is a tripwire: the day the engine takes these characters in an
@@ -32,7 +32,7 @@ async function dropdownForm(rows: Record<string, string[]>): Promise<Uint8Array>
 }
 
 describe.each([';', '>', '|'])('an enum value with %s', (character) => {
-	it('is refused by the engine, which is why a choice with one is written as a string', async () => {
+	it('is refused by the engine, which is why a choice with one is written as a text field', async () => {
 		const blank = await PDFDocument.create();
 		blank.addPage([612, 792]);
 		const background = await blank.save();
@@ -57,7 +57,7 @@ describe.each([';', '>', '|'])('an enum value with %s', (character) => {
 			['Quill.yaml', encoder.encode(yaml + '\n')],
 			['form.pdf', background],
 			[
-				'form.json',
+				'form.yaml',
 				encoder.encode(JSON.stringify({ schema: 'quillmark/form@0.2.0', fields: [], widgets: [] }))
 			]
 		]);
@@ -73,7 +73,7 @@ describe.each([';', '>', '|'])('an enum value with %s', (character) => {
 	});
 });
 
-it('builds a dropdown with a row the engine refuses as a string, and renders a value typed into it', async () => {
+it('builds a dropdown with a row the engine refuses as a text field, and renders a value typed into it', async () => {
 	const rows = {
 		Duration: ['Training >20 weeks', 'Other'],
 		Plan: ['Plan; act', 'Other'],
@@ -93,7 +93,7 @@ it('builds a dropdown with a row the engine refuses as a string, and renders a v
 	const [duration, plan, side, marks] = naming.fields;
 	const refused = { Duration: duration, Plan: plan, Side: side };
 	const { fields } = quill.schema.main;
-	for (const field of Object.values(refused)) expect(fields[field.name].type).toBe('string');
+	for (const field of Object.values(refused)) expect(fields[field.name].type).toBe('text');
 	expect(fields[marks.name].type).toBe('enum');
 	expect(fields[marks.name].values).toEqual(rows.Marks);
 

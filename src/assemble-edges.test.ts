@@ -1,7 +1,7 @@
 /**
  * What `assembleQuill` writes where the carried test does not look: a
  * signature's tooltip, an example on a field that shows none, and the end of
- * `form.json`.
+ * `form.yaml`.
  */
 
 import { expect, it } from 'vitest';
@@ -27,16 +27,16 @@ const placed = (id: string, kind: 'Tx' | 'Btn' | 'Sig', tooltip?: string) => ({
 const text = (tree: Map<string, Uint8Array>, name: string) =>
 	new TextDecoder().decode(tree.get(name));
 
-it('gives a signature its tooltip, and ends form.json with a line feed', () => {
+it('gives a signature its tooltip, and ends form.yaml with a line feed', () => {
 	const tree = assembleQuill(
 		{ quill: QUILL, fields: [{ ...FIELD, widget: 'sig', name: 'sig' }] },
 		{ widgets: [placed('sig', 'Sig', 'Sign here')] },
 		new Uint8Array()
 	);
-	expect(JSON.parse(text(tree, 'form.json')).widgets).toEqual([
+	expect(JSON.parse(text(tree, 'form.yaml')).widgets).toEqual([
 		{ name: 'sig', type: 'signature', page: 0, rect: RECT, tooltip: 'Sign here' }
 	]);
-	expect(text(tree, 'form.json').endsWith('}\n')).toBe(true);
+	expect(text(tree, 'form.yaml').endsWith('}\n')).toBe(true);
 });
 
 it('writes no example for a boolean, and none for a signature', () => {
@@ -66,14 +66,14 @@ it('writes no fields key for a form with no field', () => {
 
 it('marks a text box that takes lines', () => {
 	const yaml = quillYaml({ quill: QUILL, fields: [] }, [{ ...FIELD, multiline: true }]);
-	expect(yaml).toContain('      default: ""\n      ui:\n        multiline: true\n');
+	expect(yaml).toContain('      default: ""\n      multiline: true\n');
 });
 
 it('makes a dropdown a text box when any one value holds what the engine refuses', () => {
 	const yaml = quillYaml({ quill: QUILL, fields: [] }, [
 		{ ...FIELD, type: 'enum', options: ['', 'a;b', 'c'] }
 	]);
-	expect(yaml).toContain('      type: string\n      default: ""\n      description');
+	expect(yaml).toContain('      type: text\n      default: ""\n      description');
 });
 
 it('gives a dropdown and a list a default unless they are required', () => {
@@ -92,7 +92,7 @@ it('names the second place of a field after the first, with its tooltip, two spa
 		{ widgets: [{ id: 'a', kind: 'Tx', tooltip: 'Name', places }] },
 		new Uint8Array()
 	);
-	expect(JSON.parse(text(tree, 'form.json')).fields).toEqual(
+	expect(JSON.parse(text(tree, 'form.yaml')).fields).toEqual(
 		[0, 1].map((page) => ({
 			name: page ? 'a#2' : 'a',
 			schema_field: 'a',
@@ -101,5 +101,5 @@ it('names the second place of a field after the first, with its tooltip, two spa
 			tooltip: 'Name'
 		}))
 	);
-	expect(text(tree, 'form.json')).toContain('{\n  "schema": "quillmark/form@0.2.0",\n');
+	expect(text(tree, 'form.yaml')).toContain('{\n  "schema": "quillmark/form@0.2.0",\n');
 });

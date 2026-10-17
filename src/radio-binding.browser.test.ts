@@ -4,7 +4,7 @@
  * `form@0.2.0` carries no per-widget on-state, so the stamper writes the chosen
  * value into every widget of the group. Twelve boxes, all reading `option_3`.
  *
- * The day `form.json` carries an on-value for a widget this test fails, and
+ * The day `form.yaml` carries an on-value for a widget this test fails, and
  * that is the signal to change how `assemble.ts` writes a group.
  */
 
@@ -57,7 +57,7 @@ describe('radio group binding', () => {
 		const tree = new Map<string, Uint8Array>([
 			['Quill.yaml', encoder.encode(yaml + '\n')],
 			['form.pdf', background],
-			['form.json', encoder.encode(JSON.stringify(form, null, 2))]
+			['form.yaml', encoder.encode(JSON.stringify(form, null, 2))]
 		]);
 
 		const { ref, quill } = await fromTree(tree);

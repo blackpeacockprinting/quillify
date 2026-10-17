@@ -125,7 +125,7 @@ describe('assembled acroform quill', () => {
 
 		const example = quill.exampleDocument()!;
 		const markdown = example.toMarkdown();
-		expect(markdown).toContain('$quill: probe_form@0.1.0');
+		expect(markdown).toContain('$quill: probe_form@0.1\n');
 		expect(markdown).toContain('full_name: MMMMMMMMMMMMMMMMMMMM');
 
 		const session = await open(quill, example);
@@ -176,7 +176,7 @@ describe('assembled acroform quill', () => {
 		expect(yaml).toContain(
 			'    "grade":\n      type: enum\n      values:\n        - "O-1"\n        - "O-2"\n'
 		);
-		expect(yaml).toContain('    "unit":\n      type: string\n');
+		expect(yaml).toContain('    "unit":\n      type: text\n');
 		expect(quill.backendId).toBe('acroform');
 	}, 60_000);
 });

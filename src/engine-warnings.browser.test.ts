@@ -23,7 +23,7 @@ for (const [path, url] of Object.entries(fixtures)) {
 
 		const { quill } = await fromTree(quillified.tree);
 		expect(quill.warnings).toEqual([]);
-		// A signature is a widget of form.json, not a field of the schema.
+		// A signature is a widget of form.yaml, not a field of the schema.
 		const byId = new Map(sanitized.form.fields.map((field) => [field.id, field]));
 		const filled = naming.filter(
 			({ id, keep }) => keep && !byId.get(id)!.readOnly && byId.get(id)!.kind !== 'signature'
