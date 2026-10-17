@@ -4,6 +4,8 @@ What a consumer can observe, in the latest release and since. Earlier releases a
 
 ## Unreleased
 
+- A quill is written for engine 0.126 and loads on no earlier engine, and its tree holds `form.yaml` where it held `form.json`. To move, take `@quillmark/wasm` 0.126 with quillify 0.5.
+
 ## v0.4.0 - 2026-10-16
 
 - A naming may give a field a `title`, the label an editor shows in place of its name. `suggest` gives none, since its description is already the field's tooltip.
