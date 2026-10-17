@@ -20,7 +20,15 @@ import {
 	rgb
 } from 'pdf-lib';
 import type { PDFAcroField, PDFRef } from 'pdf-lib';
-import { displayList, type DisplayList, type Edge, type Run } from './display-list.js';
+import {
+	displayList,
+	type Box,
+	type Colour,
+	type DisplayList,
+	type Drawn,
+	type Edge,
+	type Run
+} from './display-list.js';
 import { openPdf } from './pdfjs.js';
 import { Refused } from './refusal.js';
 import { MAX_PAGES, MAX_PICTURE_PIXELS } from './types.js';
@@ -75,8 +83,10 @@ export async function xfaToAcroForm(bytes: Uint8Array, signal?: AbortSignal): Pr
 					construct: 'image',
 					detail: 'pixels'
 				});
-			for (const widget of harvestWidgets(laid, number)) widgets.push(widget);
-			await paint(out.addPage([list.width, list.height]), number, list, async (name) => {
+			const harvested = harvestWidgets(laid, number);
+			for (const widget of harvested) widgets.push(widget);
+			const shown = whiten(list, harvested);
+			await paint(out.addPage([list.width, list.height]), number, shown, async (name) => {
 				let font = fonts.get(name);
 				if (!font) fonts.set(name, (font = await out.embedFont(name)));
 				return font;
@@ -89,6 +99,34 @@ export async function xfaToAcroForm(bytes: Uint8Array, signal?: AbortSignal): Pr
 		stage.close();
 		await opened?.close();
 	}
+}
+
+/**
+ * The engine fills every field in black, whatever colour the form gives its
+ * text. A field whose middle lies on a fill that black reads on at under 4.5:1,
+ * WCAG's floor for text, gets a white box drawn just over that fill.
+ */
+function whiten(list: DisplayList, widgets: XfaWidget[]): DisplayList {
+	const drawn = [...list.drawn];
+	const filled = (item: Drawn): item is Box & { fill: Colour } =>
+		'edges' in item && item.fill !== null;
+	for (const { x, y, w, h } of widgets) {
+		const [u, v] = [x + w / 2, y + h / 2];
+		const at = drawn.findLastIndex(
+			(item) =>
+				filled(item) && item.x <= u && u <= item.x + item.w && item.y <= v && v <= item.y + item.h
+		);
+		const under = drawn[at];
+		if (at >= 0 && filled(under) && (luminance(under.fill) + 0.05) / 0.05 < 4.5)
+			drawn.splice(at + 1, 0, { x, y, w, h, fill: [1, 1, 1], edges: [null, null, null, null] });
+	}
+	return { ...list, drawn };
+}
+
+/** The relative luminance WCAG gives a colour in sRGB. */
+function luminance(colour: Colour): number {
+	const [r, g, b] = colour.map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+	return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
 /** PDF's origin is bottom-left; every primitive arrives top-left. */
