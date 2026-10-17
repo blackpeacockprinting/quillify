@@ -401,3 +401,21 @@ it('text that a fill lies over in the layout does not show in the redraw', async
 	expect(ink(100), 'text over a fill').toBeGreaterThan(100);
 	expect(ink(20), 'text under a fill').toBe(0);
 }, 120_000);
+
+it('a field on a dark fill is redrawn on white, where the black the engine fills it in can be read', async () => {
+	// AF 716 prints its title band black, and GRADE's value in 192,192,192 on it.
+	const black = rectangle(20, '<edge presence="hidden"/><fill><color value="0,0,0"/></fill>');
+	const grade =
+		'<field name="grade" x="40pt" y="30pt" w="120pt" h="20pt"><ui><textEdit/></ui><font><fill><color value="192,192,192"/></fill></font></field>';
+	const [{ data, width }] = await redrawn(
+		await xfaToAcroForm(await normalizePdf(await dynamicForm(black + grade)))
+	);
+	/** The darkest channel of the pixel at a point. */
+	const at = (x: number, y: number) =>
+		Math.min(
+			...data.slice(4 * (y * SCALE * width + x * SCALE), 4 * (y * SCALE * width + x * SCALE) + 3)
+		);
+
+	expect(at(100, 40), 'under the field').toBeGreaterThan(250);
+	expect(at(30, 40), 'the fill beside it').toBeLessThan(5);
+}, 120_000);
