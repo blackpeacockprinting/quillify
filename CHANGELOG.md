@@ -4,6 +4,8 @@ What a consumer can observe, in the latest release and since. Earlier releases a
 
 ## Unreleased
 
+- A field a dynamic form puts on a dark fill is redrawn on a white box, where the value the engine writes in black can be read.
+
 ## v0.4.0 - 2026-10-16
 
 - A naming may give a field a `title`, the label an editor shows in place of its name. `suggest` gives none, since its description is already the field's tooltip.
