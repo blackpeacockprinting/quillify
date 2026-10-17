@@ -12,15 +12,17 @@ type Placed = Pick<InventoryWidget, 'id' | 'kind' | 'places' | 'tooltip'>;
 export const QUILL_VERSION = '0.1.0';
 
 /**
- * A string as a YAML double-quoted scalar. JSON writes it, from a well formed
- * string, and the characters the engine's reader refuses and JSON leaves raw
- * (U+007F to U+009F, U+FFFE and U+FFFF) are written as `\u` escapes.
+ * JSON as YAML the engine reads: the characters its reader refuses and JSON
+ * leaves raw (U+007F to U+009F, U+FFFE and U+FFFF) are written as `\u` escapes.
  */
-const q = (s: string) =>
-	JSON.stringify(s.toWellFormed()).replace(
+const escaped = (json: string) =>
+	json.replace(
 		/[\u007f-\u009f\ufffe\uffff]/g,
 		(c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`
 	);
+
+/** A string as a YAML double-quoted scalar, which JSON writes from a well formed string. */
+const q = (s: string) => escaped(JSON.stringify(s.toWellFormed()));
 
 /**
  * A `default:` says nobody need answer the field. A required field declares
@@ -29,12 +31,11 @@ const q = (s: string) =>
 function fieldYaml(field: Named): string[] {
 	const lines = [`    ${q(field.name)}:`];
 	if (field.title !== undefined) lines.push(`      title: ${q(field.title)}`);
-	const ui: string[] = [];
 	switch (field.type) {
 		case 'string':
-			lines.push('      type: string');
+			lines.push('      type: text');
 			if (!field.required) lines.push('      default: ""');
-			if (field.multiline) ui.push('        multiline: true');
+			if (field.multiline) lines.push('      multiline: true');
 			break;
 		case 'boolean':
 			lines.push('      type: boolean', '      default: false');
@@ -45,7 +46,7 @@ function fieldYaml(field: Named): string[] {
 			// It refuses ";", ">" and "|" in a value too, so a dropdown with one is a text box.
 			const values = (field.options ?? []).filter((option) => option !== '');
 			if (values.length === 0 || values.some((value) => /[;>|]/.test(value)))
-				lines.push('      type: string');
+				lines.push('      type: text');
 			else {
 				lines.push('      type: enum', '      values:');
 				for (const value of values) lines.push(`        - ${q(value)}`);
@@ -54,12 +55,10 @@ function fieldYaml(field: Named): string[] {
 			break;
 		}
 		case 'array':
-			lines.push('      type: array', '      items:', '        type: string');
+			lines.push('      type: array', '      items:', '        type: text');
 			if (!field.required) lines.push('      default: []');
-			ui.push('        multiline: true');
 			break;
 	}
-	if (ui.length > 0) lines.push('      ui:', ...ui);
 	lines.push(`      description: ${q(field.description)}`);
 	return lines;
 }
@@ -144,7 +143,7 @@ export function assembleQuill(
 	const tree = new Map<string, Uint8Array>([
 		['Quill.yaml', encoder.encode(quillYaml(form, bound))],
 		['form.pdf', formPdf],
-		['form.json', encoder.encode(JSON.stringify(formJson, null, 2) + '\n')]
+		['form.yaml', encoder.encode(escaped(JSON.stringify(formJson, null, 2)) + '\n')]
 	]);
 	const example = exampleMarkdown(form, bound);
 	if (example) tree.set('example.md', encoder.encode(example));

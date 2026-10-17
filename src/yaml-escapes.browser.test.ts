@@ -84,9 +84,11 @@ it.each(CHARACTERS.flatMap((character) => SLOTS.map((slot) => [slot, ...characte
 		const { payloadItems } = example.main;
 		const markdown = example.toMarkdown();
 		example.free();
+		// A one-line text value drops its trailing whitespace, and U+0085 is whitespace.
+		const line = `Sample${here('an example')}`.replace(/\u0085$/, '');
 		expect(payloadItems).toEqual([
 			{ type: 'field', key: pick.name, value: `A${here('an option')}` },
-			{ type: 'field', key: sample.name, value: `Sample${here('an example')}` }
+			{ type: 'field', key: sample.name, value: line }
 		]);
 		expect((await render(quill, markdown)).length).toBeGreaterThan(0);
 	},

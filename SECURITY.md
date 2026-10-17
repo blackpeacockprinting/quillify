@@ -46,7 +46,7 @@ Known limits, and no vulnerability to report.
 - pdf.js can read a file qpdf wrote as another document than qpdf and pdf-lib read. Measured: with a forged trailer that holds `/Encrypt`, a file that is not encrypted is refused as `password` or `encryption`. Not tried, so not ruled out: a forged trailer with no `/Encrypt`, whose objects pdf.js would read in place of the file's own, and whether objects spelled in a stream's data can make pdf.js inflate what the 64 MiB bound never counted (#265).
 - qpdf's memory before a refusal is unbounded.
 - An image counts for the most its dictionary, its JPEG or JPEG 2000 header, or a CCITT image's `/DecodeParms` says. Not read: a JBIG2 stream's own size, which lies behind segments of varying length, and an image inside a content stream, whose end only a content-stream parser finds.
-- The bound counts bytes, not pixels: an image of 22,000 by 22,000 at a bit a pixel counts 60 MB, and the engine at 0.124.0 traps after 8 s painting its page to a canvas (#259).
+- The bound counts bytes, not pixels: an image of 22,000 by 22,000 at a bit a pixel counts 60 MB, and the engine at 0.126.0 takes 10 s to paint its page to a canvas (#259).
 - `qpdf.wasm` is one publisher's prebuilt binary. A 1 kB file traps or hangs it, and a trap ends chrome-headless-shell on Linux (#46).
 - A link with no scheme, or to `mailto:`, is removed (#68).
 - The deadline ends only a wait on a worker: a call can settle after 60 s.

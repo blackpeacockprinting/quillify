@@ -31,9 +31,9 @@ it.each(['DD1610', 'SF1152', 'DAF1288'])(
 		const { form } = sanitized;
 
 		const tree = await built(form, suggest(form.fields));
-		expect([...tree.keys()]).toEqual(expect.arrayContaining(['Quill.yaml', 'form.json']));
+		expect([...tree.keys()]).toEqual(expect.arrayContaining(['Quill.yaml', 'form.yaml']));
 		expect(tree.get('form.pdf')).toBe(form.pdf);
-		const { fields, widgets } = JSON.parse(text(tree, 'form.json'));
+		const { fields, widgets } = JSON.parse(text(tree, 'form.yaml'));
 		const places = form.fields
 			.filter((field) => !field.readOnly)
 			.reduce((count, field) => count + field.places.length, 0);
@@ -137,11 +137,11 @@ describe('a form built by hand', () => {
 				'  fields:',
 				'    "last4":',
 				'      title: "SSN (last 4)"',
-				'      type: string',
+				'      type: text',
 				'      default: ""',
 				'      description: ""',
 				'    "initial":',
-				'      type: string',
+				'      type: text',
 				'      default: ""',
 				'      description: ""',
 				'    "grade":',
@@ -172,34 +172,30 @@ describe('a form built by hand', () => {
 				'      description: ""',
 				// The naming asks for a paragraph of a single-line field.
 				'    "remarks":',
-				'      type: string',
+				'      type: text',
 				'      default: ""',
-				'      ui:',
-				'        multiline: true',
+				'      multiline: true',
 				'      description: ""',
 				// The naming asks for nothing, and the field is multiline itself.
 				'    "narrative":',
-				'      type: string',
+				'      type: text',
 				'      default: ""',
-				'      ui:',
-				'        multiline: true',
+				'      multiline: true',
 				'      description: ""',
 				// The naming asks for a line of a multiline field.
 				'    "heading":',
-				'      type: string',
+				'      type: text',
 				'      default: ""',
 				'      description: ""',
 				// A required field declares no default.
 				'    "assigned_unit":',
-				'      type: string',
+				'      type: text',
 				'      description: "Where the member is assigned."',
 				'    "roster":',
 				'      type: array',
 				'      items:',
-				'        type: string',
+				'        type: text',
 				'      default: []',
-				'      ui:',
-				'        multiline: true',
 				'      description: ""',
 				''
 			].join('\n')
@@ -230,7 +226,7 @@ describe('a form built by hand', () => {
 			page: 0,
 			rect: rect(y)
 		});
-		expect(JSON.parse(text(await built(await form(), naming), 'form.json'))).toEqual({
+		expect(JSON.parse(text(await built(await form(), naming), 'form.yaml'))).toEqual({
 			schema: 'quillmark/form@0.2.0',
 			fields: [
 				bound('last4', 'last4', 310),

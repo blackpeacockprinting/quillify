@@ -81,7 +81,7 @@ describe('the background a built format stamps over', () => {
 				quill: { name: `bg_${probe.name}`, title: 'Probe', description: 'd' },
 				fields
 			};
-			const { ref, quill } = await fromTree(assembleQuill(form, inventory, background));
+			const { quill } = await fromTree(assembleQuill(form, inventory, background));
 			const doc = quill.seedDocument();
 			let markdown = '';
 			let ink = 0;
@@ -97,7 +97,7 @@ describe('the background a built format stamps over', () => {
 			} finally {
 				doc.free();
 			}
-			expect(markdown).toContain(ref);
+			expect(markdown).toContain(`$quill: ${form.quill.name}@0.1\n`);
 			expect(ink, `${probe.name} rendered`).toBeGreaterThan(0.004);
 		}, 180_000);
 	}

@@ -4,6 +4,7 @@ What a consumer can observe, in the latest release and since. Earlier releases a
 
 ## Unreleased
 
+- A quill is written for engine 0.126 and loads on no earlier engine, and its tree holds `form.yaml` where it held `form.json`. To move, take `@quillmark/wasm` 0.126 with quillify 0.5.
 - A field a dynamic form puts on a dark fill is redrawn on a white box, where the value the engine writes in black can be read.
 
 ## v0.4.0 - 2026-10-16
