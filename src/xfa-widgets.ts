@@ -22,6 +22,8 @@ export interface XfaWidget {
 	on?: string;
 	tooltip?: string;
 	options: string[];
+	/** The template's `maxChars`, which pdf.js writes as the control's `maxLength`. */
+	maxLength?: number;
 }
 
 /**
@@ -117,6 +119,11 @@ export function harvestWidgets(page: XfaPage, pageNumber: number): XfaWidget[] {
 		seen.set(base, count);
 
 		const excl = kind === 'radio' ? exclusion(el, layer) : null;
+		// An input or textarea with no limit reports -1.
+		const maxLength =
+			kind === 'text' || kind === 'multiline'
+				? (el as HTMLInputElement | HTMLTextAreaElement).maxLength
+				: 0;
 		widgets.push({
 			name: count === 1 ? base : `${base}#${count}`,
 			kind,
@@ -131,7 +138,8 @@ export function harvestWidgets(page: XfaPage, pageNumber: number): XfaWidget[] {
 			// exclusion group from another.
 			on: excl ? path.slice(path.lastIndexOf('.') + 1) : undefined,
 			tooltip,
-			options
+			options,
+			...(maxLength > 0 ? { maxLength } : {})
 		});
 	}
 	return widgets;

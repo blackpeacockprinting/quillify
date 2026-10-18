@@ -4,6 +4,8 @@ What a consumer can observe, in the latest release and since. Earlier releases a
 
 ## Unreleased
 
+- A text field of a dynamic form keeps the character limit its template sets as `maxChars`, as its `maxLength`, as a static form's `/MaxLen` already did.
+
 ## v0.5.0 - 2026-10-17
 
 - A quill is written for engine 0.126 and loads on no earlier engine, and its tree holds `form.yaml` where it held `form.json`. To move, take `@quillmark/wasm` 0.126 with quillify 0.5.
