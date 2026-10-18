@@ -216,6 +216,29 @@ describe('assembleQuill', () => {
 		expect(yaml.match(/title:/g)).toHaveLength(1);
 	});
 
+	it("writes a text field's limit on each of its places in form.yaml, and none where it sets none", () => {
+		const [fullName, comments] = INVENTORY.widgets;
+		const inventory = {
+			widgets: [
+				{
+					...fullName,
+					places: [...fullName.places, { page: 0, rect: rect(200, 500, 300, 22) }],
+					maxLen: 35
+				},
+				comments
+			]
+		};
+		const form = { ...FORM, fields: FORM.fields.slice(0, 2) };
+		const { fields } = JSON.parse(
+			new TextDecoder().decode(assembleQuill(form, inventory, new Uint8Array()).get('form.yaml'))
+		);
+		expect(fields.map((field: { max_length?: number }) => field.max_length)).toEqual([
+			35,
+			35,
+			undefined
+		]);
+	});
+
 	it('writes no example.md when no kept field carries a sample', () => {
 		const form = { ...FORM, fields: FORM.fields.map((f) => ({ ...f, example: undefined })) };
 		const tree = assembleQuill(form, INVENTORY, new Uint8Array());

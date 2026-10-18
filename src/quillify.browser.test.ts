@@ -65,7 +65,7 @@ describe('a form built by hand', () => {
 	const plain = { required: false, readOnly: false };
 	const line = { ...plain, kind: 'text', multiline: false } as const;
 	const fields: Field[] = [
-		{ ...line, id: 'roster', places: at(100) },
+		{ ...line, id: 'roster', places: at(100), maxLength: 20 },
 		{ ...line, id: 'remarks', places: at(130) },
 		{ ...line, id: 'narrative', places: at(160), multiline: true },
 		{ ...line, id: 'heading', places: at(190), multiline: true },
@@ -219,7 +219,7 @@ describe('a form built by hand', () => {
 		);
 	});
 
-	it('places every kept field once per place, a signature as a widget, and no field that is dropped or read-only', async () => {
+	it("places every kept field once per place, a signature as a widget, no field that is dropped or read-only, and a text field's limit on each of its places", async () => {
 		const bound = (name: string, schema_field: string, y: number) => ({
 			name,
 			schema_field,
@@ -229,8 +229,8 @@ describe('a form built by hand', () => {
 		expect(JSON.parse(text(await built(await form(), naming), 'form.yaml'))).toEqual({
 			schema: 'quillmark/form@0.2.0',
 			fields: [
-				bound('last4', 'last4', 310),
-				bound('initial', 'initial', 340),
+				{ ...bound('last4', 'last4', 310), max_length: 4 },
+				{ ...bound('initial', 'initial', 340), max_length: 1 },
 				bound('grade', 'grade', 250),
 				bound('component', 'component', 280),
 				bound('agree', 'agree', 370),
@@ -241,7 +241,8 @@ describe('a form built by hand', () => {
 				bound('heading', 'heading', 190),
 				{ ...bound('unit', 'assigned_unit', 220), tooltip: 'Unit of assignment' },
 				{ ...bound('unit#2', 'assigned_unit', 520), tooltip: 'Unit of assignment' },
-				bound('roster', 'roster', 100)
+				// A field of lines is held to its limit as a whole, as its one box is.
+				{ ...bound('roster', 'roster', 100), max_length: 20 }
 			],
 			widgets: [{ name: 'signed', type: 'signature', page: 0, rect: rect(550) }]
 		});
