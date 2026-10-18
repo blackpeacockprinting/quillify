@@ -5,6 +5,7 @@ What a consumer can observe, in the latest release and since. Earlier releases a
 ## Unreleased
 
 - A text field of a dynamic form keeps the character limit its template sets as `maxChars`, as its `maxLength`, as a static form's `/MaxLen` already did.
+- A text field's `maxLength` is written to `form.yaml` as `max_length` on each of its bindings, a field of lines carrying it for the whole field. Engine 0.126 ignores it and enforces no limit.
 
 ## v0.5.0 - 2026-10-17
 

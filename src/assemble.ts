@@ -6,7 +6,8 @@ type Qualified = {
 	quill: Pick<QualifiedForm['quill'], 'name' | 'description'> & { title?: string };
 	fields: Named[];
 };
-type Placed = Pick<InventoryWidget, 'id' | 'kind' | 'places' | 'tooltip'>;
+type Placed = Pick<InventoryWidget, 'id' | 'kind' | 'places' | 'tooltip'> &
+	Partial<Pick<InventoryWidget, 'maxLen'>>;
 
 /** Every quill the library builds is a first version. */
 export const QUILL_VERSION = '0.1.0';
@@ -124,7 +125,9 @@ export function assembleQuill(
 				schema_field: f.name,
 				page: place.page,
 				rect: place.rect,
-				...(w.tooltip ? { tooltip: w.tooltip.toWellFormed() } : {})
+				...(w.tooltip ? { tooltip: w.tooltip.toWellFormed() } : {}),
+				// The engine ignores this key and enforces no limit.
+				...(w.kind === 'Tx' && w.maxLen ? { max_length: w.maxLen } : {})
 			}));
 		}),
 		widgets: signatures.flatMap((f) => {

@@ -75,6 +75,8 @@ Builds the quill and resolves to `{ ok: true, tree }` or `{ ok: false, problems 
 
 `tree` maps a file name to its bytes (`Quill.yaml`, `form.yaml`, `form.pdf`, and `example.md` when a kept field has an example or is a dropdown with an option), and `Quill.fromTree` takes it.
 
+A text field with a `maxLength` has it as `max_length` on each of its bindings in `form.yaml`. On a field of `lines` it is the whole field's limit, not each line's. Engine 0.126 ignores the key and fills a value of any length.
+
 ## limits
 
 Frozen. The largest file in bytes (8,388,608), the most pages and the most fields `sanitize` takes. Print a refusal's own `limit`: `too_large` carries 67,108,864 for the decoded bound.

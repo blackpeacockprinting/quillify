@@ -71,11 +71,12 @@ export async function quillify(form: Form, naming: Naming): Promise<Quillified> 
 			})
 		},
 		{
-			widgets: form.fields.map(({ id, kind, places, tooltip }) => ({
-				id,
-				kind: WIDGET[kind],
-				places: [...places],
-				tooltip
+			widgets: form.fields.map((field) => ({
+				id: field.id,
+				kind: WIDGET[field.kind],
+				places: [...field.places],
+				tooltip: field.tooltip,
+				maxLen: field.kind === 'text' ? (field.maxLength ?? 0) : 0
 			}))
 		},
 		form.pdf
