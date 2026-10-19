@@ -13,6 +13,7 @@ it('names these six request APIs nowhere in the source but where a face of the p
 		);
 	expect(found).toEqual([
 		'src/pdfjs.ts: async fetch({ filename }: { filename: string }): Promise<Uint8Array> {',
-		'src/pdfjs.ts: const response = await fetch(FACES[filename]);'
+		'src/pdfjs.ts: const response = await fetch(FACES[filename]);',
+		'src/xfa-layer.ts: const response = await fetch(url);'
 	]);
 });
