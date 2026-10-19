@@ -1,7 +1,7 @@
 quillify
 Copyright 2026 Enrique Oti
 
-quillify redistributes eight files that are other projects' work. Everything
+quillify redistributes twelve files that are other projects' work. Everything
 else it depends on is installed by its consumer and is not in the package.
 
 assets/pdf.worker.js
@@ -33,6 +33,16 @@ assets/LiberationSans-BoldItalic.ttf
   copyright (c) 2010 Google Corporation, Copyright (c) 2012 Red Hat, Inc.,
   under the SIL Open Font License 1.1 (licenses/LiberationSans-LICENSE).
   Liberation is a trademark of Red Hat, Inc.
+
+assets/Carlito-Regular.ttf
+assets/Carlito-Bold.ttf
+assets/Carlito-Italic.ttf
+assets/Carlito-BoldItalic.ttf
+  The four faces of Carlito 1.104, at googlefonts/carlito 3a810ca,
+  unchanged. Copyright 2013 The Carlito Project Authors, with Reserved Font
+  Name "Carlito", under the SIL Open Font License 1.1
+  (licenses/Carlito-LICENSE). Carlito is a trademark of tyPoland Lukasz
+  Dziedzic.
 
 assets/qpdf.worker.js
   dist/qpdf.js of @neslinesli93/qpdf-wasm 0.3.0, unchanged, under a first

@@ -24,6 +24,20 @@ const NO_LINKS = {
 
 const SHELL = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src blob: data:">`;
 
+const CARLITO = {
+	'normal normal': new URL('../assets/Carlito-Regular.ttf', import.meta.url),
+	'bold normal': new URL('../assets/Carlito-Bold.ttf', import.meta.url),
+	'normal italic': new URL('../assets/Carlito-Italic.ttf', import.meta.url),
+	'bold italic': new URL('../assets/Carlito-BoldItalic.ttf', import.meta.url)
+};
+// The faces of the package a family is laid out in where the file embeds none,
+// by weight and style. pdf.js names Calibri `Calibri`, or `Calibri-PdfJS-XFA`
+// where it stands Liberation Sans in for a style of it.
+const BACKED: Record<string, Record<string, URL>> = {
+	Calibri: CARLITO,
+	'Calibri-PdfJS-XFA': CARLITO
+};
+
 /**
  * Somewhere out of sight to lay XFA pages out: a frame, whose document takes no
  * rule from the host page and gives it none. `display: none` is not an option:
@@ -36,14 +50,19 @@ const SHELL = `<meta http-equiv="Content-Security-Policy" content="default-src '
  *
  * The frame runs no script, and its policy lets its document load only an
  * image from `blob:`, which is how pdf.js hands it a form's images, or from
- * `data:`. A face of the form is not the document's to load: pdf.js makes it
- * in the host page's realm, from the file's bytes, a `local()` name or a face
- * the package ships.
+ * `data:`. A face is not the document's to load: pdf.js makes a face of the
+ * form in the host page's realm, from the file's bytes, a `local()` name or a
+ * face the package ships, and the stage makes the package's faces for the
+ * families it backs the same way.
  */
 export class XfaStage {
 	readonly #frame = document.createElement('iframe');
 	/** The frame's document, once the stylesheet `XfaLayer.render` counts on applies in it. */
 	readonly ready: Promise<Document>;
+	#add!: (face: FontFace) => FontFaceSet;
+	/** The family and style of each face of the package the frame holds. */
+	readonly #backed = new Set<string>();
+	readonly #ours = new WeakSet<FontFace>();
 
 	constructor() {
 		const frame = this.#frame;
@@ -97,8 +116,12 @@ export class XfaStage {
 			const add = faces.add.bind(faces);
 			faces.add = (face) => {
 				if (/^".*"$/.test(face.family)) face.family = face.family.slice(1, -1);
-				return add(face);
+				// pdf.js's stand-in for a family the package backs gives way to the package's face.
+				return face.family.endsWith('-PdfJS-XFA') && Object.hasOwn(BACKED, face.family)
+					? faces
+					: add(face);
 			};
+			this.#add = add;
 			return frameDocument;
 		});
 	}
@@ -136,6 +159,7 @@ export class XfaStage {
 			linkService: NO_LINKS as never,
 			intent: 'display'
 		});
+		await this.#back(layer);
 		await frameDocument.fonts.ready;
 		// A picture has a size once it has loaded, and one that fails to has none.
 		await Promise.all(
@@ -159,6 +183,65 @@ export class XfaStage {
 			width: viewport.width,
 			height: viewport.height
 		};
+	}
+
+	/**
+	 * Give the frame the package's face for each backed family and style the
+	 * page's text asks for, unless the file gave pdf.js a face of that family.
+	 * One that does not load ends the layout, as a face pdf.js asks the package
+	 * for does.
+	 */
+	async #back(layer: HTMLElement): Promise<void> {
+		const owner = layer.ownerDocument;
+		// A frame the host page took out has no view, which `lay` reports below.
+		const view = owner.defaultView;
+		if (!view) return;
+		const theirs = new Set(
+			[...owner.fonts].filter((face) => !this.#ours.has(face)).map((face) => face.family)
+		);
+		const asked = new Set<string>();
+		const walker = owner.createTreeWalker(layer, NodeFilter.SHOW_TEXT);
+		for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+			const parent = node.parentElement;
+			// Neither a control's text nor hidden text is drawn.
+			if (!node.nodeValue?.trim() || !parent || parent.closest('select, textarea')) continue;
+			const style = view.getComputedStyle(parent);
+			if (style.visibility === 'hidden') continue;
+			const family = style.fontFamily
+				.split(',')[0]
+				.trim()
+				.replace(/^"(.*)"$/, '$1');
+			if (!Object.hasOwn(BACKED, family) || theirs.has(family)) continue;
+			const weight = parseInt(style.fontWeight, 10) >= 600 ? 'bold' : 'normal';
+			asked.add(`${family}|${weight} ${style.fontStyle === 'normal' ? 'normal' : 'italic'}`);
+		}
+		const missing = [...asked].filter((key) => !this.#backed.has(key));
+		// No load outlives the layout: each settles before the first that failed is thrown.
+		const loads = await Promise.allSettled(
+			missing.map(async (key) => {
+				const [family, style] = key.split('|');
+				const [weight, slant] = style.split(' ');
+				const url = BACKED[family][style];
+				try {
+					const response = await fetch(url);
+					if (response.ok) {
+						const face = new FontFace(family, await response.arrayBuffer(), {
+							weight,
+							style: slant
+						});
+						await face.load();
+						this.#ours.add(face);
+						this.#add(face);
+						this.#backed.add(key);
+						return;
+					}
+				} catch {
+					// Ends the layout below, as a status that is not ok does.
+				}
+				throw new Error(`${url.pathname.split('/').pop()} did not load from ${url}`);
+			})
+		);
+		for (const load of loads) if (load.status === 'rejected') throw load.reason;
 	}
 
 	close(): void {
