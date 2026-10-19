@@ -42,6 +42,22 @@ it.each(['DD1610', 'SF1152', 'DAF1288'])(
 	120_000
 );
 
+// SF 1152's Shares Total sets /MaxLen 3, and DAF 988's template sets maxChars 35 on its Name fields.
+it.each([
+	['SF1152', 3],
+	['DAF988', 35]
+])(
+	'%s writes the limit its form sets on a text field as max: %i',
+	async (name, cap) => {
+		const [, url] = Object.entries(fixtures).find(([path]) => path.includes(`/${name}_`))!;
+		const sanitized = await sanitize(new Uint8Array(await (await fetch(url)).arrayBuffer()));
+		if (!sanitized.ok) throw new Error(`${name} was refused as ${sanitized.refusal.code}`);
+		const tree = await built(sanitized.form, suggest(sanitized.form.fields));
+		expect(text(tree, 'Quill.yaml')).toContain(`      max: ${cap}\n`);
+	},
+	120_000
+);
+
 it('ticks one box alone of those that share a name and differ in on-state', async () => {
 	const sanitized = await sanitize(await sharedNameCheckboxes());
 	if (!sanitized.ok) throw new Error(`refused as ${sanitized.refusal.code}`);
@@ -65,7 +81,7 @@ describe('a form built by hand', () => {
 	const plain = { required: false, readOnly: false };
 	const line = { ...plain, kind: 'text', multiline: false } as const;
 	const fields: Field[] = [
-		{ ...line, id: 'roster', places: at(100) },
+		{ ...line, id: 'roster', places: at(100), maxLength: 20 },
 		{ ...line, id: 'remarks', places: at(130) },
 		{ ...line, id: 'narrative', places: at(160), multiline: true },
 		{ ...line, id: 'heading', places: at(190), multiline: true },
@@ -139,10 +155,12 @@ describe('a form built by hand', () => {
 				'      title: "SSN (last 4)"',
 				'      type: text',
 				'      default: ""',
+				'      max: 4',
 				'      description: ""',
 				'    "initial":',
 				'      type: text',
 				'      default: ""',
+				'      max: 1',
 				'      description: ""',
 				'    "grade":',
 				'      type: enum',
@@ -264,6 +282,27 @@ describe('a form built by hand', () => {
 		expect(markdown).toContain('roster:\n  - A1C Doe');
 		const filled = (await PDFDocument.load(await render(quill, markdown))).getForm();
 		expect(filled.getTextField('roster').getText()).toBe('A1C Doe');
+	}, 60_000);
+
+	it("stamps a text field's limit on its widget in the engine", async () => {
+		const { quill } = await fromTree(await built(await form(), naming));
+		const example = quill.exampleDocument()!;
+		const markdown = example.toMarkdown();
+		example.free();
+		const filled = (await PDFDocument.load(await render(quill, markdown))).getForm();
+		expect(filled.getTextField('last4').getMaxLength()).toBe(4);
+	}, 60_000);
+
+	it('writes no max: for a limit of 0, or of more than the engine reads', async () => {
+		const read = await form();
+		const fields = read.fields.map((field) =>
+			field.id === 'last4'
+				? { ...field, maxLength: 2 ** 32 }
+				: field.id === 'initial'
+					? { ...field, maxLength: 0 }
+					: field
+		);
+		expect(text(await built({ ...read, fields }, naming), 'Quill.yaml')).not.toContain('max:');
 	}, 60_000);
 
 	it("returns what the engine refuses as a problem that carries the engine's code", async () => {

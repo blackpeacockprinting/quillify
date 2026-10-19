@@ -216,6 +216,17 @@ describe('assembleQuill', () => {
 		expect(yaml.match(/title:/g)).toHaveLength(1);
 	});
 
+	it("writes a text field's limit as max, and none where it has none", () => {
+		const yaml = quillYaml(FORM, [
+			{ ...FORM.fields[0], max: 35 },
+			{ ...FORM.fields[0], name: 'open' }
+		]);
+		expect(yaml).toContain(
+			'    "full_name":\n      type: text\n      default: ""\n      max: 35\n'
+		);
+		expect(yaml.match(/max:/g)).toHaveLength(1);
+	});
+
 	it('writes no example.md when no kept field carries a sample', () => {
 		const form = { ...FORM, fields: FORM.fields.map((f) => ({ ...f, example: undefined })) };
 		const tree = assembleQuill(form, INVENTORY, new Uint8Array());
