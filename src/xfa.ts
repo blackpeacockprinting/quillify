@@ -448,6 +448,7 @@ function stamp(doc: PDFDocument, widgets: XfaWidget[]): void {
 		}
 		const field = rooted(PDFAcroText.create(doc.context), widget.name, PDFTextField.of);
 		if (widget.kind === 'multiline') field.enableMultiline();
+		if (widget.maxLength) field.setMaxLength(widget.maxLength);
 		field.addToPage(page, box);
 		tooltip(field, widget.tooltip);
 	}
