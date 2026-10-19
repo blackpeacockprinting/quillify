@@ -4,11 +4,12 @@
 
 Nothing until the first `sanitize`. Then, from `assets/` beside the build:
 
-| File                          | Size    | When           |
-| ----------------------------- | ------- | -------------- |
-| `pdf.worker.js`               | 2.2 MB  | every file     |
-| `qpdf.worker.js`, `qpdf.wasm` | 1.4 MB  | every file     |
-| four `LiberationSans-*.ttf`   | 1.65 MB | a dynamic form |
+| File                          | Size               | When                     |
+| ----------------------------- | ------------------ | ------------------------ |
+| `pdf.worker.js`               | 2.2 MB             | every file               |
+| `qpdf.worker.js`, `qpdf.wasm` | 1.4 MB             | every file               |
+| four `LiberationSans-*.ttf`   | 1.65 MB            | a dynamic form           |
+| a `Carlito-*.ttf` per style   | 0.6 to 0.8 MB each | a dynamic form's Calibri |
 
 A bundler has to follow `new URL('../assets/…', import.meta.url)` to copy them.
 

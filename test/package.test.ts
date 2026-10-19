@@ -30,6 +30,7 @@ it('packs the build, the assets and their notices, and nothing else', () => {
 			'NOTICE',
 			'licenses/pdf.js-LICENSE',
 			'licenses/LiberationSans-LICENSE',
+			'licenses/Carlito-LICENSE',
 			...[
 				'qpdf-LICENSE',
 				'qpdf-NOTICE',
@@ -44,9 +45,10 @@ it('packs the build, the assets and their notices, and nothing else', () => {
 			].map((name) => `licenses/${name}`),
 			'assets/pdf.worker.js',
 			'assets/qpdf.wasm',
-			...['Regular', 'Bold', 'Italic', 'BoldItalic'].map(
-				(style) => `assets/LiberationSans-${style}.ttf`
-			),
+			...['Regular', 'Bold', 'Italic', 'BoldItalic'].flatMap((style) => [
+				`assets/LiberationSans-${style}.ttf`,
+				`assets/Carlito-${style}.ttf`
+			]),
 			'assets/qpdf.worker.js',
 			'assets/xfa-layer.js',
 			'assets/xfa-layer.d.ts',

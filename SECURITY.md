@@ -55,5 +55,5 @@ Known limits, and no vulnerability to report.
 ## Supply chain
 
 - `pdf-lib` and `pdfjs-dist` are pinned exactly. The engine, `@quillmark/wasm`, is a peer.
-- `NOTICE` names the eight redistributed files. The build holds `qpdf.wasm` and the fonts to SHA-256 hashes.
+- `NOTICE` names the redistributed files. The build holds `qpdf.wasm` and the fonts to SHA-256 hashes.
 - Installs run no lifecycle script. CI publishes with provenance, an SBOM and `SHA256SUMS`.
