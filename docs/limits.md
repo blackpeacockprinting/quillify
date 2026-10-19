@@ -19,7 +19,7 @@ It is drawn as pdf.js lays it out, in Helvetica, Times or Courier, and a mark th
 
 - A hairline under half a point, or a rule half a point from a fill, can come out a pixel off its layout.
 - pdf.js's layout is not always Acrobat's ([#120](https://github.com/tonguetoquill/quillify/issues/120)).
-- Calibri is laid out in the shipped Carlito, and Arial, Helvetica, Myriad Pro and faces the form's font list lacks in the shipped Liberation Sans. Another listed and not embedded, or any with no list, uses the machine's ([#197](https://github.com/tonguetoquill/quillify/issues/197)).
+- Calibri is laid out in the shipped Carlito, Times New Roman and Courier New in the shipped Liberation Serif and Mono, and Arial, Helvetica, Myriad Pro and faces the form's font list lacks in the shipped Liberation Sans. Another face listed and not embedded uses the machine's, and the text of a form with no font list the browser's default ([#197](https://github.com/tonguetoquill/quillify/issues/197)).
 - Refused: a field that is turned, off its page, a barcode or a password; a turned picture or line, a caption turned in a cell that flows, and a turn not by quarters; a picture that does not load; a gradient or pattern fill; a dotted border; an SVG shape other than a line, a rectangle or an ellipse; and a character no standard font holds. [#42](https://github.com/tonguetoquill/quillify/issues/42) has the turned field, the border and the shape.
 
 ## Every form

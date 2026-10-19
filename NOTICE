@@ -1,7 +1,7 @@
 quillify
 Copyright 2026 Enrique Oti
 
-quillify redistributes twelve files that are other projects' work. Everything
+quillify redistributes twenty files that are other projects' work. Everything
 else it depends on is installed by its consumer and is not in the package.
 
 assets/pdf.worker.js
@@ -29,10 +29,18 @@ assets/LiberationSans-Regular.ttf
 assets/LiberationSans-Bold.ttf
 assets/LiberationSans-Italic.ttf
 assets/LiberationSans-BoldItalic.ttf
-  The four faces of Liberation Sans 2.1.5, unchanged. Digitized data
-  copyright (c) 2010 Google Corporation, Copyright (c) 2012 Red Hat, Inc.,
-  under the SIL Open Font License 1.1 (licenses/LiberationSans-LICENSE).
-  Liberation is a trademark of Red Hat, Inc.
+assets/LiberationSerif-Regular.ttf
+assets/LiberationSerif-Bold.ttf
+assets/LiberationSerif-Italic.ttf
+assets/LiberationSerif-BoldItalic.ttf
+assets/LiberationMono-Regular.ttf
+assets/LiberationMono-Bold.ttf
+assets/LiberationMono-Italic.ttf
+assets/LiberationMono-BoldItalic.ttf
+  The four faces of each of Liberation Sans, Serif and Mono 2.1.5,
+  unchanged. Digitized data copyright (c) 2010 Google Corporation,
+  Copyright (c) 2012 Red Hat, Inc., under the SIL Open Font License 1.1
+  (licenses/Liberation-LICENSE). Liberation is a trademark of Red Hat, Inc.
 
 assets/Carlito-Regular.ttf
 assets/Carlito-Bold.ttf

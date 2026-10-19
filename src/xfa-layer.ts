@@ -35,7 +35,19 @@ const CARLITO = {
 // where it stands Liberation Sans in for a style of it.
 const BACKED: Record<string, Record<string, URL>> = {
 	Calibri: CARLITO,
-	'Calibri-PdfJS-XFA': CARLITO
+	'Calibri-PdfJS-XFA': CARLITO,
+	'Times New Roman': {
+		'normal normal': new URL('../assets/LiberationSerif-Regular.ttf', import.meta.url),
+		'bold normal': new URL('../assets/LiberationSerif-Bold.ttf', import.meta.url),
+		'normal italic': new URL('../assets/LiberationSerif-Italic.ttf', import.meta.url),
+		'bold italic': new URL('../assets/LiberationSerif-BoldItalic.ttf', import.meta.url)
+	},
+	'Courier New': {
+		'normal normal': new URL('../assets/LiberationMono-Regular.ttf', import.meta.url),
+		'bold normal': new URL('../assets/LiberationMono-Bold.ttf', import.meta.url),
+		'normal italic': new URL('../assets/LiberationMono-Italic.ttf', import.meta.url),
+		'bold italic': new URL('../assets/LiberationMono-BoldItalic.ttf', import.meta.url)
+	}
 };
 
 /**

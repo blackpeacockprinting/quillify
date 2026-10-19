@@ -326,3 +326,54 @@ it.each([
 	},
 	120_000
 );
+
+/** A form with a line in each style of Times New Roman and of Courier New, both listed in its fonts and not embedded. */
+async function serifAndMono(): Promise<Uint8Array> {
+	const slants = ['', 'weight="bold"', 'posture="italic"', 'weight="bold" posture="italic"'];
+	const drawn = ['Times New Roman', 'Courier New'].flatMap((typeface, i) =>
+		slants.map(
+			(slant, j) =>
+				`<draw x="72pt" y="${72 + 28 * (4 * i + j)}pt" w="400pt" h="20pt"><value><text>Laid out in ${typeface}</text></value><font typeface="${typeface}" size="10pt" ${slant}/></draw>`
+		)
+	);
+	const form = await PDFDocument.load(
+		await dynamicFlow(
+			`<subform layout="position" w="612pt" h="792pt">${drawn.join('')}<field name="name" x="72pt" y="320pt" w="200pt" h="20pt"><ui><textEdit/></ui></field></subform>`
+		)
+	);
+	const listed = (family: string, base: string) =>
+		form.context.obj({
+			Type: 'Font',
+			Subtype: 'TrueType',
+			BaseFont: base,
+			FontDescriptor: {
+				Type: 'FontDescriptor',
+				FontName: base,
+				FontFamily: PDFString.of(family),
+				FontWeight: 400,
+				ItalicAngle: 0,
+				Flags: 34
+			}
+		});
+	form.catalog.lookup(PDFName.of('AcroForm'), PDFDict).set(
+		PDFName.of('DR'),
+		form.context.obj({
+			Font: {
+				Serif: listed('Times New Roman', 'TimesNewRomanPSMT'),
+				Mono: listed('Courier New', 'CourierNewPSMT')
+			}
+		})
+	);
+	return form.save();
+}
+
+it("lays a form's Times New Roman and Courier New out in faces the package ships, a face for each style", async () => {
+	const faces = made();
+	await xfaToAcroForm(await normalizePdf(await serifAndMono()));
+	expect(faces.sort()).toEqual(
+		await from([
+			...each('Times New Roman', 'LiberationSerif'),
+			...each('Courier New', 'LiberationMono')
+		])
+	);
+}, 120_000);

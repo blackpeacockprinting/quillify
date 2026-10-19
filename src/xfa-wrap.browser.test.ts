@@ -16,6 +16,7 @@ import {
 } from 'pdf-lib';
 import { afterEach, expect, it, vi } from 'vitest';
 import eprUrl from '../test/fixtures/AF716_Enlisted_Performance_Brief.pdf?url';
+import reserveUrl from '../test/fixtures/DAF1288_Application_for_Ready_Reserve_Assignment.pdf?url';
 import { displayList, type Run } from './display-list.js';
 import { normalizePdf } from './normalize.js';
 import { xfaToAcroForm } from './xfa.js';
@@ -113,4 +114,8 @@ it('lays out no text of AF 716 outside the box that holds it', async () => {
 
 it("breaks AF 716's text into the lines its designer did", async () => {
 	expect(await lines(await published(eprUrl))).toEqual({ designed: 57, broken: [] });
+}, 120_000);
+
+it("breaks DAF 1288's text, in Times New Roman and Arial Narrow, into the lines its designer did", async () => {
+	expect(await lines(await published(reserveUrl))).toEqual({ designed: 53, broken: [] });
 }, 120_000);
