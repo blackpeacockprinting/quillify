@@ -42,11 +42,16 @@ function typed(
 	}
 }
 
-/** A choice shows one of its options even when the naming gives none, so its list is seen in the example. */
+/**
+ * A choice shows one of its options even when the naming gives none, so its
+ * list is seen in the example. A box is ticked by an example of `true` alone.
+ */
 function shown(field: Field, suggested: string | undefined): string | undefined {
 	const value = suggested?.trim() || undefined;
 	if (field.kind === 'choice')
 		return value !== undefined && field.options.includes(value) ? value : field.options[0];
+	if (field.kind === 'checkbox' || field.kind === 'radio')
+		return value === 'true' ? value : undefined;
 	if (field.kind !== 'text') return undefined;
 	return value && field.maxLength ? [...value].slice(0, field.maxLength).join('') : value;
 }

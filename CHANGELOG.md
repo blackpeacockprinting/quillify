@@ -4,6 +4,8 @@ What a consumer can observe, in the latest release and since. Earlier releases a
 
 ## Unreleased
 
+- A naming may tick a checkbox or a radio option in the example: an `example` of `true` reaches `example.md` as a YAML `true`, and the engine's render of the example shows the box ticked. A box with no example, or with any other, stays out of `example.md` as before.
+
 ## v0.7.0 - 2026-10-19
 
 - A dynamic form's Calibri is laid out in Carlito, a face of its widths the package ships, so its labels break where the form's designer broke them on any machine. A form that names Calibri fetches only the styles it uses, and a host that copies `assets/` by hand copies the four `Carlito-*.ttf` too: one that does not load ends the conversion with an error that names it.
