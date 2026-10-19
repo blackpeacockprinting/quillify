@@ -58,6 +58,15 @@
 		"encryption": "none",
 		"sha256": "6f3bc58aaa8adfabc3f55d39df3a59ad36908be1ef5865a3cb90f4370d5b1eee"
 	},
+	"SF182-2020-12_Authorization_Agreement_and_Certification_of_Training.pdf": {
+		"form": "SF 182",
+		"publisher": "opm.gov",
+		"url": "https://www.opm.gov/forms/pdf_fill/sf182.pdf",
+		"verified": "2026-10-19T10:51:48Z",
+		"kind": "plain",
+		"encryption": "none",
+		"sha256": "c47495016b15e1abecb568c066acbc2cdb8e1530784e41124276aca5f5c16e73"
+	},
 	"DD2875_System_Authorization_Access_Request.pdf": {
 		"form": "DD 2875",
 		"publisher": "esd.whs.mil",
