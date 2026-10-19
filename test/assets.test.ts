@@ -83,7 +83,11 @@ it('ships the pdf.js worker as the installed one but for the notice, the guards 
 	const differing = installed.flatMap((line, index) =>
 		line === shipped[index] ? [] : [[line.trim(), shipped[index].trim()]]
 	);
+	const BREAK = 'if (currentLineWidth + glyphWidth > maxWidth) {';
+	const DRAWN_BREAK = 'if (0.99 * (currentLineWidth + glyphWidth) > maxWidth) {';
 	expect(differing, STALE).toEqual([
+		[BREAK, DRAWN_BREAK],
+		[BREAK, DRAWN_BREAK],
 		[UNGUARDED, GUARDED],
 		[UNGUARDED, GUARDED],
 		[
