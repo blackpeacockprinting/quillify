@@ -70,6 +70,28 @@
 		"encryption": "AESv2, R4, empty user password",
 		"sha256": "f72990b29decd6992ef89f76709acdfefe2ea5b3a5749f6899b46ba2e93a6cd9"
 	},
+	"AF716_Enlisted_Performance_Brief.pdf": {
+		"form": "AF 716",
+		"publisher": "static.e-publishing.af.mil",
+		"url": "https://static.e-publishing.af.mil/production/1/af_a1/form/af716/af716.pdf",
+		"verified": "2026-10-10T07:52:14Z",
+		"kind": "dynamic",
+		"encryption": "AESv2, R4, empty user password",
+		"sha256": "c48c1bc0380a78f0412599cf0c1a0d301ffdf2eec311d6e41dc46b4f356bf5e1",
+		"published_sha256": "abaf0574f339f47680387d72cf14487de2355082d4e3842898b8320f80bd5a74",
+		"blanked": "the author's name, blanked in the document info, the XMP and the XFA description"
+	},
+	"DAF1206_Nomination_for_Award.pdf": {
+		"form": "DAF 1206",
+		"publisher": "static.e-publishing.af.mil",
+		"url": "https://static.e-publishing.af.mil/production/1/af_a1/form/daf1206/daf1206.pdf",
+		"verified": "2026-10-10T08:00:32Z",
+		"kind": "dynamic",
+		"encryption": "AESv2, R4, empty user password",
+		"sha256": "84aa35ed390b3a3443c34f718b44378e4b4696c60a5093465132a44883aae14a",
+		"published_sha256": "1d05c2686346c22477070dc0220f12c79bc2b9d58ad21ce5e4f95f59bd7e296c",
+		"blanked": "the author's ID and the contact's name, blanked in the document info, the XMP and the XFA description"
+	},
 	"acroform-sample.pdf": {
 		"form": "synthetic",
 		"generator": "scripts/make-acroform-fixture.js",

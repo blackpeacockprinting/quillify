@@ -34,7 +34,7 @@ The second line downloads the headless Chromium shell. The gate is the build, Pr
 ## Tests and carried code
 
 - A test builds its hostile input from bytes.
-- A fixture is a blank published form, byte for byte. Test values are notional.
+- A fixture is a blank published form, byte for byte but for a name or ID of its author or contact, which is blanked. Test values are notional.
 - Nothing a person entered into a form goes anywhere: no fixture, test, issue or pull request.
 - The first modules came from a private repository, in commits with a `Source:` trailer. A review needs only this repository, and carried code changes in a pull request that says why.
 - A design decision, and any change to a carried test, is explained in the pull request that makes it, and the test commit's message says why the test changes.

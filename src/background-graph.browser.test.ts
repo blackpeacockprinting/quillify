@@ -2,8 +2,9 @@
  * A background is what the strip's table says and nothing else (#25).
  * `test/background.ts` has qpdf write the saved bytes as JSON and walks that
  * from the trailer with a walker of its own, which shares the table with the
- * strip as data and none of its code. For the ten fixtures, for a form of each
- * builder in `test/` and for the files of `HOSTILE`, built here from bytes:
+ * strip as data and none of its code. For the twelve fixtures, for a form of
+ * each builder in `test/` and for the files of `HOSTILE`, built here from
+ * bytes:
  *
  * - every key of every dictionary is in the row of its kind, and every value is
  *   what its key leads to;
@@ -20,7 +21,7 @@
  *   left out, since its keys are the file's own names for its fonts, its
  *   classes and its roles. `/Names` is also the key of an `/IDTree` leaf, and
  *   is held to that one kind.
- * - `test/goldens/background.keys.json`: the keys the ten fixtures hold, by
+ * - `test/goldens/background.keys.json`: the keys the twelve fixtures hold, by
  *   kind. A row that lets a new key through on a fixture is a change to that
  *   file, which a reviewer reads.
  * - no row of the table says `*`.
@@ -161,7 +162,7 @@ for (const [name, plant] of Object.entries(REFUSED))
 		await expect(stripped(plant)).rejects.toMatchObject({ refusal: { code: 'damaged' } });
 	});
 
-it('the ten fixtures hold, kind by kind, the keys the golden records', async () => {
+it('the twelve fixtures hold, kind by kind, the keys the golden records', async () => {
 	const held = new Map<string, Set<string>>();
 	for (const { graph } of ofFixtures)
 		for (const [kind, keys] of (await graph).held)
