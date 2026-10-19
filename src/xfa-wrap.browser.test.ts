@@ -17,10 +17,13 @@ import {
 import { afterEach, expect, it, vi } from 'vitest';
 import eprUrl from '../test/fixtures/AF716_Enlisted_Performance_Brief.pdf?url';
 import reserveUrl from '../test/fixtures/DAF1288_Application_for_Ready_Reserve_Assignment.pdf?url';
+import awardUrl from '../test/fixtures/DAF1206_Nomination_for_Award.pdf?url';
+import saarUrl from '../test/fixtures/DD2875_System_Authorization_Access_Request.pdf?url';
 import { displayList, type Run } from './display-list.js';
 import { normalizePdf } from './normalize.js';
 import { xfaToAcroForm } from './xfa.js';
 import { XfaStage, type XfaPage } from './xfa-layer.js';
+import { harvestWidgets } from './xfa-widgets.js';
 
 afterEach(() => {
 	vi.restoreAllMocks();
@@ -54,20 +57,41 @@ function spilled({ layer }: XfaPage): string[] {
 	return out;
 }
 
-/** A form laid out: what spills on its pages, and their runs. */
+/** The text fields of a page whose box, half a point in, meets the capitals of a printed run. */
+function covering(page: XfaPage, pageNumber: number, runs: Run[]): string[] {
+	return harvestWidgets(page, pageNumber)
+		.filter(
+			(widget) => widget.kind === 'text' || widget.kind === 'multiline' || widget.kind === 'choice'
+		)
+		.filter((widget) =>
+			runs.some(
+				(run) =>
+					run.x < widget.x + widget.w - 0.5 &&
+					run.x + run.width > widget.x + 0.5 &&
+					run.baseline - 0.72 * run.size < widget.y + widget.h - 0.5 &&
+					run.baseline > widget.y + 0.5
+			)
+		)
+		.map((widget) => widget.name);
+}
+
+/** A form laid out: what spills on its pages, their runs, and the text fields under printed text. */
 async function laid(file: Uint8Array) {
 	const spills: string[] = [];
 	const runs: Run[] = [];
+	const covered: string[] = [];
 	const lay = XfaStage.prototype.lay;
 	vi.spyOn(XfaStage.prototype, 'lay').mockImplementation(async function (this: XfaStage, page) {
 		const out = await lay.call(this, page);
+		const shown = displayList(out, page.pageNumber).drawn.filter((item) => 'text' in item);
 		spills.push(...spilled(out));
-		runs.push(...displayList(out, page.pageNumber).drawn.filter((item) => 'text' in item));
+		runs.push(...shown);
+		covered.push(...covering(out, page.pageNumber, shown));
 		return out;
 	});
 	const bytes = await normalizePdf(file);
 	await xfaToAcroForm(bytes);
-	return { spills, runs, bytes };
+	return { spills, runs, covered, bytes };
 }
 
 /** The lines the template's render cache records. */
@@ -119,3 +143,18 @@ it("breaks AF 716's text into the lines its designer did", async () => {
 it("breaks DAF 1288's text, in Times New Roman and Arial Narrow, into the lines its designer did", async () => {
 	expect(await lines(await published(reserveUrl))).toEqual({ designed: 53, broken: [] });
 }, 120_000);
+
+// DAF 988 places fields over its own labels, and lays scaled text out too wide (#291).
+it.each([
+	['AF 716', eprUrl],
+	['DAF 1206', awardUrl],
+	['DAF 1288', reserveUrl],
+	['DD 2875', saarUrl]
+])(
+	'lays no text field of %s under printed text',
+	async (_, url) => {
+		const { covered } = await laid(await published(url));
+		expect(covered).toEqual([]);
+	},
+	120_000
+);
