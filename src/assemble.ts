@@ -36,6 +36,7 @@ function fieldYaml(field: Named): string[] {
 			lines.push('      type: text');
 			if (!field.required) lines.push('      default: ""');
 			if (field.multiline) lines.push('      multiline: true');
+			if (field.max !== undefined) lines.push(`      max: ${field.max}`);
 			break;
 		case 'boolean':
 			lines.push('      type: boolean', '      default: false');
