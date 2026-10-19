@@ -6,6 +6,15 @@
 		"encryption": "AESv2, R4, empty user password",
 		"sha256": "702fe2abb0225d176537840d43ec5ae6417593d52af5177f63e37b8a7137070b"
 	},
+	"DD1610-2026-09_Request_and_Authorization_for_TDY_Travel.pdf": {
+		"form": "DD 1610",
+		"publisher": "esd.whs.mil",
+		"url": "https://www.esd.whs.mil/Portals/54/Documents/DD/forms/dd/dd1610.pdf",
+		"verified": "2026-10-19T10:15:00Z",
+		"kind": "hybrid",
+		"encryption": "AESv2, R4, empty user password",
+		"sha256": "12dcc9dc87fba7955973ef2d0a6f8c6848e15a9fb4fb929b47c539ba4018e33b"
+	},
 	"DD577_Appointment_Termination_Record.pdf": {
 		"form": "DD 577",
 		"publisher": "esd.whs.mil",
