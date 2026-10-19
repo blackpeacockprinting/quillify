@@ -39,20 +39,32 @@ it('gives a signature its tooltip, and ends form.yaml with a line feed', () => {
 	expect(text(tree, 'form.yaml').endsWith('}\n')).toBe(true);
 });
 
-it('writes no example for a boolean, and none for a signature', () => {
+it('writes a ticked boolean as a bare true, no other boolean, and no signature', () => {
+	const box = (name: string, example?: string) =>
+		({ ...FIELD, widget: name, name, type: 'boolean', example }) as const;
 	const tree = assembleQuill(
 		{
 			quill: QUILL,
 			fields: [
 				{ ...FIELD, example: 'x' },
-				{ ...FIELD, widget: 'tick', name: 'tick', type: 'boolean', example: 'true' },
+				box('tick', 'true'),
+				box('blank'),
+				box('other', 'yes'),
 				{ ...FIELD, widget: 'sig', name: 'sig', example: 'A-1' }
 			]
 		},
-		{ widgets: [placed('a', 'Tx'), placed('tick', 'Btn'), placed('sig', 'Sig')] },
+		{
+			widgets: [
+				placed('a', 'Tx'),
+				placed('tick', 'Btn'),
+				placed('blank', 'Btn'),
+				placed('other', 'Btn'),
+				placed('sig', 'Sig')
+			]
+		},
 		new Uint8Array()
 	);
-	expect(text(tree, 'example.md')).toBe('~~~\n$quill: "sample"\n"a": "x"\n~~~\n');
+	expect(text(tree, 'example.md')).toBe('~~~\n$quill: "sample"\n"a": "x"\n"tick": true\n~~~\n');
 });
 
 it('writes a character the engine refuses as four hex digits', () => {
