@@ -274,6 +274,47 @@ describe('a form built by hand', () => {
 		).resolves.toEqual({ ok: false, problems: [{ code: 'duplicate_name', name: 'same' }] });
 	});
 
+	it('writes one schema field for fields that share a name, and fills every box from it', async () => {
+		const shared = naming.map((entry) =>
+			entry.id === 'last4'
+				? { ...entry, name: 'remarks', title: undefined, example: undefined }
+				: entry.id === 'remarks'
+					? {
+							...entry,
+							text: undefined,
+							title: 'Remarks',
+							description: 'What the member adds.',
+							example: '12345678'
+						}
+					: entry
+		);
+		const tree = await built(await form(), shared);
+		const yaml = text(tree, 'Quill.yaml');
+		expect(yaml.split('\n    "remarks":\n')).toHaveLength(2);
+		expect(yaml).toContain(
+			[
+				'    "remarks":',
+				'      title: "Remarks"',
+				'      type: text',
+				'      default: ""',
+				'      max: 4',
+				'      description: "What the member adds."'
+			].join('\n')
+		);
+		expect(yaml).not.toContain('"last4"');
+		expect(text(tree, 'example.md')).toContain('"remarks": "1234"\n');
+		const { fields } = JSON.parse(text(tree, 'form.yaml'));
+		expect(
+			fields.filter((f: { schema_field: string }) => f.schema_field === 'remarks')
+		).toHaveLength(2);
+
+		const { ref, quill } = await fromTree(tree);
+		const markdown = `~~~\n$quill: ${ref}\n$kind: main\nremarks: "4321"\n~~~\n`;
+		const filled = (await PDFDocument.load(await render(quill, markdown))).getForm();
+		expect(filled.getTextField('last4').getText()).toBe('4321');
+		expect(filled.getTextField('remarks').getText()).toBe('4321');
+	}, 60_000);
+
 	it('fills a field of lines in the engine from a one-line example', async () => {
 		const { quill } = await fromTree(await built(await form(), naming));
 		const example = quill.exampleDocument()!;
