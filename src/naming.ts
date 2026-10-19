@@ -1,4 +1,5 @@
 import { SNAKE_CASE } from './types.js';
+import { shape } from './shape.js';
 import type { Field, FieldNaming, Naming, Problem } from './api.js';
 
 const MAX_LENGTH = 40;
@@ -106,8 +107,12 @@ export function check(fields: readonly Field[], naming: Naming): Problem[] {
 	if (kept.length === 0) problems.push({ code: 'nothing_kept' });
 	for (const { id, name } of kept)
 		if (!SNAKE_CASE.test(name)) problems.push({ code: 'field_name', id });
-	for (const [name, sharing] of Map.groupBy(kept, (entry) => entry.name))
-		if (sharing.length > 1) problems.push({ code: 'duplicate_name', name });
+	const byId = new Map(fields.map((field) => [field.id, field]));
+	for (const [name, sharing] of Map.groupBy(kept, (entry) => entry.name)) {
+		const shapes = new Set(sharing.map(({ id, text }) => shape(byId.get(id)!, text)));
+		if (sharing.length > 1 && (shapes.size > 1 || shapes.has(null)))
+			problems.push({ code: 'duplicate_name', name });
+	}
 	for (const { id, kind } of fields)
 		if (kind !== 'text' && entries.get(id)?.some((entry) => entry.text))
 			problems.push({ code: 'text_on_non_text', id });
