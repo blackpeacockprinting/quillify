@@ -1,8 +1,8 @@
 /**
  * Dynamic Adobe LiveCycle forms, which carry no field on the page at all.
  * `xfaToAcroForm` runs pdf.js's XFA layout ahead of the inventory and writes
- * each back with a field tree. Three are fixtures, and `corpus/` names
- * fourteen more.
+ * each back with a field tree. Five are fixtures, and `corpus/` names
+ * thirteen more.
  */
 
 import { describe, expect, it } from 'vitest';

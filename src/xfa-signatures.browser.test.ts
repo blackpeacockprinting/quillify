@@ -17,7 +17,7 @@ const goldens = import.meta.glob<FieldInventory>('../test/goldens/D*.inventory.j
 	eager: true
 });
 
-/** The signature fields each dynamic fixture's template shows, and the captions printed in them. */
+/** The signature fields a dynamic fixture's template shows, and the captions printed in them. */
 const FORMS = [
 	{
 		form: 'DD2875',

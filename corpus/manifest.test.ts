@@ -26,14 +26,14 @@ function count(key: 'kind' | 'encryption' | 'outcome', forms = manifest) {
 const sum = (key: 'bytes' | 'pages' | 'fields' | 'places') =>
 	manifest.reduce((total, form) => total + (form[key] ?? 0), 0);
 
-it('names 59 forms, each by a SHA-256 of its own', () => {
+it('names 60 forms, each by a SHA-256 of its own', () => {
 	const hashes = manifest.map((form) => form.sha256);
-	expect(hashes).toHaveLength(59);
-	expect(new Set(hashes).size).toBe(59);
+	expect(hashes).toHaveLength(60);
+	expect(new Set(hashes).size).toBe(60);
 	for (const hash of hashes) expect(hash).toMatch(/^[0-9a-f]{64}$/);
 });
 
-it('describes the nine published fixtures as their own manifest does', () => {
+it('describes the eleven published fixtures as their own manifest does', () => {
 	type Described = Pick<Entry, 'form' | 'sha256' | 'kind' | 'encryption'>;
 	const described = ({ form, sha256, kind, encryption }: Described) => ({
 		form,
@@ -41,29 +41,34 @@ it('describes the nine published fixtures as their own manifest does', () => {
 		kind,
 		encryption
 	});
-	const fixtures: (Described & { publisher?: string })[] = Object.values(
+	const fixtures: (Described & { publisher?: string; published_sha256?: string })[] = Object.values(
 		JSON.parse(readFileSync('test/fixtures/MANIFEST.json', 'utf8'))
 	);
-	const published = fixtures.filter((fixture) => fixture.publisher).map(described);
+	// A fixture with a name blanked is its published file's entry here.
+	const published = fixtures
+		.filter((fixture) => fixture.publisher)
+		.map((fixture) =>
+			described({ ...fixture, sha256: fixture.published_sha256 ?? fixture.sha256 })
+		);
 	const named = new Map(manifest.map((form) => [form.sha256, described(form)]));
-	expect(published).toHaveLength(9);
+	expect(published).toHaveLength(11);
 	expect(published.map((fixture) => named.get(fixture.sha256))).toEqual(published);
 });
 
-it('expects 57 forms to convert and 2 to be refused', () => {
+it('expects 58 forms to convert and 2 to be refused', () => {
 	expect(count('outcome')).toEqual({
-		converted: 57,
+		converted: 58,
 		no_fields: 1,
 		portfolio: 1
 	});
 });
 
 it('holds the other totals the two READMEs quote', () => {
-	expect(count('kind')).toEqual({ plain: 14, hybrid: 26, dynamic: 17, none: 2 });
-	expect(count('kind', converted)).toEqual({ plain: 14, hybrid: 26, dynamic: 17 });
+	expect(count('kind')).toEqual({ plain: 14, hybrid: 26, dynamic: 18, none: 2 });
+	expect(count('kind', converted)).toEqual({ plain: 14, hybrid: 26, dynamic: 18 });
 	expect(count('encryption')).toEqual({
 		none: 21,
-		'AESv2, R4, empty user password': 35,
+		'AESv2, R4, empty user password': 36,
 		'AESv3, R6, empty user password': 1,
 		'RC4, R2, empty user password': 2
 	});
@@ -73,5 +78,5 @@ it('holds the other totals the two READMEs quote', () => {
 		fields: sum('fields'),
 		places: sum('places'),
 		withUrl: manifest.filter((form) => form.url).length
-	}).toEqual({ megabytes: 24, pages: 197, fields: 6686, places: 6589, withUrl: 17 });
+	}).toEqual({ megabytes: 24, pages: 199, fields: 6744, places: 6647, withUrl: 18 });
 });
