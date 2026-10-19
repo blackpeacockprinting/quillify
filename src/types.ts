@@ -68,6 +68,7 @@ export interface QualifiedField {
 	type: FieldType;
 	multiline: boolean;
 	options?: string[];
+	max?: number;
 	example?: string;
 	keep: boolean;
 	/** `/Ff` bit 2: the form says this one has to be filled. */

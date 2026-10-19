@@ -27,5 +27,6 @@ It is drawn as pdf.js lays it out, in Helvetica, Times or Courier, and a mark th
 - A signature field becomes an unsigned widget. What signing locks is not carried (decided in [#124](https://github.com/tonguetoquill/quillify/issues/124)).
 - A radio group reaches the quill as one boolean a button ([#41](https://github.com/tonguetoquill/quillify/issues/41)), and `suggest` gives a field no title: a caller's naming gives one.
 - A dropdown with `>`, `;` or `|` in an option becomes a text field.
+- A text field's limit becomes its `max:`, and its example is cut to it. A field of `lines` gets none: `max:` on a list counts its lines.
 - The background keeps links to `http`, `https` or a place in the file, and no other annotation ([#68](https://github.com/tonguetoquill/quillify/issues/68)). It keeps a layer that is off, and its stamped fields are untagged ([#192](https://github.com/tonguetoquill/quillify/issues/192)).
 - A `zoom` on the host page that the layout frame cannot undo exactly makes `sanitize` reject with an error that names it.
