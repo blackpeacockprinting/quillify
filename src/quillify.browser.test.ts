@@ -31,9 +31,9 @@ it.each(['DD1610', 'SF1152', 'DAF1288'])(
 		const { form } = sanitized;
 
 		const tree = await built(form, suggest(form.fields));
-		expect([...tree.keys()]).toEqual(expect.arrayContaining(['Quill.yaml', 'form.yaml']));
+		expect([...tree.keys()]).toEqual(expect.arrayContaining(['Quill.yaml', 'Form.yaml']));
 		expect(tree.get('form.pdf')).toBe(form.pdf);
-		const { fields, widgets } = JSON.parse(text(tree, 'form.yaml'));
+		const { fields, widgets } = JSON.parse(text(tree, 'Form.yaml'));
 		const places = form.fields
 			.filter((field) => !field.readOnly)
 			.reduce((count, field) => count + field.places.length, 0);
@@ -145,6 +145,7 @@ describe('a form built by hand', () => {
 				'  name: "x"',
 				'  version: 0.1.0',
 				'  backend: acroform',
+				'  requires: ">=0.127"',
 				'  description: "A form."',
 				'',
 				'main:',
@@ -244,7 +245,7 @@ describe('a form built by hand', () => {
 			page: 0,
 			rect: rect(y)
 		});
-		expect(JSON.parse(text(await built(await form(), naming), 'form.yaml'))).toEqual({
+		expect(JSON.parse(text(await built(await form(), naming), 'Form.yaml'))).toEqual({
 			schema: 'quillmark/form@0.2.0',
 			fields: [
 				bound('last4', 'last4', 310),
@@ -303,7 +304,7 @@ describe('a form built by hand', () => {
 		);
 		expect(yaml).not.toContain('"last4"');
 		expect(text(tree, 'example.md')).toContain('"remarks": "1234"\n');
-		const { fields } = JSON.parse(text(tree, 'form.yaml'));
+		const { fields } = JSON.parse(text(tree, 'Form.yaml'));
 		expect(
 			fields.filter((f: { schema_field: string }) => f.schema_field === 'remarks')
 		).toHaveLength(2);
