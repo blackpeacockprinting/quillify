@@ -85,6 +85,9 @@ it('ships the pdf.js worker as the installed one but for the notice, the guards 
 	);
 	const BREAK = 'if (currentLineWidth + glyphWidth > maxWidth) {';
 	const DRAWN_BREAK = 'if (0.99 * (currentLineWidth + glyphWidth) > maxWidth) {';
+	const MAX_CHARS = 'if (this.ui.textEdit && this.value.text?.maxChars) {';
+	const CELLS_OR_MAX_CHARS =
+		'const cells = (this.ui.textEdit || this.ui.numericEdit)?.comb?.numberOfCells; if (cells) { ui.children[0].attributes.maxLength = cells; } if ((this.ui.textEdit || this.ui.numericEdit) && this.value.text?.maxChars) {';
 	expect(differing, STALE).toEqual([
 		[BREAK, DRAWN_BREAK],
 		[BREAK, DRAWN_BREAK],
@@ -103,6 +106,7 @@ it('ships the pdf.js worker as the installed one but for the notice, the guards 
 			'const ui = this.ui[$toHTML]().html;',
 			'const ui = this.ui[$toHTML]().html ?? { name: "label", attributes: { class: ["xfaLabel"] }, children: [{ name: "div", attributes: { class: [this.ui.signature ? "xfaSignature" : this.ui.barcode ? "xfaBarcode" : this.ui.passwordEdit ? "xfaPasswordEdit" : "xfaImageEdit"], style: { width: "100%" } }, children: [] }] };'
 		],
+		[MAX_CHARS, CELLS_OR_MAX_CHARS],
 		['this[$extra].pageSetIndex = -1;', 'this[$extra].pageSetIndex = -1; this[$cleanPage]();'],
 		[
 			'for (const item of formNode.items.children) {',
