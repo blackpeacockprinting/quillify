@@ -389,6 +389,21 @@ it('keeps a link to a www. address 200,000 characters long', async () => {
 	expect(annotations(page)).toHaveLength(1);
 });
 
+it('drops a link to a www. address no URL reads, and keeps one beside it, where URL has no parse', async () => {
+	const parse = URL.parse;
+	delete (URL as { parse?: unknown }).parse;
+	try {
+		const { page, text } = await background((sheet) => {
+			linked({ A: uri('www.PRIVATE.1') })(sheet);
+			linked({ A: uri('www.example.com') })(sheet);
+		});
+		expect(annotations(page)).toHaveLength(1);
+		expect(text).not.toContain('PRIVATE');
+	} finally {
+		URL.parse = parse;
+	}
+});
+
 it('keeps a link to an http address as the file wrote it, though www. ones beside it are rewritten', async () => {
 	const { page } = await background((sheet) => {
 		linked({ A: uri('www.example.com') })(sheet);
