@@ -158,9 +158,56 @@ describe('check', () => {
 	});
 
 	it('reports a name that kept entries share once, however many share it', () => {
-		const fields = [a, text('b'), text('c')];
+		const fields = [a, box, text('c')];
 		const entries = [kept('a', 'same'), kept('b', 'same'), kept('c', 'same')];
 		expect(check(fields, naming(...entries))).toEqual([{ code: 'duplicate_name', name: 'same' }]);
+	});
+
+	it('takes a name that kept fields share when they take the same value', () => {
+		const capped: Field = { ...plain, id: 'b', kind: 'text', multiline: false, maxLength: 9 };
+		const tall: Field = { ...plain, id: 'c', kind: 'text', multiline: true };
+		const entries: FieldNaming[] = [
+			kept('a', 'same'),
+			kept('b', 'same'),
+			{ ...kept('c', 'same'), text: 'line' }
+		];
+		expect(check([a, capped, tall], naming(...entries))).toEqual([]);
+	});
+
+	it.each<[string, Field, Partial<FieldNaming>]>([
+		['a paragraph and a line', text('b'), { text: 'paragraph' }],
+		['lines and a line', text('b'), { text: 'lines' }],
+		['a box and a line', box, {}],
+		['dropdowns of other options', { ...plain, id: 'b', kind: 'choice', options: ['x'] }, {}]
+	])('reports a name shared by %s', (_, other, more) => {
+		const first: Field =
+			other.kind === 'choice' ? { ...plain, id: 'a', kind: 'choice', options: ['y'] } : a;
+		const entries = [kept('a', 'same'), { ...kept('b', 'same'), ...more }];
+		expect(check([first, other], naming(...entries))).toEqual([
+			{ code: 'duplicate_name', name: 'same' }
+		]);
+	});
+
+	it('reports a name that radio buttons share, even of one group', () => {
+		const radio = (id: string, on: string): Field => ({
+			...plain,
+			id,
+			kind: 'radio',
+			group: 'g',
+			on
+		});
+		const entries = [kept('a', 'same'), kept('b', 'same')];
+		expect(check([radio('a', 'yes'), radio('b', 'no')], naming(...entries))).toEqual([
+			{ code: 'duplicate_name', name: 'same' }
+		]);
+	});
+
+	it('reports a name that signatures share', () => {
+		const signature = (id: string): Field => ({ ...plain, id, kind: 'signature' });
+		const entries = [kept('a', 'same'), kept('b', 'same')];
+		expect(check([signature('a'), signature('b')], naming(...entries))).toEqual([
+			{ code: 'duplicate_name', name: 'same' }
+		]);
 	});
 
 	it('reports text set on a field that is not text, even a dropped one', () => {
@@ -187,14 +234,15 @@ describe('check', () => {
 	});
 
 	it('returns every problem at once, in the order of the rules', () => {
-		const problems = check([a, box, text('c')], {
+		const problems = check([a, box, text('c'), text('e')], {
 			name: '',
 			description: '',
 			fields: [
 				kept('a', 'first'),
 				kept('a', 'first'),
 				{ ...kept('b', 'Second'), text: 'line' },
-				kept('d', 'fourth')
+				kept('d', 'fourth'),
+				{ ...kept('e', 'first'), text: 'lines' }
 			]
 		});
 		expect(problems).toEqual([

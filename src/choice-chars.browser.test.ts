@@ -57,7 +57,7 @@ describe.each([';', '>', '|'])('an enum value with %s', (character) => {
 			['Quill.yaml', encoder.encode(yaml + '\n')],
 			['form.pdf', background],
 			[
-				'form.yaml',
+				'Form.yaml',
 				encoder.encode(JSON.stringify({ schema: 'quillmark/form@0.2.0', fields: [], widgets: [] }))
 			]
 		]);
