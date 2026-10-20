@@ -4,6 +4,8 @@ What a consumer can observe, in the latest release and since. Earlier releases a
 
 ## Unreleased
 
+- A dynamic form's comb field keeps its count of cells as its `maxLength` where its template sets no `maxChars`, and a numeric field keeps its `maxChars` as a text field already did. DAF 988's and DAF 1288's DoD ID fields carry a `maxLength` of 10.
+
 ## v0.7.0 - 2026-10-19
 
 - A dynamic form's Calibri is laid out in Carlito, a face of its widths the package ships, so its labels break where the form's designer broke them on any machine. A form that names Calibri fetches only the styles it uses, and a host that copies `assets/` by hand copies the four `Carlito-*.ttf` too: one that does not load ends the conversion with an error that names it.
