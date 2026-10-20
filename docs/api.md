@@ -75,7 +75,7 @@ Returns what is wrong with a naming, and an empty list when nothing is. A naming
 
 Builds the quill and resolves to `{ ok: true, tree }` or `{ ok: false, problems }`. The problems are `check`'s, and `engine` when the engine refuses the files.
 
-`tree` maps a file name to its bytes (`Quill.yaml`, `form.yaml`, `form.pdf`, and `example.md` when a kept field has an example or is a dropdown with an option), and `Quill.fromTree` takes it.
+`tree` maps a file name to its bytes (`Quill.yaml`, `Form.yaml`, `form.pdf`, and `example.md` when a kept field has an example or is a dropdown with an option), and `Quill.fromTree` takes it.
 
 ## limits
 

@@ -70,6 +70,7 @@ export function quillYaml(form: Qualified, fields: Named[]): string {
 		`  name: ${q(form.quill.name)}`,
 		`  version: ${QUILL_VERSION}`,
 		'  backend: acroform',
+		'  requires: ">=0.127"',
 		`  description: ${q(form.quill.description)}`,
 		'',
 		'main:',
@@ -145,7 +146,7 @@ export function assembleQuill(
 	const tree = new Map<string, Uint8Array>([
 		['Quill.yaml', encoder.encode(quillYaml(form, schema))],
 		['form.pdf', formPdf],
-		['form.yaml', encoder.encode(escaped(JSON.stringify(formJson, null, 2)) + '\n')]
+		['Form.yaml', encoder.encode(escaped(JSON.stringify(formJson, null, 2)) + '\n')]
 	]);
 	const example = exampleMarkdown(form, schema);
 	if (example) tree.set('example.md', encoder.encode(example));
