@@ -278,7 +278,11 @@ function opened(bytes: Uint8Array): string | undefined {
 	const [, host, path] = /^([^/?#]*)([^?#]*)/.exec(text)!;
 	if (!HOST.test(host) || path.split('/').some((part) => /^(?:\.|%2e){1,2}$/i.test(part)))
 		return undefined;
-	return URL.parse(`http://${text}`)?.href;
+	try {
+		return new URL(`http://${text}`).href;
+	} catch {
+		return undefined;
+	}
 }
 
 /**
