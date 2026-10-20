@@ -4,6 +4,8 @@ What a consumer can observe, in the latest release and since. Earlier releases a
 
 ## Unreleased
 
+- A background keeps a link to an address that begins `www.` and has two dots, written as the `http://` address pdf.js opens for it, and a link to one `mailto:` mailbox, written without its subject, body or other query. Either is removed where the address is not plainly one host or one mailbox, and a link to `file:` or any other scheme is still removed.
+
 ## v0.7.0 - 2026-10-19
 
 - A dynamic form's Calibri is laid out in Carlito, a face of its widths the package ships, so its labels break where the form's designer broke them on any machine. A form that names Calibri fetches only the styles it uses, and a host that copies `assets/` by hand copies the four `Carlito-*.ttf` too: one that does not load ends the conversion with an error that names it.
