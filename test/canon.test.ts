@@ -24,7 +24,7 @@ it('holds each row of the fixtures README to the manifest and to a count of the 
 	// A golden is named as its fixture is up to the first underscore, so two editions of a form each have one.
 	const golden = (file: string) => {
 		const { pages, widgets } = JSON.parse(
-			read(`test/goldens/${file.slice(0, file.indexOf('_'))}.inventory.json`)
+			read(`test/goldens/${file.split('_')[0]}.inventory.json`)
 		);
 		return { pages: pages.length, fields: widgets.length };
 	};
