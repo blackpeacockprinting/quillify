@@ -268,6 +268,7 @@ const HOST = /^www(?:\.[a-z\d-]+)+$/i;
  * of two labels or more.
  */
 function opened(bytes: Uint8Array): string | undefined {
+	// 'latin1' decodes as windows-1252; both tests below take only ASCII.
 	const text = new TextDecoder('latin1').decode(bytes);
 	if (/^mailto:/i.test(text)) {
 		const [mailbox] = text.slice('mailto:'.length).split('?', 1);
