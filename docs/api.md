@@ -50,7 +50,7 @@ Returns an entry for each field, named from the form's own tooltips: `{ id, keep
 
 A naming is `{ name, description, fields }`, and those entries are its `fields`. A read-only field is left out whatever `keep` says.
 
-Kept fields may share a name when each takes the same value: text of one kind, a box, or a dropdown of the same options. The quill asks for it once and fills every one of them with the answer. The first of them gives its title, description and example where it has one, it is required when any of them is, and it takes no more characters than the least of them. Signatures and radio buttons share no name.
+Kept fields may share a name when each takes the same value: text of one kind, a box, or a dropdown of the same options. The quill asks for it once and fills every one of them with the answer. The first of them gives its title, description and example where it has one, it is required when any of them is, and it takes no more characters than the least of them. Boxes that share a name are ticked together, so an example of `true` on any of them ticks them all. Signatures and radio buttons share no name.
 
 ## check
 

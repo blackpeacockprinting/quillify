@@ -321,6 +321,26 @@ describe('a form built by hand', () => {
 		]);
 	}, 60_000);
 
+	it('ticks every box of a shared name when one of them has an example of true', async () => {
+		const twin = { ...plain, id: 'agree_again', places: at(580), kind: 'checkbox' } as const;
+		const shared = [
+			...naming.map((entry) => (entry.id === 'agree' ? { ...entry, example: 'true' } : entry)),
+			named('agree_again', { name: 'agree' })
+		];
+		const tree = await built({ ...(await form()), fields: [...fields, twin] }, shared);
+		expect(text(tree, 'example.md')).toContain('\n"agree": true\n');
+
+		const { quill } = await fromTree(tree);
+		const example = quill.exampleDocument()!;
+		const rendered = example.toMarkdown();
+		example.free();
+		const filled = (await PDFDocument.load(await render(quill, rendered))).getForm();
+		expect(['agree', 'agree_again'].map((id) => filled.getCheckBox(id).isChecked())).toEqual([
+			true,
+			true
+		]);
+	}, 60_000);
+
 	it('writes one schema field for fields that share a name, and fills every box from it', async () => {
 		const shared = naming.map((entry) =>
 			entry.id === 'last4'
