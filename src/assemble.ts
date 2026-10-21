@@ -87,7 +87,8 @@ export function quillYaml(form: Qualified, fields: Named[]): string {
 /** The sample values as the quill's example document, or null when no kept field carries one. */
 function exampleMarkdown(form: Qualified, fields: Named[]): string | null {
 	const lines = fields.flatMap((f) => {
-		if (f.example === undefined || f.type === 'boolean') return [];
+		if (f.example === undefined) return [];
+		if (f.type === 'boolean') return f.example === 'true' ? [`${q(f.name)}: true`] : [];
 		return f.type === 'array'
 			? [`${q(f.name)}:`, `  - ${q(f.example)}`]
 			: [`${q(f.name)}: ${q(f.example)}`];

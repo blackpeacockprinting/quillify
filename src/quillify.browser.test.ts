@@ -1,4 +1,4 @@
-import { PDFDocument } from 'pdf-lib';
+import { PDFCheckBox, PDFDocument } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 import { fromTree, render } from '../test/engine.js';
 import { sharedNameCheckboxes } from '../test/shared-name-checkboxes.js';
@@ -57,6 +57,30 @@ it.each([
 	},
 	120_000
 );
+
+it("ticks DAF 988's Ordinary leave box alone when its example is true", async () => {
+	const [, url] = Object.entries(fixtures).find(([path]) => path.includes('/DAF988_'))!;
+	const sanitized = await sanitize(new Uint8Array(await (await fetch(url)).arrayBuffer()));
+	if (!sanitized.ok) throw new Error(`refused as ${sanitized.refusal.code}`);
+	const ordinary = 'p1.PageArea1.AF988_Unlocked.Page1.Ordinary_mutexcl_grp.Conval_1';
+	const naming = suggest(sanitized.form.fields).map((entry) =>
+		entry.id === ordinary ? { ...entry, example: 'true' } : entry
+	);
+	const tree = await built(sanitized.form, naming);
+	const { name } = naming.find((entry) => entry.id === ordinary)!;
+	expect(text(tree, 'example.md')).toContain(`\n"${name}": true\n`);
+
+	const { quill } = await fromTree(tree);
+	const example = quill.exampleDocument()!;
+	const markdown = example.toMarkdown();
+	example.free();
+	const filled = (await PDFDocument.load(await render(quill, markdown))).getForm();
+	const ticked = filled
+		.getFields()
+		.filter((field) => field instanceof PDFCheckBox && field.isChecked())
+		.map((field) => field.getName());
+	expect(ticked).toEqual([ordinary]);
+}, 120_000);
 
 it('ticks one box alone of those that share a name and differ in on-state', async () => {
 	const sanitized = await sanitize(await sharedNameCheckboxes());
@@ -274,6 +298,48 @@ describe('a form built by hand', () => {
 			quillify(await form(), { name: 'x', description: 'A form.', fields: twice })
 		).resolves.toEqual({ ok: false, problems: [{ code: 'duplicate_name', name: 'same' }] });
 	});
+
+	it('ticks a box and a radio option whose example is true, in example.md and in the engine', async () => {
+		const examples: Record<string, string> = { agree: 'true', sick: ' true ', annual: 'yes' };
+		const ticked = naming.map((entry) =>
+			entry.id in examples ? { ...entry, example: examples[entry.id] } : entry
+		);
+		const tree = await built(await form(), ticked);
+		const markdown = text(tree, 'example.md');
+		expect(markdown).toContain('\n"agree": true\n"sick": true\n"roster":');
+		expect(markdown).not.toContain('"annual"');
+
+		const { quill } = await fromTree(tree);
+		const example = quill.exampleDocument()!;
+		const rendered = example.toMarkdown();
+		example.free();
+		const filled = (await PDFDocument.load(await render(quill, rendered))).getForm();
+		expect(['agree', 'sick', 'annual'].map((id) => filled.getCheckBox(id).isChecked())).toEqual([
+			true,
+			true,
+			false
+		]);
+	}, 60_000);
+
+	it('ticks every box of a shared name when one of them has an example of true', async () => {
+		const twin = { ...plain, id: 'agree_again', places: at(580), kind: 'checkbox' } as const;
+		const shared = [
+			...naming.map((entry) => (entry.id === 'agree' ? { ...entry, example: 'true' } : entry)),
+			named('agree_again', { name: 'agree' })
+		];
+		const tree = await built({ ...(await form()), fields: [...fields, twin] }, shared);
+		expect(text(tree, 'example.md')).toContain('\n"agree": true\n');
+
+		const { quill } = await fromTree(tree);
+		const example = quill.exampleDocument()!;
+		const rendered = example.toMarkdown();
+		example.free();
+		const filled = (await PDFDocument.load(await render(quill, rendered))).getForm();
+		expect(['agree', 'agree_again'].map((id) => filled.getCheckBox(id).isChecked())).toEqual([
+			true,
+			true
+		]);
+	}, 60_000);
 
 	it('writes one schema field for fields that share a name, and fills every box from it', async () => {
 		const shared = naming.map((entry) =>

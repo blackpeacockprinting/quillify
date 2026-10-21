@@ -4,6 +4,7 @@ What a consumer can observe, in the latest release and since. Earlier releases a
 
 ## Unreleased
 
+- A naming may tick a checkbox or a radio option in the example: an `example` of `true` reaches `example.md` as a YAML `true`, and the engine's render of the example shows the box ticked. A box with no example, or with any other, stays out of `example.md` as before.
 - A dynamic form's comb field keeps its count of cells as its `maxLength` where its template sets no `maxChars` or a larger one, and a numeric field keeps its `maxChars` as a text field already did. DAF 988's and DAF 1288's DoD ID fields carry a `maxLength` of 10.
 - A background keeps a link to an address that begins `www.` and has two dots, written as the `http://` address pdf.js opens for it, and a link to one `mailto:` mailbox, written without its subject, body or other query. Either is removed where the address is not plainly one host or one mailbox, and a link to `file:` or any other scheme is still removed.
 - Kept fields that take the same value may share a name, and the quill asks for it once and fills each of them. `check` reports `duplicate_name` only for fields of different values, or for signatures or radio buttons.
