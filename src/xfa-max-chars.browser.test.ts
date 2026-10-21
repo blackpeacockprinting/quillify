@@ -39,13 +39,14 @@ it('reads the maxChars of a dynamic form text field as its maxLength', async () 
 	]);
 }, 120_000);
 
-it('reads the cells of a comb with no maxChars, and a numeric field its maxChars, as its maxLength', async () => {
+it('reads the cells of a comb with no maxChars or a larger one, and a numeric field its maxChars, as its maxLength', async () => {
 	expect(
 		await limits(
 			await dynamicForm(
 				'<field name="dodid" x="72pt" y="120pt" w="200pt" h="20pt"><ui><numericEdit><comb numberOfCells="10"/></numericEdit></ui><value><integer/></value></field>' +
 					'<field name="code" x="72pt" y="160pt" w="200pt" h="20pt"><ui><textEdit><comb numberOfCells="6"/></textEdit></ui><value><text/></value></field>' +
 					'<field name="both" x="72pt" y="200pt" w="200pt" h="20pt"><ui><textEdit><comb numberOfCells="6"/></textEdit></ui><value><text maxChars="4"/></value></field>' +
+					'<field name="wide" x="72pt" y="220pt" w="200pt" h="20pt"><ui><textEdit><comb numberOfCells="6"/></textEdit></ui><value><text maxChars="10"/></value></field>' +
 					'<field name="count" x="72pt" y="240pt" w="200pt" h="20pt"><ui><numericEdit/></ui><value><text maxChars="3"/></value></field>' +
 					'<field name="amount" x="72pt" y="280pt" w="200pt" h="20pt"><ui><numericEdit/></ui><value><float/></value></field>' +
 					'<field name="blank" x="72pt" y="320pt" w="200pt" h="20pt"><ui><textEdit><comb/></textEdit></ui><value><text/></value></field>'
@@ -55,6 +56,7 @@ it('reads the cells of a comb with no maxChars, and a numeric field its maxChars
 		{ id: 'p1.Page1.form1.dodid', multiline: false, maxLength: 10 },
 		{ id: 'p1.Page1.form1.code', multiline: false, maxLength: 6 },
 		{ id: 'p1.Page1.form1.both', multiline: false, maxLength: 4 },
+		{ id: 'p1.Page1.form1.wide', multiline: false, maxLength: 6 },
 		{ id: 'p1.Page1.form1.count', multiline: false, maxLength: 3 },
 		{ id: 'p1.Page1.form1.amount', multiline: false, maxLength: undefined },
 		{ id: 'p1.Page1.form1.blank', multiline: false, maxLength: undefined }
