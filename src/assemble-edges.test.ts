@@ -1,7 +1,7 @@
 /**
  * What `assembleQuill` writes where the carried test does not look: a
  * signature's tooltip, an example on a field that shows none, and the end of
- * `form.yaml`.
+ * `Form.yaml`.
  */
 
 import { expect, it } from 'vitest';
@@ -27,16 +27,16 @@ const placed = (id: string, kind: 'Tx' | 'Btn' | 'Sig', tooltip?: string) => ({
 const text = (tree: Map<string, Uint8Array>, name: string) =>
 	new TextDecoder().decode(tree.get(name));
 
-it('gives a signature its tooltip, and ends form.yaml with a line feed', () => {
+it('gives a signature its tooltip, and ends Form.yaml with a line feed', () => {
 	const tree = assembleQuill(
 		{ quill: QUILL, fields: [{ ...FIELD, widget: 'sig', name: 'sig' }] },
 		{ widgets: [placed('sig', 'Sig', 'Sign here')] },
 		new Uint8Array()
 	);
-	expect(JSON.parse(text(tree, 'form.yaml')).widgets).toEqual([
+	expect(JSON.parse(text(tree, 'Form.yaml')).widgets).toEqual([
 		{ name: 'sig', type: 'signature', page: 0, rect: RECT, tooltip: 'Sign here' }
 	]);
-	expect(text(tree, 'form.yaml').endsWith('}\n')).toBe(true);
+	expect(text(tree, 'Form.yaml').endsWith('}\n')).toBe(true);
 });
 
 it('writes a ticked boolean as a bare true, no other boolean, and no signature', () => {
@@ -104,7 +104,7 @@ it('names the second place of a field after the first, with its tooltip, two spa
 		{ widgets: [{ id: 'a', kind: 'Tx', tooltip: 'Name', places }] },
 		new Uint8Array()
 	);
-	expect(JSON.parse(text(tree, 'form.yaml')).fields).toEqual(
+	expect(JSON.parse(text(tree, 'Form.yaml')).fields).toEqual(
 		[0, 1].map((page) => ({
 			name: page ? 'a#2' : 'a',
 			schema_field: 'a',
@@ -113,5 +113,5 @@ it('names the second place of a field after the first, with its tooltip, two spa
 			tooltip: 'Name'
 		}))
 	);
-	expect(text(tree, 'form.yaml')).toContain('{\n  "schema": "quillmark/form@0.2.0",\n');
+	expect(text(tree, 'Form.yaml')).toContain('{\n  "schema": "quillmark/form@0.2.0",\n');
 });
