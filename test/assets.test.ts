@@ -87,7 +87,7 @@ it('ships the pdf.js worker as the installed one but for the notice, the guards 
 	const DRAWN_BREAK = 'if (0.99 * (currentLineWidth + glyphWidth) > maxWidth) {';
 	const MAX_CHARS = 'if (this.ui.textEdit && this.value.text?.maxChars) {';
 	const CELLS_OR_MAX_CHARS =
-		'const cells = (this.ui.textEdit || this.ui.numericEdit)?.comb?.numberOfCells; if (cells) { ui.children[0].attributes.maxLength = cells; } if ((this.ui.textEdit || this.ui.numericEdit) && this.value.text?.maxChars) {';
+		'const cells = (this.ui.textEdit || this.ui.numericEdit)?.comb?.numberOfCells; if (cells) { ui.children[0].attributes.maxLength = cells; } if ((this.ui.textEdit || this.ui.numericEdit) && this.value.text?.maxChars && !(cells < this.value.text.maxChars)) {';
 	expect(differing, STALE).toEqual([
 		[BREAK, DRAWN_BREAK],
 		[BREAK, DRAWN_BREAK],

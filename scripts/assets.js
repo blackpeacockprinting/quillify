@@ -76,7 +76,7 @@ const GUARDS = [
 		sites: 1,
 		line: 'if (this.ui.textEdit && this.value.text?.maxChars) {',
 		guarded:
-			'const cells = (this.ui.textEdit || this.ui.numericEdit)?.comb?.numberOfCells; if (cells) { ui.children[0].attributes.maxLength = cells; } if ((this.ui.textEdit || this.ui.numericEdit) && this.value.text?.maxChars) {'
+			'const cells = (this.ui.textEdit || this.ui.numericEdit)?.comb?.numberOfCells; if (cells) { ui.children[0].attributes.maxLength = cells; } if ((this.ui.textEdit || this.ui.numericEdit) && this.value.text?.maxChars && !(cells < this.value.text.maxChars)) {'
 	}
 ];
 const SOURCE_MAP = '//# sourceMappingURL=pdf.worker.mjs.map';
@@ -145,7 +145,7 @@ mkdirSync('assets');
 for (const [name, content] of [
 	[
 		'pdf.worker.js',
-		`/* The worker of pdfjs-dist ${version} (build/pdf.worker.mjs), changed: a null guard added at two sites, a page's first unsplittable node no longer taken from an overflow leader or trailer, a page set made to clear its page areas' counts when it starts another pass, a field with no control or a default one given a text control, a field whose control has no HTML given a box for it so that its caption is laid out, a list bound to data the file does not hold left with the items its template lists, a span marked where a page's text embeds a page number or a page count that a layout script fills, an exception of the XFA layout thrown on after it is logged, a line of text broken only where it is wider than its box at the size the browser draws it, a field's limit on what is typed taken from its comb's cells where its text sets no maxChars and passed on for a numeric field as for a text one, and the last line, which named a source map, removed. */\n` +
+		`/* The worker of pdfjs-dist ${version} (build/pdf.worker.mjs), changed: a null guard added at two sites, a page's first unsplittable node no longer taken from an overflow leader or trailer, a page set made to clear its page areas' counts when it starts another pass, a field with no control or a default one given a text control, a field whose control has no HTML given a box for it so that its caption is laid out, a list bound to data the file does not hold left with the items its template lists, a span marked where a page's text embeds a page number or a page count that a layout script fills, an exception of the XFA layout thrown on after it is logged, a line of text broken only where it is wider than its box at the size the browser draws it, a field's limit on what is typed taken from its comb's cells where its text sets no maxChars or a larger one and passed on for a numeric field as for a text one, and the last line, which named a source map, removed. */\n` +
 			worker
 	],
 	[
