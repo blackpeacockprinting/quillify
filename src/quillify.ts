@@ -1,8 +1,8 @@
 import { init, isQuillmarkError } from '@quillmark/wasm';
 import { assembleQuill } from './assemble.js';
 import { check } from './naming.js';
-import type { Field, FieldNaming, Form, Naming, Problem } from './api.js';
-import type { QualifiedField } from './types.js';
+import { typed } from './shape.js';
+import type { Field, Form, Naming, Problem } from './api.js';
 
 export type Quillified =
 	{ ok: true; tree: Map<string, Uint8Array> } | { ok: false; problems: readonly Problem[] };
@@ -15,32 +15,6 @@ const WIDGET = {
 	choice: 'Ch',
 	signature: 'Sig'
 } as const;
-
-/** The engine reads `max:` as a u32, and a cap of 0 takes nothing. */
-const capped = (max: number | undefined): max is number =>
-	max !== undefined && Number.isInteger(max) && max > 0 && max <= 0xffffffff;
-
-function typed(
-	field: Field,
-	text: FieldNaming['text']
-): Pick<QualifiedField, 'type' | 'multiline' | 'options' | 'max'> {
-	switch (field.kind) {
-		case 'text':
-			if (text === 'lines') return { type: 'array', multiline: true };
-			return {
-				type: 'string',
-				multiline: text ? text === 'paragraph' : field.multiline,
-				...(capped(field.maxLength) ? { max: field.maxLength } : {})
-			};
-		case 'choice':
-			return { type: 'enum', multiline: false, options: [...field.options] };
-		case 'checkbox':
-		case 'radio':
-			return { type: 'boolean', multiline: false };
-		case 'signature':
-			return { type: 'string', multiline: false };
-	}
-}
 
 /** A choice shows one of its options even when the naming gives none, so its list is seen in the example. */
 function shown(field: Field, suggested: string | undefined): string | undefined {

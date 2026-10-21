@@ -70,6 +70,7 @@ export function quillYaml(form: Qualified, fields: Named[]): string {
 		`  name: ${q(form.quill.name)}`,
 		`  version: ${QUILL_VERSION}`,
 		'  backend: acroform',
+		'  requires: ">=0.127"',
 		`  description: ${q(form.quill.description)}`,
 		'',
 		'main:',
@@ -140,15 +141,45 @@ export function assembleQuill(
 		})
 	};
 
+	const schema = byName(bound);
 	const encoder = new TextEncoder();
 	const tree = new Map<string, Uint8Array>([
-		['Quill.yaml', encoder.encode(quillYaml(form, bound))],
+		['Quill.yaml', encoder.encode(quillYaml(form, schema))],
 		['form.pdf', formPdf],
-		['form.yaml', encoder.encode(escaped(JSON.stringify(formJson, null, 2)) + '\n')]
+		['Form.yaml', encoder.encode(escaped(JSON.stringify(formJson, null, 2)) + '\n')]
 	]);
-	const example = exampleMarkdown(form, bound);
+	const example = exampleMarkdown(form, schema);
 	if (example) tree.set('example.md', encoder.encode(example));
 	return tree;
+}
+
+/**
+ * One schema field for the fields that share a name, at the first one's place
+ * and with its words where it has them. It is required when any of them is,
+ * and takes no more than the least of them takes, its example cut to fit.
+ */
+function byName(fields: Named[]): Named[] {
+	const named = new Map<string, Named>();
+	for (const field of fields) {
+		const first = named.get(field.name);
+		if (!first) {
+			named.set(field.name, field);
+			continue;
+		}
+		const caps = [first.max, field.max].filter((max) => max !== undefined);
+		const max = caps.length > 0 ? Math.min(...caps) : undefined;
+		const example = first.example ?? field.example;
+		named.set(field.name, {
+			...first,
+			title: first.title ?? field.title,
+			description: first.description || field.description,
+			required: first.required || field.required,
+			max,
+			example:
+				example !== undefined && max !== undefined ? [...example].slice(0, max).join('') : example
+		});
+	}
+	return [...named.values()];
 }
 
 /** Each place gets its own widget name, and all of a field's places name one schema field. */
