@@ -50,6 +50,8 @@ Returns an entry for each field, named from the form's own tooltips: `{ id, keep
 
 A naming is `{ name, description, fields }`, and those entries are its `fields`. A read-only field is left out whatever `keep` says.
 
+Kept fields may share a name when each takes the same value: text of one kind, a box, or a dropdown of the same options. The quill asks for it once and fills every one of them with the answer. The first of them gives its title, description and example where it has one, it is required when any of them is, and it takes no more characters than the least of them. Signatures and radio buttons share no name.
+
 ## check
 
 Returns what is wrong with a naming, and an empty list when nothing is. A naming of the wrong shape throws a `TypeError` that names the slot.
@@ -65,7 +67,7 @@ Returns what is wrong with a naming, and an empty list when nothing is. A naming
 | `unnamed_field`     | `id`                    | a field has no entry                      |
 | `repeated_field`    | `id`                    | a field has two entries                   |
 | `field_name`        | `id`                    | a kept field's name is not snake_case     |
-| `duplicate_name`    | `name`                  | two kept fields share a name              |
+| `duplicate_name`    | `name`                  | kept fields of unlike values share a name |
 | `text_on_non_text`  | `id`                    | `text` is set on a field that is not text |
 | `engine`            | `message`, `diagnostic` | the engine refused the files              |
 
@@ -73,7 +75,7 @@ Returns what is wrong with a naming, and an empty list when nothing is. A naming
 
 Builds the quill and resolves to `{ ok: true, tree }` or `{ ok: false, problems }`. The problems are `check`'s, and `engine` when the engine refuses the files.
 
-`tree` maps a file name to its bytes (`Quill.yaml`, `form.yaml`, `form.pdf`, and `example.md` when a kept field has an example or is a dropdown with an option), and `Quill.fromTree` takes it.
+`tree` maps a file name to its bytes (`Quill.yaml`, `Form.yaml`, `form.pdf`, and `example.md` when a kept field has an example or is a dropdown with an option), and `Quill.fromTree` takes it.
 
 ## limits
 
